@@ -223,6 +223,105 @@ Output format: bullet lines only, OR `none`, OR `tool-unavailable`.
 
 ---
 
+## Library briefs — `library-brief` skill (SIBLING-SKILL invocation, NOT a subagent)
+
+**This source is NOT a subagent dispatch and NOT an MCP tool call.** It is a synchronous SIBLING-SKILL invocation of the `library-brief` skill, executed AFTER local-knowledge and BEFORE the external parallel fan-out. It is NEVER dropped on overflow.
+
+### Invocation contract
+
+For each matched library (cap: top N=5 most-relevant), invoke the `library-brief` skill with `intent=read_only`:
+
+```yaml
+intent: read_only
+library: <canonical-name>          # package-manager install name, lowercased, kebab-cased
+ecosystem: <ecosystem-enum>        # js | ts | python | go | java | kotlin | rust | dotnet | ruby | php | swift | aws | gcp | azure | gradle | maven | npm | cli | db | infra | general
+caller: pre-task-research
+```
+
+### Library matching algorithm
+
+1. Parse repo manifests for library names: `package.json` (dependencies + devDependencies), `pyproject.toml` / `requirements.txt`, `go.mod` (require block), `pom.xml` (artifactId), `Cargo.toml` (dependencies), `Gemfile`.
+2. Scan the topic string for library names (words that match known package-name patterns).
+3. Union both sets; check which names have an existing brief under `~/.claude/data/library-briefs/` (or `$CLAUDE_LIBRARY_BRIEFS_DIR`).
+4. Rank: topic-mention hits first, then manifest hits; within each group, alphabetical. Keep top 5.
+
+### Output per library
+
+`library-brief` returns one of:
+- A markdown digest (status `ok` or `stale`) — render verbatim under section #2.
+- `status: not_found` — silent skip; no section entry for that library.
+
+Digest shape (from `library-brief/references/api-contract.md` Intent 4):
+
+```markdown
+### library-brief: react (js, v19.1.0, updated 2026-05-14)
+
+**TL;DR:** <one paragraph from the brief's TL;DR>
+
+**Mental model (digest):** <2-3 sentences from Mental model>
+
+**Top gotchas:**
+- <bullet 1>
+- <bullet 2>
+- <bullet 3>
+
+**Full brief:** `~/.claude/data/library-briefs/js/react.md`
+```
+
+Stale briefs include `[stale]` in the header: `### library-brief: react (js, v19.1.0, [stale], updated 2024-11-02)`. Stale marker is advisory — the digest is still included. Do NOT auto-trigger `refresh_existing`.
+
+### Ecosystem examples
+
+**JavaScript / TypeScript (`js`, `ts`):**
+```yaml
+# package.json has "react": "^19.1.0", "zod": "^3.22.0", "vite": "^5.0.0"
+# Topic: "add form validation with zod"
+# → zod (topic-mention, manifest hit) → react (manifest hit) → vite (manifest hit)
+# → cap at 5; pick top 3 here = zod, react, vite
+
+intent: read_only
+library: zod
+ecosystem: ts
+caller: pre-task-research
+```
+
+**Python:**
+```yaml
+# pyproject.toml has pydantic, fastapi, sqlalchemy
+# Topic: "add pydantic models for the API layer"
+# → pydantic (topic-mention + manifest) → fastapi (manifest) → sqlalchemy (manifest)
+
+intent: read_only
+library: pydantic
+ecosystem: python
+caller: pre-task-research
+```
+
+**Go:**
+```yaml
+# go.mod has github.com/gin-gonic/gin, github.com/redis/go-redis/v9
+# Topic: "cache responses using go-redis"
+# → go-redis (topic-mention + manifest) → gin (manifest)
+
+intent: read_only
+library: go-redis
+ecosystem: go
+caller: pre-task-research
+```
+
+### Error handling
+
+| Condition | Behavior |
+|---|---|
+| `library-brief` skill not installed | Render section header with `_skipped: library-brief sibling not installed_`; continue. Do NOT block. |
+| `status: not_found` for a library | Silent skip; no entry for that library. |
+| `status: stale` | Include digest with `[stale]` marker; do NOT trigger refresh. |
+| No libraries matched or all returned `not_found` | Render `_none found_` under section heading. |
+
+The section heading is `## Library briefs (from ~/.claude/data/library-briefs/)`. This section is NEVER dropped on overflow — it shares the never-drop pinning with local-knowledge.
+
+---
+
 ## Local knowledge — `knowledge-capture` read API
 
 Local knowledge is NOT a subagent dispatch — it's a synchronous call to the `knowledge-capture` sibling, executed BEFORE the parallel fan-out. The caller passes:
