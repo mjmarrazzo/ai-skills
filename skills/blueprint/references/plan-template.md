@@ -97,3 +97,7 @@ After drafting the plan, read it once with fresh eyes:
 4. **UI verification:** If the spec touches frontend, the plan includes a verification task that hands off to a UI-validation skill (or names the surfaces / viewports / credentials that need checking).
 
 Fix issues inline. No need to re-review — just fix and move on.
+
+## Auto-mode notes
+
+If executing in autonomous mode, every non-trivial decision the executor rolls with (instead of pausing to ask the user) goes into `.claude-plans/<active>/open-questions.md` per the convention. The plan itself doesn't enumerate these — they emerge during execution.

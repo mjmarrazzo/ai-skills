@@ -36,13 +36,16 @@ All artifacts live in a **gitignored** `.claude-plans/` directory at the repo ro
 ```
 .claude-plans/
 └── <YYYY-MM-DD>-<slug>/
-    ├── handoff.md      # discovery findings: any fresh LLM can pick this up cold
-    ├── spec.md         # current spec (the "what")
-    ├── spec.v1.md      # prior iteration, written when user pushes back
-    ├── plan.md         # current implementation plan (the "how")
-    ├── plan.v1.md      # prior iteration
-    └── decisions.md    # ADR-style log of every non-obvious choice + rationale
+    ├── handoff.md          # discovery findings: any fresh LLM can pick this up cold
+    ├── spec.md             # current spec (the "what")
+    ├── spec.v1.md          # prior iteration, written when user pushes back
+    ├── plan.md             # current implementation plan (the "how")
+    ├── plan.v1.md          # prior iteration
+    ├── decisions.md        # ADR-style log of every non-obvious choice + rationale
+    └── open-questions.md   # deferred questions / decisions auto-mode rolled with — user reviews after
 ```
+
+`open-questions.md` is the running log of things the agent didn't pause to ask about (auto mode) or things that surfaced during work the user wants to revisit. Surfaced at end of run ("3 deferred questions in open-questions.md"). When continuing related work in a follow-up session, Phase 1 reads it first.
 
 **Slug:** prefer a ticket key when present in the user's request or current branch (e.g. `MSP-7032-add-orchestrion`); otherwise a 3-5 word kebab-case summary (`add-stripe-webhook-handler`). Always prefix with today's date so multiple workspaces sort chronologically.
 

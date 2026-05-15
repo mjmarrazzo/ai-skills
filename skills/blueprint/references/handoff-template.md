@@ -53,4 +53,8 @@ If any. Mark them clearly so the spec can flag them.
 - Related docs: <links>
 - Adjacent work / prior art: <PRs, commits, files>
 - People to ask: <names, roles> (only if the user surfaced them)
+
+## Continuation log (from prior `open-questions.md`)
+
+If this workspace continues work from a prior session, summarize what the prior `open-questions.md` flagged. Otherwise omit the section.
 ```
