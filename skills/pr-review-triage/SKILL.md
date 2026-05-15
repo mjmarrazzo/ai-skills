@@ -11,13 +11,9 @@ Turn the unresolved review queue on a PR into a single approvable table, then ap
 
 ## When to trigger
 
-Auto-trigger on the phrases in the frontmatter, after finish-branch opens a PR and the user mentions review feedback, or when a fresh PR has accumulated bot comments and the user comes back to deal with them. Explicit opt-outs:
-- "I'll handle the comments myself"
-- "just ignore the bots"
-- "no triage"
-- The user names one specific comment to act on ("just fix the typo on line 42") — handle that one directly, don't run the full triage flow.
+Trigger phrases and opt-outs are in the frontmatter. One additional case: user names a single specific comment ("just fix the typo on line 42") — handle that one directly; skip the full flow.
 
-**Scope:** triage and act on unresolved review threads on one PR. Not in scope: merging, re-requesting review, dismissing review submissions, generating new code beyond what comments request.
+**Scope:** triage unresolved review threads on one PR. Not in scope: merging, re-requesting review, dismissing review submissions, generating new code beyond what comments request.
 
 ## In-session tracking
 
@@ -81,11 +77,7 @@ Stop.
 
 ### 4. Classify by author
 
-Tag each comment with author type:
-- `bot` — login ends in `[bot]`, or matches known bots (`copilot-pull-request-reviewer`, `coderabbitai`, `greptile-app`, `sourcery-ai`, `codex-bot`), or GraphQL `author.__typename == "Bot"`.
-- `human` — everything else.
-
-Bot comments are graded by the same rubric as human comments. The tag affects resolve policy only (see Comment-back), not grading.
+Tag each comment `bot` or `human`. Bot signals and full detection rules: see `references/triage-policy.md § Bot detection`. The tag affects resolve policy only — grading is identical for both.
 
 ### 5. Separate stale comments
 
@@ -110,24 +102,21 @@ Lower default confidence one notch on every verdict in ad-hoc mode.
 
 ## Grading rubric
 
-For each comment, grade against (1) the diff hunk it points to, (2) the workspace files, (3) repo conventions (lint config, CONTRIBUTING.md, style guides). Pick one verdict:
+For each comment, grade against: (1) the diff hunk, (2) workspace files, (3) repo conventions. Full rubric, edge cases, confidence rules, and resolve policy: `references/triage-policy.md`.
+
+Summary of verdicts:
 
 | Verdict | When |
 |---|---|
-| **fix** | Comment names a real, mechanical issue in the diff: bug, typo, missing null check, dead code, security issue, perf regression, broken assertion, incorrect docstring. Patch ≤ ~30 lines, single-file or tightly coupled. |
-| **won't-fix: rejected by decisions** | Comment suggests an approach `decisions.md` explicitly rejected. Cite the decision title. |
-| **won't-fix: false positive** | Comment misreads the code. Name what it got wrong concretely (variable, function, control flow). |
-| **won't-fix: style-only** | Pure style preference and the repo has no enforced rule for it. Trivial single-symbol renames can still be `fix`; broad renames are won't-fix. |
-| **won't-fix: out of scope** | Comment requests work beyond the PR's stated scope. |
-| **answer** | Comment is a question, not a request. Draft a reply; no code change. |
-| **escalate** | Substantive change required: >30 lines, multi-file design, contradicts spec, touches a load-bearing area. Don't auto-fix — recommend re-entering blueprint. |
+| **fix** | Real, mechanical issue in the diff. Patch ≤ ~30 lines. |
+| **won't-fix: rejected by decisions** | Approach already rejected in `decisions.md`. Cite the title. |
+| **won't-fix: false positive** | Comment misreads the code. Name what it got wrong. |
+| **won't-fix: style-only** | Pure style preference; no enforced rule. |
+| **won't-fix: out of scope** | Requests work beyond the PR's scope. |
+| **answer** | Question, not a request. Draft reply; no code change. |
+| **escalate** | >30 lines, multi-file design, contradicts spec. Recommend blueprint. |
 
-Tag each verdict with confidence: `high` (clear signal), `medium` (judgment call), `low` (could go either way — flag for explicit user review even on batch approve).
-
-Edges:
-- Comment is both style-only and false-positive → grade as false positive (more informative rationale).
-- Comment requests something the user opted into during blueprint discovery → won't-fix, citing the `handoff.md` / `decisions.md` entry.
-- CodeRabbit-style "summary" top-level comments (not actionable) → `answer` with no reply needed; mark "no action".
+Tag each verdict `high` / `medium` / `low` confidence. `low`-confidence verdicts get flagged for explicit user review even on batch approve.
 
 ## Fix proposal format
 
@@ -203,36 +192,23 @@ If a fix can't apply cleanly (the surrounding context the comment referenced has
 
 ### 2. Run verify-before-done if installed
 
-Sibling-installed check: `~/.claude/skills/verify-before-done/SKILL.md` OR `~/.claude/plugins/cache/**/skills/verify-before-done/SKILL.md`.
-
-If installed: hand off with `caller=pr-review-triage`. Wait for the result.
-
+Sibling-installed check (per composition-skills decisions.md). If installed: hand off with `caller=pr-review-triage`.
 - `pass` → continue.
-- `fail` → hand off to `debug-loop` with `caller=pr-review-triage` and the failure bundle (file, command, output, comment that prompted the fix). debug-loop's anti-cycle guard handles the rest.
+- `fail` → hand off to `debug-loop` with `caller=pr-review-triage` + failure bundle (file, command, output, triggering comment).
 
-If not installed: print `if verify-before-done were installed I'd verify here` and continue. Note in the post-resolve summary that verify wasn't run.
+If not installed: continue, note in summary.
 
 ### 3. Commit
 
-**MSP detection (triangulated):**
-1. `git remote get-url origin` contains `nicusa` or `tylertech` (case-insensitive), or
-2. Current branch name matches `^MSP-\d+/`, or
-3. `git config user.email` ends in `@tylertech.com`.
+**MSP detection:** triangulated per composition-skills decisions.md. Any match = MSP; extract ticket key from branch.
 
-Any single match = MSP repo. Extract ticket key from branch.
+**Commit policy:** single commit by default — clean review history. Per-fix commits offered at approval time.
 
-**Commit policy:** single commit by default — that's what humans do and review history stays clean. Per-fix commits offered at approval time if the user prefers finer granularity.
-
-Default commit message:
+Default message:
 - MSP: `MSP-XXXX: address PR review feedback`
 - Non-MSP: `Address PR review feedback`
 
-Body lists one line per applied fix:
-
-```
-- <file>:<line>: <one-line summary>
-- <file>:<line>: <one-line summary>
-```
+Body lists one line per applied fix: `- <file>:<line>: <summary>`.
 
 ### 4. Push
 
@@ -242,46 +218,17 @@ If the push is rejected (someone pushed to the remote branch since): surface, do
 
 ## Comment-back and resolve threads
 
-For each applied fix (after push completes — need the SHA on remote):
+After push completes (SHA must be on remote before replying):
 
 **Get fix SHA:** `git rev-parse --short HEAD` (or per-fix SHA if commits were split).
 
-**Reply on inline thread:**
+**Reply on inline thread:** REST `POST /pulls/$NUM/comments/$COMMENT_ID/replies`, body `"Fixed in $SHORT_SHA. <description>."`.
 
-```bash
-gh api "repos/$OWNER/$REPO/pulls/$NUM/comments/$COMMENT_ID/replies" \
-  -f body="Fixed in $SHORT_SHA. <one-line description>."
-```
+**Reply on conversation comment:** REST `POST /issues/$NUM/comments`, body `"Re: @$ORIG_AUTHOR — fixed in $SHORT_SHA. <description>."` (no thread structure; can't be resolved).
 
-**Reply on conversation (issue-style) comment:** there's no thread reply for these; post a new issue comment referencing the original:
+**Resolve thread:** GraphQL `resolveReviewThread(input:{threadId:$id})`. Full invocations in `references/graphql-queries.md`.
 
-```bash
-gh api "repos/$OWNER/$REPO/issues/$NUM/comments" \
-  -f body="Re: @$ORIG_AUTHOR — fixed in $SHORT_SHA. <description>."
-```
-
-**Resolve inline thread (GraphQL):**
-
-```bash
-gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' \
-  -F id="$THREAD_ID"
-```
-
-Full mutation + queries are in `references/graphql-queries.md`.
-
-**Resolve policy:**
-
-| Verdict | Bot author | Human author |
-|---|---|---|
-| fix | Reply + resolve | Reply, leave open |
-| won't-fix: false positive | Reply + resolve | Reply, leave open |
-| won't-fix: style-only | Reply + resolve | Reply, leave open |
-| won't-fix: rejected by decisions | Reply, leave open | Reply, leave open |
-| won't-fix: out of scope | Reply, leave open | Reply, leave open |
-| answer | Reply, leave open | Reply, leave open |
-| escalate | "Flagged for design review — handing back to spec." Leave open. | Same. |
-
-**Never resolve human-authored threads.** Reviewers expect to resolve their own; we comment, they close.
+**Resolve policy:** full table in `references/triage-policy.md`. Key rule: **never resolve human-authored threads** — reply and leave open. Bot `fix` and bot `won't-fix: false positive` / `won't-fix: style-only` threads are resolved; `rejected by decisions` and `out of scope` are left open regardless of author.
 
 ## Post-resolve summary
 
@@ -311,15 +258,12 @@ If verify wasn't run, swap that last line for `Verify: not run (verify-before-do
 
 ## Composition
 
-- **Called by:** the user, directly or via the frontmatter triggers. Optionally suggested as a one-line tail message by `finish-branch` after PR creation ("Bots will leave review comments shortly — run `pr-review-triage` once they've settled"). This skill does not require finish-branch to advertise it; the contract is one-directional.
-- **Calls:**
-  - `verify-before-done` (after fixes, before commit) with `caller=pr-review-triage`.
-  - `debug-loop` (on verify failure) with `caller=pr-review-triage` and the failure bundle.
-  - `blueprint` is **never auto-invoked** — escalations are surfaced as recommendations only. The user decides.
-- **Reads:** `handoff.md`, `spec.md`, `plan.md`, `decisions.md` from the active workspace (all optional); the PR diff via `gh`; comment bodies + thread state via REST + GraphQL.
-- **Writes:** code via Edit (per approved fix); one (or N) git commit; GitHub thread replies + resolves via `gh api`.
-- **Caller flag:** when invoking siblings, always pass `caller=pr-review-triage` so they suppress reverse hand-offs.
-- **Sibling absent:** verify-before-done missing → continue without verify, note in summary. debug-loop missing → on verify failure, surface and stop before commit. blueprint missing → escalations still surfaced as text recommendations.
+- **Called by:** the user directly. `finish-branch` may suggest it as a one-line tail message after PR creation (one-directional; no coupling).
+- **Calls:** `verify-before-done` (after fixes) with `caller=pr-review-triage`; `debug-loop` (on verify failure) with `caller=pr-review-triage` + failure bundle. `blueprint` is **never auto-invoked** — escalations are text recommendations only.
+- **Reads:** `handoff.md`, `spec.md`, `plan.md`, `decisions.md` (all optional); PR diff + thread state via `gh`.
+- **Writes:** code edits (per approved fix); git commit(s); GitHub replies + thread resolves via `gh api`.
+- **Caller flag:** pass `caller=pr-review-triage` to all sibling invocations (cycle-prevention convention per composition-skills decisions.md).
+- **Sibling absent:** verify-before-done → commit without verify, note in summary. debug-loop → surface failure and stop. blueprint → escalations still emitted as text.
 
 ## Anti-patterns
 
