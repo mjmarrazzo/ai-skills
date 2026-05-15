@@ -161,6 +161,29 @@ The entry follows the same ADR format as blueprint's `decisions.md`:
 
 If the failure was obvious (typo, missing import, obvious off-by-one), skip the log entry. The decisions log is for knowledge that would help a future reader understand why the code looks the way it does, not a running tally of every bug closed.
 
+**Propose a knowledge-capture entry** when the decision-log entry was written AND any of:
+- The fix was in a different module than the symptom.
+- More than one hypothesis was needed.
+- A previously trusted assumption turned out to be wrong.
+
+Invoke `knowledge-capture` (if installed) with payload:
+
+```yaml
+caller: debug-loop
+kind: gotcha
+proposed:
+  title: <slugified version of the decision-log "Root cause" title, ≤80 chars>
+  context: <one sentence — the symptom + where it appeared>
+  lesson: <one or two sentences — the takeaway from "Why non-obvious">
+  tags: [<extracted from modules/files involved, max 4>]
+source:
+  files: <list from `git diff --name-only HEAD~..HEAD` over the fix commit>
+  commit: <`git rev-parse HEAD`>
+  session_marker: "debug-loop-<reproduction-symptom-slug>"
+```
+
+knowledge-capture batches these in interactive mode (one prompt at session end) or queues them to `.claude-plans/<active>/open-questions.md` in auto mode. Do NOT prompt the user in this skill — knowledge-capture owns the user interaction. If `knowledge-capture` is not installed, print "if `knowledge-capture` were installed I'd propose saving this gotcha for next time" and continue.
+
 ## Termination conditions
 
 **Success:** root cause confirmed, fix applied, Phase 6 verify passed, no `DEBUG-LOOP-TEMP` sentinels remain. The loop ends.
@@ -261,9 +284,9 @@ These are the default LLM debugging behaviors. Each one makes the failure harder
 ## Composition
 
 - **Called by:** execute-plan (on task failure), ui-validation (on browser check failure), verify-before-done (on gate failure). Each caller is responsible for passing the failure bundle (error output + what was being attempted + what changed) and a `caller=<skill-name>` parameter.
-- **Calls:** ui-validation (at end of Phase 6 if frontend code was modified and ui-validation is installed, passing `caller=debug-loop`); vscode-preview (to display the decisions.md entry if the sibling is installed — optional).
+- **Calls:** ui-validation (at end of Phase 6 if frontend code was modified and ui-validation is installed, passing `caller=debug-loop`); `knowledge-capture` (Phase 7, when the conditions for proposing an entry are met, passing `caller=debug-loop`); vscode-preview (to display the decisions.md entry if the sibling is installed — optional).
 - **Reads:** `.claude-plans/<active-dir>/handoff.md` and `decisions.md` for repo context; `plan.md` for task scope; changed files via git diff.
-- **Writes:** `DEBUG-LOOP-TEMP` sentinels during hypothesis testing (removed before verify completes); decision log entry to `.claude-plans/<active-dir>/decisions.md` when applicable; exhaustion report to chat when terminating without resolution.
+- **Writes:** `DEBUG-LOOP-TEMP` sentinels during hypothesis testing (removed before verify completes); decision log entry to `.claude-plans/<active-dir>/decisions.md` when applicable; exhaustion report to chat when terminating without resolution. Proposes (but does not write directly) `knowledge-capture` entries — that skill owns the user interaction.
 
 If a sibling is not installed: print a one-line notice ("if `ui-validation` were installed I'd run a browser check here") and continue. Sibling-installed check: `~/.claude/skills/<name>/SKILL.md` OR `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`.
 
