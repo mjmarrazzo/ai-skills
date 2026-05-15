@@ -9,12 +9,6 @@ Turn a green branch into a PR — title generated from spec/handoff, body drawn 
 
 **Announce at start:** "Using finish-branch to open the PR — verifying clean state and drafting the body from your spec/decisions."
 
-## When to trigger
-
-Auto-trigger after a passing verify-before-done in the same session, or on any of the phrases in the frontmatter. Explicit opt-outs: "I'll open the PR myself", "just push the branch", "no PR yet".
-
-**Scope:** open a PR (or update the one already open). Not in scope: merging, interactive rebase, branch cleanup after merge, multi-mode branch routing.
-
 ## In-session tracking
 
 Use `TodoWrite` to track the 5 pre-flight checks as they run. Update each item to done/blocked as the gate resolves.
@@ -76,14 +70,9 @@ Note any deferred captures from `open-questions.md` and surface count: "3 deferr
 
 ## Branch convention enforcement
 
-### MSP detection (triangulated)
+### MSP detection
 
-The repo is an **MSP project** if ANY of:
-1. `git remote get-url origin` contains `nicusa` or `tylertech` (case-insensitive)
-2. Current branch name matches `^MSP-\d+/`
-3. `git config user.email` ends in `@tylertech.com`
-
-Any single match is sufficient.
+Triangulated check — see composition-skills `decisions.md` § "MSP detection: triangulate, don't substring".
 
 ### Hard block: PR from main or master
 
@@ -168,40 +157,7 @@ JIRA: https://nicusa.atlassian.net/browse/<MSP-XXXX>
 
 Top-3 selection: use the three most recent entries from decisions.md.
 
-### Rendered example
-
-```markdown
-## Summary
-
-- Add Datadog Orchestrion for build-time APM instrumentation, replacing manual dd-trace wiring
-- Covers all Lambda handlers in the payments and notifications services
-- No runtime dependency changes; instrumentation is injected at build time
-
-## Architecture context
-
-Orchestrion operates as a Go build plugin; it rewrites imports at `go build` time rather than at
-init(), which removes the need for any `import _ "gopkg.in/DataDog/dd-trace-go.v1/..."` lines.
-
-## Test plan
-
-- [ ] `make build` succeeds with `-toolexec orchestrion` flag
-- [ ] `go test ./...` green locally
-- [ ] APM traces visible in Datadog dev environment for a sample invocation
-- [ ] Lambda cold-start duration within 5% of baseline (see load test in plan step 8)
-
-## Non-goals / out of scope
-
-- Replacing the existing RUM configuration — that is a separate ticket
-- Adding custom spans; this ticket only covers automatic instrumentation
-
-## Key decisions
-
-- **Orchestrion over manual tracing** — eliminates 300+ lines of boilerplate across 12 handlers
-- **Build-time injection** — safer than init() hooks; no runtime panic if dd-agent unreachable
-- **Keep dd-trace-go as a direct dep** — Orchestrion still needs the type definitions at compile time
-
-JIRA: https://nicusa.atlassian.net/browse/MSP-7032
-```
+Full rendered example: see `references/pr-body-examples.md`.
 
 Note: `Fixes`/`Closes` GitHub keywords close GitHub issues, not JIRA tickets. Use a plain `JIRA:` line. JIRA Smart Commits (triggered by commit messages prefixed `MSP-XXXX:`) handle the JIRA side independently.
 
