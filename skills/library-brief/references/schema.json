@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "description": "Pinned format for ~/.claude/data/library-briefs/. Bumps require a written migration path. This file is the literal initial content written to ~/.claude/data/library-briefs/.schema.json on first write by the library-brief skill.",
+  "storage": {
+    "root_default": "~/.claude/data/library-briefs/",
+    "root_env_override": "CLAUDE_LIBRARY_BRIEFS_DIR",
+    "brief_path_pattern": "<root>/<ecosystem>/<library>.md",
+    "archive_rename_pattern": "<library>.archived-<YYYY-MM-DD>.md",
+    "clobber_archival_pattern": "<library>.v<N>.md",
+    "ref_extraction_dir": "<root>/<ecosystem>/<library>/",
+    "index_file": "README.md",
+    "schema_file": ".schema.json",
+    "audit_log_file": ".audit.log"
+  },
+  "ecosystem_enum": [
+    "js",
+    "ts",
+    "python",
+    "go",
+    "java",
+    "kotlin",
+    "rust",
+    "dotnet",
+    "ruby",
+    "php",
+    "swift",
+    "aws",
+    "gcp",
+    "azure",
+    "gradle",
+    "maven",
+    "npm",
+    "cli",
+    "db",
+    "infra",
+    "general"
+  ],
+  "intents": ["research_new", "refresh_existing", "read_only", "archive"],
+  "intent_options": {
+    "research_new": {
+      "supports_clobber": true,
+      "clobber_requires_reason": true,
+      "depths": ["shallow", "standard", "deep"],
+      "default_depth": "standard"
+    },
+    "refresh_existing": {
+      "supports_fresh_bypass": true,
+      "default_target_version": "latest"
+    },
+    "read_only": {
+      "writes": false,
+      "side_effects": false,
+      "output_format": "markdown"
+    },
+    "archive": {
+      "requires_reason": true
+    }
+  },
+  "stale_thresholds_days": {
+    "js": 180,
+    "ts": 180,
+    "python": 365,
+    "go": 365,
+    "java": 365,
+    "kotlin": 365,
+    "rust": 270,
+    "dotnet": 365,
+    "ruby": 365,
+    "php": 365,
+    "swift": 270,
+    "aws": 270,
+    "gcp": 270,
+    "azure": 270,
+    "gradle": 365,
+    "maven": 365,
+    "npm": 270,
+    "cli": 365,
+    "db": 365,
+    "infra": 365,
+    "general": 365
+  },
+  "stale_rules": {
+    "evaluation": "at READ time against updated + stale_threshold_days",
+    "per_brief_override_field": "stale_threshold_days",
+    "per_brief_override_validation": "must be a positive integer; <=0 rejected at write time",
+    "advisory_only": true,
+    "never_auto_refresh": true
+  },
+  "body_section_order": [
+    "TL;DR",
+    "When to reach for it / When NOT to",
+    "Mental model",
+    "Common patterns",
+    "Gotchas",
+    "Version history (newest first)",
+    "References"
+  ],
+  "body_line_cap": 200,
+  "body_line_cap_deep_mode": 350,
+  "tag_count_cap": 6,
+  "see_also_format": "<ecosystem>/<library>",
+  "see_also_auto_traverse": false,
+  "audit_log_rotation_bytes": 10485760,
+  "audit_log_backup_count": 1,
+  "frontmatter_required_fields": [
+    "name",
+    "display_name",
+    "ecosystem",
+    "homepage",
+    "versions_explored",
+    "version_last_seen",
+    "created",
+    "updated",
+    "schema_version"
+  ],
+  "frontmatter_optional_fields": [
+    "repo",
+    "aliases",
+    "tags",
+    "stale_threshold_days",
+    "see_also"
+  ],
+  "version_last_seen_rule": "computed as semver_max(versions_explored) at write time; NOT the last-appended element",
+  "source_priority_drop_order": [
+    "ms-learn",
+    "aws-docs",
+    "confluence",
+    "general-mcp",
+    "changelog",
+    "repo-readme"
+  ],
+  "source_never_dropped": ["knowledge-capture", "homepage"],
+  "source_budget_tokens": {
+    "per_source": 600,
+    "total": 2400
+  },
+  "subagent_timeout_seconds": 90,
+  "cycle_guard": {
+    "rejected_caller": "library-brief",
+    "action": "log error to stderr, return without acting"
+  },
+  "interactive_question_wave": {
+    "questions": 2,
+    "first": "confirm library + ecosystem + version",
+    "second": "sources + depth (standard | shallow | deep | custom)"
+  },
+  "auto_mode_deferral_file": ".claude-plans/<active>/open-questions.md",
+  "auto_mode_deferral_file_ad_hoc": "./.claude-results/<ts>/library-brief/open-questions.md",
+  "directory_lifecycle": {
+    "created_on": "first WRITE in $HOME",
+    "first_read_on_missing_dir": "return status: not_found, no side effects",
+    "first_write_creates": [
+      "<root>/",
+      "<root>/<ecosystem>/",
+      "<root>/.schema.json",
+      "<root>/README.md"
+    ],
+    "audit_log_created_on": "first append"
+  },
+  "atomic_writes": {
+    "readme_regen": "tmpfile + rename",
+    "brief_write": "tmpfile + rename"
+  },
+  "write_policy": {
+    "silent_writes_allowed": false,
+    "interactive_mode_flow": "2-question AskUserQuestion wave before research; deterministic assembly from sources after confirmation",
+    "auto_mode_flow": "infer inputs, log each non-trivial inference to open-questions.md, write deterministically; never hallucinate when sources fail",
+    "hallucination_rule": "if homepage + README + changelog all fail, REFUSE the brief; do not synthesize from training data"
+  },
+  "cross_machine_sync": {
+    "supported": false,
+    "v2_path": "symlink ~/.claude/data/library-briefs to a dotfiles dir, or set CLAUDE_LIBRARY_BRIEFS_DIR"
+  }
+}
