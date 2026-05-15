@@ -1,0 +1,8 @@
+# local plan workspaces produced by the blueprint skill
+.claude-plans/
+
+# editor & OS noise
+.DS_Store
+.vscode/
+.idea/
+*.swp
