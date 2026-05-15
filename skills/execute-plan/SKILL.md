@@ -13,27 +13,11 @@ Not in scope: writing the plan (that's `blueprint`), the final pre-commit gate (
 
 ## When to trigger
 
-```dot
-digraph trigger {
-    "Request received" [shape=box];
-    "Plan handoff or 'execute'?" [shape=diamond];
-    "Surgical ask?" [shape=diamond];
-    "Run execute-plan" [shape=doublecircle];
-    "Proceed directly" [shape=doublecircle];
-
-    "Request received" -> "Plan handoff or 'execute'?";
-    "Plan handoff or 'execute'?" -> "Proceed directly" [label="no"];
-    "Plan handoff or 'execute'?" -> "Surgical ask?" [label="yes"];
-    "Surgical ask?" -> "Proceed directly" [label="'just step N' / 'I'll do it myself'"];
-    "Surgical ask?" -> "Run execute-plan" [label="no — full execution"];
-}
-```
-
-Pushy on plan handoff, quiet on surgical asks. The default bias is end-to-end execution — if the user wanted to babysit each step they'd have asked for that.
+Fire on plan handoff or "execute" phrases. Pass through on surgical asks ("just step N", "I'll do it myself"). Pushy on plan handoff; quiet on anything else.
 
 ## Pre-flight
 
-Every invocation runs these in order before touching code. The first failure stops the skill and surfaces to the user.
+Run these in order before touching code. First failure stops and surfaces to user.
 
 ### 1. Worktree-already-inside check (run FIRST)
 
@@ -45,47 +29,33 @@ test -f .git && grep -q "gitdir:.*\.git/worktrees/" .git
 [ "$(git rev-parse --git-common-dir)" != "$(git rev-parse --git-dir)" ]
 ```
 
-If either is true, set `inside_worktree=true` and skip the isolated-work suggestion (see § Isolated-work suggestion) regardless of risky-plan signals later. Without this guard, the wrapped invocation would re-suggest isolated-work and loop.
+If either is true, set `inside_worktree=true` and skip the isolated-work suggestion regardless of risky-plan signals. Without this guard: isolated-work wraps execute-plan, the wrapped invocation re-suggests isolated-work → loop.
 
-### 2. Locate the plan
-
-Resolution order — stop at the first match:
+### 2. Locate the plan — stop at first match:
 
 1. **Caller-supplied `PLAN_PATH=<absolute-path>`** in the invocation message. `isolated-work` and any other wrapping skill passes this in. Discovery skipped.
 2. **Explicit user path** typed in chat.
-3. **Active-workspace algorithm** (canonical, shared with siblings):
-   - If `WORKSPACE_PATH=<absolute-path>` is in the invocation message, use `<that>/plan.md`.
-   - Otherwise enumerate `.claude-plans/*/` in repo root (or cwd if not a git repo), filter to directories containing `plan.md` or `spec.md`.
-   - One match → use it. Multiple → prefer the slug containing the current branch's ticket key (branch `MSP-7032/foo` → slug with `MSP-7032`). Still multiple → most recent `plan.md` mtime.
-   - Zero matches → refuse with "no plan.md found; run blueprint first or pass `PLAN_PATH=`".
+3. **Active-workspace algorithm** — canonical shared convention; see composition-skills decisions.md. Zero matches → refuse with "no plan.md found; run blueprint first or pass `PLAN_PATH=`".
 
 Print the resolved path before doing anything else so the user can catch a wrong pick.
 
 ### 3. Load companion artifacts
 
-From the same workspace directory:
-
-- `spec.md` — **required**. Refuse without it: a plan without a spec means we can't review for spec compliance.
-- `handoff.md` — **required**. Discovery dossier.
-- `decisions.md` — optional. Loaded only for the end-of-plan handoff message, not into per-task prompts.
-- `progress.json` — optional. If present, this is a resumed run (see § Progress & resume).
+From the same workspace directory: `spec.md` (**required** — refuse without it), `handoff.md` (**required**), `decisions.md` (optional; only for end-of-plan handoff, not per-task prompts), `progress.json` (optional; if present, this is a resumed run — see § Progress & resume).
 
 ### 4. Freshness check
 
-A plan written against a codebase that has since moved is a liability. Source of truth for "when was the plan first executed" is `progress.json.plan_sha` (written on first run; blueprint does not stamp a Plan-SHA into `plan.md`). On a fresh run with no `progress.json`, treat HEAD as the plan SHA and write it on first save.
-
-For each file under the plan's `## Files` section, check whether it moved since `plan_sha`:
+`progress.json.plan_sha` is the reference point (written on first run; blueprint does not stamp a SHA into `plan.md`). On a fresh run, treat HEAD as the plan SHA. For each file under `## Files`, run:
 
 ```bash
 git log <plan_sha>..HEAD --format=%H -- <path>
+# NOT `git log -1` — that returns last-touch regardless of time and silently passes drifted plans
 ```
-
-Note: this is `git log <plan_sha>..HEAD`, not `git log -1`. The latter returns the last-touch regardless of time and silently passes drifted plans.
 
 Outcomes:
 
 - **Clean** (HEAD == plan SHA, no files moved): proceed.
-- **Minor drift** (HEAD moved but none of the plan's target files changed): one-line warning, proceed. (`Plan was written at abc1234, HEAD is now def5678. None of the plan's target files were modified — proceeding.`)
+- **Minor drift** (HEAD moved but none of the plan's target files changed): one-line warning, proceed.
 - **Material drift** (any plan-target file changed): stop. List the changed files. Ask the user to accept-and-continue, refresh the plan via blueprint, or cancel. Don't auto-proceed — the plan's code blocks may now apply at wrong line numbers.
 
 ### 5. Mode selection
@@ -105,13 +75,7 @@ If on `main` / `master` / `develop`, refuse and ask the user to switch. If the p
 
 ### 7. MSP repo detection
 
-Triangulated — any one is sufficient:
-
-1. Remote URL contains `nicusa` or `tylertech` (case-insensitive).
-2. Current branch matches `^MSP-\d+/`.
-3. Git config `user.email` ends `@tylertech.com`.
-
-When MSP-detected, the commit-prefix line gets injected into every drafter prompt (Mode 1) and every inline commit step (Mode 2): _All commit messages MUST start with `MSP-<ticket>: ` where `<ticket>` is extracted from the workspace slug._
+Triangulated check — see composition-skills decisions.md for the canonical three-signal rule. When MSP-detected, inject into every drafter prompt (Mode 1) and every inline commit step (Mode 2): _All commit messages MUST start with `MSP-<ticket>: ` where `<ticket>` is extracted from the workspace slug._
 
 ## Mode 1: Subagent-per-task
 
@@ -286,9 +250,7 @@ printf '%s\n' "$json" > "$tmp" && mv "$tmp" "$workspace/progress.json"
 
 A concurrent-session crash mid-write must not produce a half-baked `progress.json`.
 
-`plan_sha` is populated at first run from `git rev-parse HEAD`. Blueprint does **not** stamp a Plan-SHA into `plan.md`.
-
-This does not violate the "no plan.md mutation" constraint. `plan.md` is read-only; `progress.json` is a separate gitignored file.
+`plan_sha` is populated at first run from `git rev-parse HEAD`. Blueprint does **not** stamp a Plan-SHA into `plan.md`; `progress.json` is the only mutable file here.
 
 ### Resume
 
@@ -302,26 +264,13 @@ Default to resume. Git history is the ground truth — `progress.json` is the br
 
 ### Ad-hoc fallback
 
-`execute-plan` almost always runs inside a blueprint workspace, but if for some reason it needs to write artifacts without one (e.g. caller passed only `PLAN_PATH=` to a plan outside `.claude-plans/`), the fallback root is:
-
-```
-./.claude-results/<YYYY-MM-DD-HHMMSS>/execute-plan/
-```
-
-Same shape as the other skills in the composition set. Add `.claude-results/` to `.gitignore` if not already present.
+When no blueprint workspace is active, use the canonical fallback root: `./.claude-results/<YYYY-MM-DD-HHMMSS>/execute-plan/`. See composition-skills decisions.md for the ad-hoc artifact root convention.
 
 ## Isolated-work suggestion
 
 Once per invocation, before mode selection, on risky plans only — **and only if the pre-flight `inside_worktree` check returned false**. If we're already in a worktree, skip this section entirely.
 
-Risky signals (any one triggers the suggestion):
-
-- **File count**: plan's `Files` section lists > 15 distinct files.
-- **Root config touched**: `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `tsconfig.json`, `next.config.*`, `vite.config.*`, `tailwind.config.*` at repo root.
-- **Migration present**: any path matching `migrations/`, `*.sql`, `schema.prisma`, `alembic/versions/`.
-- **Auth/security paths**: paths under `auth/`, `security/`, `middleware/`, anything matching `*permission*` or `*authz*`.
-- **Architectural verbs in plan goal**: `rename`, `extract`, `consolidate`, `rewrite`, `migrate`, `deprecate` in the plan header's `**Goal:**` line.
-- **Deletion-heavy**: more `Delete:` than `Create:` entries in the file map.
+Risky signals (any one triggers the suggestion) — representative examples: > 15 files, root config touched (`package.json`, `go.mod`, etc.), migration files present. Full enumeration: `references/isolated-work-signals.md`.
 
 Prompt:
 
@@ -389,7 +338,7 @@ If `verify-before-done` isn't installed, print:
   - `knowledge-capture` at end-of-plan for any task that finished `BLOCKED` or over-budget.
   - `verify-before-done` once at end of plan.
   - `isolated-work` optionally, before execution, when risky signals fire and the worktree-guard returned false.
-- **Sibling-installed check:** `~/.claude/skills/<name>/SKILL.md` OR `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`. Missing → one-line graceful-degradation note, continue.
+- **Sibling-installed check:** canonical two-path probe (see composition-skills decisions.md). Missing → one-line graceful-degradation note, continue.
 - **Reads:** `.claude-plans/<active>/{plan,spec,handoff,decisions}.md` (all read-only), `.claude-plans/<active>/progress.json` (resume; rewritten as execution advances), git history (`git log <plan_sha>..HEAD`, `git show`, etc.).
 - **Writes:** `.claude-plans/<active>/progress.json` (atomic via tmpfile + rename); commits to the current branch (via subagents in Mode 1, directly in Mode 2). Screenshots under `.claude-plans/<active>/screenshots/task-<N>/` are written **only via `ui-validation`** — this skill never writes them directly.
 
