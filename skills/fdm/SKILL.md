@@ -30,19 +30,11 @@ If you're not sure whether to apply it, apply it. Splitting a file into three wh
 
 ### Phase 1 — Detect the stack
 
-Before applying the shape, identify what you're working in. The doctrine is language-agnostic; the syntax is not.
+The doctrine is language-agnostic; the syntax is not. Inspect:
 
-Inspect:
-
-- **Repo manifests**: `package.json` (Node/TS/React/Vue/Svelte), `go.mod` (Go), `pyproject.toml` / `requirements.txt` (Python), `pom.xml` / `build.gradle{,.kts}` (Java/Kotlin), `Cargo.toml` (Rust).
-- **Framework signals**: `@nestjs/*`, `express`, `fastify`, `hono` (Node web frameworks); `fastapi` / `flask` / `django` (Python); `org.springframework.boot` (Spring); `react`, `vue`, `svelte` packages; route file layout (Next.js `app/`, Remix `routes/`, SvelteKit `+page.svelte`).
-- **Layer signals**: where does the file you're modifying live? `controllers/`, `routes/`, `handlers/`, `lambda/` → orchestration layer. `components/`, `views/`, `pages/` → UI layer. `services/`, `domain/`, `core/` → existing domain layer (good — extend it). `repository/`, `dao/`, `clients/`, `db/` → I/O edge.
+- **Stack** (manifests + framework signals): per-language manifest list and framework heuristics in `references/backend-stacks.md` (Go, Java/Spring, Node/TS, Python) and `references/frontend-stacks.md` (React, Vue, Svelte).
+- **Layer signals**: where does the file live? `controllers/`, `routes/`, `handlers/`, `lambda/` → orchestration. `components/`, `views/`, `pages/` → UI. `services/`, `domain/`, `core/` → domain (extend it). `repository/`, `dao/`, `clients/`, `db/` → I/O edge.
 - **Existing conventions**: if the codebase already has an FDM-like split (a `domain/` directory with no DB imports), follow it. Don't impose the canonical 3-file structure onto a codebase that has a working alternative shape.
-
-For per-language detail and code examples, see:
-
-- Backend → `references/backend-stacks.md`
-- Frontend → `references/frontend-stacks.md`
 
 If the repo's existing convention conflicts with the canonical FDM shape, note the conflict explicitly to the user (one sentence, e.g. "this codebase uses a Spring `@Service` pattern that mixes I/O and logic — I'll extract the pure pieces but the file layout will be hybrid") and proceed with the closest viable translation.
 
