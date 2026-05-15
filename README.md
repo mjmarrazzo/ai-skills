@@ -38,11 +38,12 @@ Skills here are intended to compose freely. A skill may reference a sibling skil
 
 ## Skills
 
-13 skills organized around a research → planning → executing → verifying → shipping spine. Every skill stands alone and degrades gracefully when its siblings aren't installed. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
+14 skills organized around a research → planning → executing → verifying → shipping spine. Every skill stands alone and degrades gracefully when its siblings aren't installed. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
 
 ### Research & knowledge
-- [`pre-task-research`](skills/pre-task-research/SKILL.md) — optional Phase 0 before blueprint. Parallel research subagents (Confluence, JIRA, recent PRs, AWS docs, MS Learn, local knowledge) with hard token budgets. Produces `research.md` that blueprint folds into `handoff.md`.
+- [`pre-task-research`](skills/pre-task-research/SKILL.md) — optional Phase 0 before blueprint. Parallel research subagents (library briefs, Confluence, JIRA, recent PRs, AWS docs, MS Learn, local knowledge) with hard token budgets. Produces `research.md` that blueprint folds into `handoff.md`.
 - [`knowledge-capture`](skills/knowledge-capture/SKILL.md) — per-repo gitignored `.claude-knowledge/` (gotchas, patterns, stack-notes) read by blueprint and pre-task-research on every run; written at checkpoints by debug-loop, execute-plan, finish-branch. Append-only with supersede; never silent writes.
+- [`library-brief`](skills/library-brief/SKILL.md) — central, durable per-library briefs at `~/.claude/data/library-briefs/<ecosystem>/<library>.md`. Researches a framework or library once and stores a terse mental model + gotchas + version history that survives across projects. Append-only deltas across versions; read by blueprint Phase 1 and pre-task-research as a never-dropped Priority-2 source.
 
 ### Planning
 - [`blueprint`](skills/blueprint/SKILL.md) — discovery questionnaire → parallel-reviewed spec → bite-sized implementation plan, all gitignored under `.claude-plans/`. Phase 1 reads knowledge-capture, offers pre-task-research, runs visual-digest on attached mockups. The entry point for substantive engineering work.
