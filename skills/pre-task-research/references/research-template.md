@@ -19,7 +19,7 @@ Total target: ≤250 lines. Per-section budgets below are upper bounds; sections
 ## Local knowledge (from .claude-knowledge/)
 <knowledge-capture's read-API digest, verbatim — up to 20 records, ≤20 lines>
 
-## Library briefs (from ~/.claude/data/library-briefs/)
+## Tech briefs (from ~/.claude/data/tech-briefs/)
 <one bullet per matched library — one-line digest summary + path to full brief — up to 5 briefs, NEVER dropped>
 
 ## Confluence
@@ -52,7 +52,7 @@ Total target: ≤250 lines. Per-section budgets below are upper bounds; sections
 |---|---|---|
 | Header (title, run-at, sources, mode, cache) | 6 | Fixed. |
 | Local knowledge | 20 | Owned by `knowledge-capture` read API. NEVER dropped. |
-| Library briefs | ~52 | 5 briefs × ~10 lines each. Sibling-skill call. NEVER dropped. |
+| Tech briefs | ~52 | 5 briefs × ~10 lines each. Sibling-skill call. NEVER dropped. |
 | Confluence | 17 | 15 records + section header + optional `_[truncated]_` line. |
 | JIRA | 17 | MSP-gated; omitted entirely when off. |
 | Recent PRs / commits | 17 | Heading varies by `gh` availability. |
@@ -131,7 +131,7 @@ Drops are applied lowest-priority-first. Local knowledge is NEVER dropped. The f
 # Research — Stripe webhook handler
 
 **Run at:** 2026-05-14T18:42:11Z
-**Sources queried:** local-knowledge, library-briefs, confluence, jira, merged-prs, aws-docs, ms-learn
+**Sources queried:** local-knowledge, tech-briefs, confluence, jira, merged-prs, aws-docs, ms-learn
 **Mode:** interactive
 **Cache:** miss
 
@@ -144,9 +144,9 @@ Drops are applied lowest-priority-first. Local knowledge is NEVER dropped. The f
 ### Patterns (1 of 4)
 - **[2026-02-10] Webhook handlers idempotent via event.id table** — see services/billing/webhooks.ts. (tags: idempotency, billing)
 
-## Library briefs (from ~/.claude/data/library-briefs/)
+## Tech briefs (from ~/.claude/data/tech-briefs/)
 
-### library-brief: stripe (js, v16.2.0, updated 2026-04-15)
+### tech-brief: stripe (js, v16.2.0, updated 2026-04-15)
 
 **TL;DR:** Stripe Node.js SDK for payment processing; v16 aligns with Stripe's new synchronous Payment Intents flow.
 
@@ -157,7 +157,7 @@ Drops are applied lowest-priority-first. Local knowledge is NEVER dropped. The f
 - `idempotencyKey` required on retried charge/payment_intent calls to avoid double-charges.
 - Test mode and live mode use different API keys; key type is encoded in the prefix (`sk_test_` vs `sk_live_`).
 
-**Full brief:** `~/.claude/data/library-briefs/js/stripe.md`
+**Full brief:** `~/.claude/data/tech-briefs/js/stripe.md`
 
 ## Confluence
 - **Stripe Integration Runbook** — https://nicusa.atlassian.net/wiki/spaces/ENG/pages/123 — covers retry semantics, IP allowlist, secret rotation

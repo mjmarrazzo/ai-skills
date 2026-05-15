@@ -26,7 +26,7 @@ Skip:
 | Input | Default | Notes |
 |---|---|---|
 | `topic` | the user request | Interactive mode re-asks if the request is broad. |
-| `sources` | all available | Members: `local-knowledge`, `library-briefs`, `confluence`, `jira`, `merged-prs` (or `commits` fallback), `aws-docs`, `ms-learn`. |
+| `sources` | all available | Members: `local-knowledge`, `tech-briefs`, `confluence`, `jira`, `merged-prs` (or `commits` fallback), `aws-docs`, `ms-learn`. |
 | `mode` | `interactive` | Per the HITL-default decision. `auto` opt-in via phrase or caller param. |
 | `fresh` | `false` | Bypass cache; force re-run. |
 | `budget` | `{per_source_lines: 15, total_lines: 250, time_seconds: 120}` | Tunable; defaults pinned. |
@@ -97,7 +97,7 @@ Same pattern for Microsoft 365 (`mcp__claude_ai_Microsoft_365__authenticate`).
 
 ```
 [ ] Local knowledge
-[ ] Library briefs
+[ ] Tech briefs
 [ ] Confluence
 [ ] JIRA
 [ ] Merged PRs (or Recent commits if gh absent)
@@ -117,11 +117,11 @@ Only `local_only=true` or interactive selection "Local only" skips the fan-out.
 
 If `knowledge-capture` is not installed: section header still rendered with `_skipped: knowledge-capture sibling not installed_`.
 
-### 5b. Library briefs SECOND (synchronous, sibling-skill call)
+### 5b. Tech briefs SECOND (synchronous, sibling-skill call)
 
-**This is a SIBLING-SKILL invocation, not an MCP tool.** Invoke the `library-brief` skill directly (not via subagent dispatch) with `intent=read_only` and `caller=pre-task-research` for each matched library. This step runs AFTER local-knowledge, BEFORE the external fan-out.
+**This is a SIBLING-SKILL invocation, not an MCP tool.** Invoke the `tech-brief` skill directly (not via subagent dispatch) with `intent=read_only` and `caller=pre-task-research` for each matched library. This step runs AFTER local-knowledge, BEFORE the external fan-out.
 
-**Library matching:** scan repo manifests (`package.json`, `pyproject.toml`, `go.mod`, `pom.xml`, `Cargo.toml`, `Gemfile`) AND the topic string for library names. Intersect with existing briefs under `~/.claude/data/library-briefs/` (or `$CLAUDE_LIBRARY_BRIEFS_DIR` if set). Cap: **top N=5 most-relevant briefs** (relevance = library mentioned in topic first, then manifest hits). If more than 5 match, pick by topic-mention priority then alphabetical.
+**Library matching:** scan repo manifests (`package.json`, `pyproject.toml`, `go.mod`, `pom.xml`, `Cargo.toml`, `Gemfile`) AND the topic string for library names. Intersect with existing briefs under `~/.claude/data/tech-briefs/` (or `$CLAUDE_TECH_BRIEFS_DIR` if set). Cap: **top N=5 most-relevant briefs** (relevance = library mentioned in topic first, then manifest hits). If more than 5 match, pick by topic-mention priority then alphabetical.
 
 **Per-library invocation:**
 
@@ -132,13 +132,13 @@ ecosystem: <detected-ecosystem>
 caller: pre-task-research
 ```
 
-Each returns a markdown digest (see `library-brief/references/api-contract.md` Intent 4) or `status: not_found` (silent skip).
+Each returns a markdown digest (see `tech-brief/references/api-contract.md` Intent 4) or `status: not_found` (silent skip).
 
-**If `library-brief` is not installed** (probe: `test -f ~/.claude/skills/library-brief/SKILL.md || ls ~/.claude/plugins/cache/**/skills/library-brief/SKILL.md 2>/dev/null`): render section header with `_skipped: library-brief sibling not installed_` and continue. Do NOT block.
+**If `tech-brief` is not installed** (probe: `test -f ~/.claude/skills/tech-brief/SKILL.md || ls ~/.claude/plugins/cache/**/skills/tech-brief/SKILL.md 2>/dev/null`): render section header with `_skipped: tech-brief sibling not installed_` and continue. Do NOT block.
 
-**NEVER dropped on budget overflow.** Library briefs share the same "never-drop" pinning as local knowledge. If both sections together exceed the 250-line total, emit them both and append the budget-warning footer — do NOT truncate either.
+**NEVER dropped on budget overflow.** Tech briefs share the same "never-drop" pinning as local knowledge. If both sections together exceed the 250-line total, emit them both and append the budget-warning footer — do NOT truncate either.
 
-Render the collected digests verbatim as section #2 of `research.md` (`## Library briefs (from ~/.claude/data/library-briefs/)`). Empty result (no matching briefs found): render `_none found_`.
+Render the collected digests verbatim as section #2 of `research.md` (`## Tech briefs (from ~/.claude/data/tech-briefs/)`). Empty result (no matching briefs found): render `_none found_`.
 
 ### 6. External sources IN PARALLEL
 
@@ -164,10 +164,10 @@ Concatenate in priority order using the template at `references/research-templat
 If total > 250 lines: drop entire sections from lowest to highest priority until under budget:
 
 ```
-ms-learn → aws-docs → merged-prs → jira → confluence → local-knowledge → library-briefs
+ms-learn → aws-docs → merged-prs → jira → confluence → local-knowledge → tech-briefs
 ```
 
-`local-knowledge` AND `library-briefs` are BOTH NEVER dropped. Each drop appends `_[dropped: <section> — total exceeded 250-line budget]_`. Never partial-drop; always whole-record.
+`local-knowledge` AND `tech-briefs` are BOTH NEVER dropped. Each drop appends `_[dropped: <section> — total exceeded 250-line budget]_`. Never partial-drop; always whole-record.
 
 See `references/budget-policy.md` for the full priority table and drop rules.
 
@@ -182,14 +182,14 @@ See `references/budget-policy.md` for the full priority table and drop rules.
 | Priority | Source | Drop on overflow |
 |---|---|---|
 | 1 | Local knowledge | NEVER |
-| 2 | Library briefs (sibling-skill: `library-brief` with `intent=read_only`) | NEVER |
+| 2 | Tech briefs (sibling-skill: `tech-brief` with `intent=read_only`) | NEVER |
 | 3 | Confluence | 5th |
 | 4 | JIRA (MSP-gated) | 4th |
 | 5 | Recent PRs (or commits) | 3rd |
 | 6 | AWS docs | 2nd |
 | 7 | Microsoft Learn | 1st |
 
-Local knowledge is most tribal and least re-discoverable. Library briefs are durable, cross-project, curated knowledge about specific deps — losing them would defeat the purpose of maintaining them. Confluence / JIRA carry team-specific context. PRs / commits carry recent change context. AWS / MS Learn are publicly searchable later — losing them in the digest is cheapest.
+Local knowledge is most tribal and least re-discoverable. Tech briefs are durable, cross-project, curated knowledge about specific deps — losing them would defeat the purpose of maintaining them. Confluence / JIRA carry team-specific context. PRs / commits carry recent change context. AWS / MS Learn are publicly searchable later — losing them in the digest is cheapest.
 
 ## MSP detection for JIRA gating
 
@@ -265,9 +265,9 @@ budget:
 | Skill | Callees (may invoke) | Callers (may invoke this) | If `caller=<self>` |
 |---|---|---|---|
 | pre-task-research | knowledge-capture (read only) | blueprint (Phase 1 offer), future start-ticket | log error, no-op |
-| | library-brief (read_only — Priority 2, NEVER dropped) | | |
+| | tech-brief (read_only — Priority 2, NEVER dropped) | | |
 
-- **Reads:** `knowledge-capture`'s `.claude-knowledge/` via its read API (with `caller=pre-task-research`); `library-brief` via sibling-skill invocation with `intent=read_only, caller=pre-task-research`; active workspace for cache check; git state for MSP detection and commit fallback; MCP tool list for source availability.
+- **Reads:** `knowledge-capture`'s `.claude-knowledge/` via its read API (with `caller=pre-task-research`); `tech-brief` via sibling-skill invocation with `intent=read_only, caller=pre-task-research`; active workspace for cache check; git state for MSP detection and commit fallback; MCP tool list for source availability.
 - **Writes:** `.claude-plans/<active>/research.md` (or ad-hoc root in pre-workspace mode); appends to `open-questions.md` in auto mode; idempotent `.gitignore` append for `.claude-results/` when ad-hoc.
 - **Never reads:** the contents of pages returned by subagents. The parent only sees structured records.
 

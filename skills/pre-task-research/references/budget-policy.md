@@ -9,7 +9,7 @@ Bloat is the antagonist for this skill. Budgets are enforced at three layers: in
 | Source | Default `per_source_lines` (N) | Max total lines per section (N+2) | Notes |
 |---|---|---|---|
 | Local knowledge | 20 records | 22 lines | Owned by `knowledge-capture` read API. |
-| Library briefs | 5 briefs × ~10 lines each | ~52 lines | Sibling-skill call; cap = top 5 most-relevant briefs. NEVER dropped. |
+| Tech briefs | 5 briefs × ~10 lines each | ~52 lines | Sibling-skill call; cap = top 5 most-relevant briefs. NEVER dropped. |
 | Confluence | 15 | 17 | |
 | JIRA | 15 | 17 | MSP-gated. |
 | Merged PRs | 15 | 17 | |
@@ -45,13 +45,13 @@ When projected total > 250 lines, drop entire sections in this order until under
 | 3 | Recent PRs / commits | Recoverable from `git log`; medium specificity. |
 | 4 | JIRA | Team-specific but searchable in JIRA UI; MSP-gated already. |
 | 5 (last droppable) | Confluence | Team-specific, harder to re-discover. |
-| NEVER | Library briefs | Durable curated knowledge about specific deps; defeats the purpose of maintaining briefs if dropped. |
+| NEVER | Tech briefs | Durable curated knowledge about specific deps; defeats the purpose of maintaining briefs if dropped. |
 | NEVER | Local knowledge | Most tribal, least re-discoverable, the whole point of the digest. |
 
-**Both local-knowledge AND library-briefs are NEVER dropped.** If the two never-drop sections together exceed 250 lines, the skill emits both sections and appends a single-line footer:
+**Both local-knowledge AND tech-briefs are NEVER dropped.** If the two never-drop sections together exceed 250 lines, the skill emits both sections and appends a single-line footer:
 
 ```
-_[warning: never-drop sections (local-knowledge + library-briefs) exceed total budget; consider trimming .claude-knowledge/ or reducing matched briefs below 5]_
+_[warning: never-drop sections (local-knowledge + tech-briefs) exceed total budget; consider trimming .claude-knowledge/ or reducing matched briefs below 5]_
 ```
 
 It does NOT truncate either section to fit. The user owns their gotchas log and their briefs; the skill surfaces all of both.

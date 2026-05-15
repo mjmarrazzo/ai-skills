@@ -223,13 +223,13 @@ Output format: bullet lines only, OR `none`, OR `tool-unavailable`.
 
 ---
 
-## Library briefs — `library-brief` skill (SIBLING-SKILL invocation, NOT a subagent)
+## Tech briefs — `tech-brief` skill (SIBLING-SKILL invocation, NOT a subagent)
 
-**This source is NOT a subagent dispatch and NOT an MCP tool call.** It is a synchronous SIBLING-SKILL invocation of the `library-brief` skill, executed AFTER local-knowledge and BEFORE the external parallel fan-out. It is NEVER dropped on overflow.
+**This source is NOT a subagent dispatch and NOT an MCP tool call.** It is a synchronous SIBLING-SKILL invocation of the `tech-brief` skill, executed AFTER local-knowledge and BEFORE the external parallel fan-out. It is NEVER dropped on overflow.
 
 ### Invocation contract
 
-For each matched library (cap: top N=5 most-relevant), invoke the `library-brief` skill with `intent=read_only`:
+For each matched library (cap: top N=5 most-relevant), invoke the `tech-brief` skill with `intent=read_only`:
 
 ```yaml
 intent: read_only
@@ -242,19 +242,19 @@ caller: pre-task-research
 
 1. Parse repo manifests for library names: `package.json` (dependencies + devDependencies), `pyproject.toml` / `requirements.txt`, `go.mod` (require block), `pom.xml` (artifactId), `Cargo.toml` (dependencies), `Gemfile`.
 2. Scan the topic string for library names (words that match known package-name patterns).
-3. Union both sets; check which names have an existing brief under `~/.claude/data/library-briefs/` (or `$CLAUDE_LIBRARY_BRIEFS_DIR`).
+3. Union both sets; check which names have an existing brief under `~/.claude/data/tech-briefs/` (or `$CLAUDE_TECH_BRIEFS_DIR`).
 4. Rank: topic-mention hits first, then manifest hits; within each group, alphabetical. Keep top 5.
 
 ### Output per library
 
-`library-brief` returns one of:
+`tech-brief` returns one of:
 - A markdown digest (status `ok` or `stale`) — render verbatim under section #2.
 - `status: not_found` — silent skip; no section entry for that library.
 
-Digest shape (from `library-brief/references/api-contract.md` Intent 4):
+Digest shape (from `tech-brief/references/api-contract.md` Intent 4):
 
 ```markdown
-### library-brief: react (js, v19.1.0, updated 2026-05-14)
+### tech-brief: react (js, v19.1.0, updated 2026-05-14)
 
 **TL;DR:** <one paragraph from the brief's TL;DR>
 
@@ -265,10 +265,10 @@ Digest shape (from `library-brief/references/api-contract.md` Intent 4):
 - <bullet 2>
 - <bullet 3>
 
-**Full brief:** `~/.claude/data/library-briefs/js/react.md`
+**Full brief:** `~/.claude/data/tech-briefs/js/react.md`
 ```
 
-Stale briefs include `[stale]` in the header: `### library-brief: react (js, v19.1.0, [stale], updated 2024-11-02)`. Stale marker is advisory — the digest is still included. Do NOT auto-trigger `refresh_existing`.
+Stale briefs include `[stale]` in the header: `### tech-brief: react (js, v19.1.0, [stale], updated 2024-11-02)`. Stale marker is advisory — the digest is still included. Do NOT auto-trigger `refresh_existing`.
 
 ### Ecosystem examples
 
@@ -313,12 +313,12 @@ caller: pre-task-research
 
 | Condition | Behavior |
 |---|---|
-| `library-brief` skill not installed | Render section header with `_skipped: library-brief sibling not installed_`; continue. Do NOT block. |
+| `tech-brief` skill not installed | Render section header with `_skipped: tech-brief sibling not installed_`; continue. Do NOT block. |
 | `status: not_found` for a library | Silent skip; no entry for that library. |
 | `status: stale` | Include digest with `[stale]` marker; do NOT trigger refresh. |
 | No libraries matched or all returned `not_found` | Render `_none found_` under section heading. |
 
-The section heading is `## Library briefs (from ~/.claude/data/library-briefs/)`. This section is NEVER dropped on overflow — it shares the never-drop pinning with local-knowledge.
+The section heading is `## Tech briefs (from ~/.claude/data/tech-briefs/)`. This section is NEVER dropped on overflow — it shares the never-drop pinning with local-knowledge.
 
 ---
 
