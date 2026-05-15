@@ -42,20 +42,14 @@ Pass `PLAN_PATH` explicitly when invoking execute-plan. Do not rely on execute-p
 
 ## Path A — Native tools (preferred)
 
-When `EnterWorktree` / `ExitWorktree` are available, always use them. The harness manages the worktree under `.claude/worktrees/<name>/`, handles gitignore, and switches the session CWD. Do not bypass it with `git worktree add` — that creates state the harness cannot manage.
+When `EnterWorktree` / `ExitWorktree` are available, always use them. The harness manages the worktree under `.claude/worktrees/<name>/`, handles gitignore, and switches the session CWD.
 
 ```
-EnterWorktree(name: "<slug>")
+EnterWorktree(name: "<slug>")          # new worktree
+EnterWorktree(path: "<existing-path>") # re-entry; exit with action: "keep"
 ```
 
-Default base is `origin/<default-branch>` (fresh start). The user can override this via the `worktree.baseRef` config setting (`head` = branch from current HEAD instead). Do not modify the setting; announce which base was used.
-
-**Re-entry into an existing worktree:**
-```
-EnterWorktree(path: "<existing-worktree-path>")
-```
-
-Use `ExitWorktree(action: "keep")` when exiting a path-based entry.
+Default base is `origin/<default-branch>`. The user can override via `worktree.baseRef` config (`head` = branch from current HEAD). Do not modify the setting; announce which base was used.
 
 ## Path B — Manual git worktree fallback
 
@@ -72,12 +66,7 @@ git worktree add "../${repo}-${slug}" -b "${branch_name}" "origin/${base}"
 
 ## Branch creation
 
-**Branch naming — MSP repos:** detect using any of:
-1. Remote URL contains `nicusa` or `tylertech` (case-insensitive)
-2. Current branch name matches `^MSP-\d+/`
-3. `git config user.email` ends in `@tylertech.com`
-
-Any match → use `MSP-<ticket>/<slug>`. Ticket number from the active workspace slug (e.g., `.claude-plans/2026-05-14-MSP-7032-add-feature/` → ticket `7032`). Otherwise use `<slug>` or whatever the user provides. Path A passes the slug as `name` to `EnterWorktree`; the harness creates the branch. Path B always branches from `origin/<default>`, never HEAD.
+**Branch naming — MSP repos:** MSP detection via triangulated check — see composition-skills `decisions.md` § "MSP detection: triangulate, don't substring". When detected, use `MSP-<ticket>/<slug>`; ticket number from the active workspace slug (e.g., `.claude-plans/2026-05-14-MSP-7032-add-feature/` → ticket `7032`). Otherwise use `<slug>` or whatever the user provides. Path A passes the slug as `name` to `EnterWorktree`; the harness creates the branch. Path B always branches from `origin/<default>`, never HEAD.
 
 **Existing branch:** `git worktree add <path> <existing-branch>` (no `-b`) or `EnterWorktree(path: <existing-worktree-path>)` when the user says "continue work in `MSP-1234/my-feature`".
 
@@ -103,15 +92,9 @@ Use `TodoWrite` to track the three phases — enter, handoff, exit — so progre
 
 ## CI / build artifacts
 
-A fresh worktree starts without `node_modules/`, `target/`, `__pycache__/`, `.venv/`, and similar build artifacts.
+A fresh worktree starts without `node_modules/`, `target/`, `__pycache__/`, `.venv/`, and similar build artifacts. Run a fresh install before handing off to execute-plan whenever the plan touches a lockfile OR the wrapped operation needs build artifacts to compile/test. Skip install only for config-only edits with no compile step (let execute-plan handle per-task).
 
-| Condition | Action |
-|---|---|
-| Plan touches a lockfile | Fresh install mandatory before handing off to execute-plan. Stale artifacts from the main checkout produce incorrect results. |
-| Plan does not touch lockfiles but the wrapped op needs build artifacts to compile/test | Fresh install in worktree. |
-| Build artifacts optional (config-only edits, no compile step) | Skip install; let execute-plan handle per-task if needed. |
-
-Auto-detect the package manager from the lockfile present in the worktree: `pnpm-lock.yaml` → `pnpm install`; `package-lock.json` → `npm ci`; `yarn.lock` → `yarn install`; `Cargo.toml` → `cargo build`; `pyproject.toml` → `poetry install`; `go.mod` → `go mod download`. Run it before handing off. If install fails, treat as lifecycle failure — do not proceed.
+Auto-detect package manager from the lockfile present: `pnpm-lock.yaml` → `pnpm install`; `package-lock.json` → `npm ci`; `yarn.lock` → `yarn install`; `Cargo.toml` → `cargo build`; `pyproject.toml` → `poetry install`; `go.mod` → `go mod download`. If install fails, treat as lifecycle failure — do not proceed.
 
 **NEVER symlink `node_modules/`, `target/`, `.venv/`, or any build artifact directory** from the main checkout into the worktree. Cross-worktree symlinks embed paths and platform assumptions from the main checkout's last run; the 30 seconds saved is not worth the class of bugs introduced.
 
