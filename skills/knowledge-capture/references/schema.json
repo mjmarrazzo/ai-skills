@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "description": "Pinned format for .claude-knowledge/. Bumps require a written migration path. This file is the literal initial content written to .claude-knowledge/.schema.json on first write in any repo.",
+  "format": {
+    "entry_heading_regex": "^## [0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+-[a-f0-9]{6} — ",
+    "slug_format": "<YYYY-MM-DD>-<kebab(title)>-<6char-content-hash>",
+    "slug_hash": {
+      "algorithm": "sha256",
+      "input": "context + '\\n' + lesson + '\\n' + source_block",
+      "length_hex_chars": 6
+    },
+    "separator": {
+      "between_slug_and_title": "—",
+      "codepoint": "U+2014",
+      "name": "em-dash",
+      "spacing": "single space on each side"
+    },
+    "tag_bracket": {
+      "syntax": "  [tags: tag1, tag2]",
+      "leading_spaces": 2,
+      "max_tags": 4,
+      "tag_charset": "lowercase ASCII letters, digits, hyphens",
+      "tag_length_chars": { "min": 1, "max": 30 },
+      "omit_when_empty": true
+    },
+    "body_fields": {
+      "required_order": ["Context", "Lesson", "Source"],
+      "optional_first": "Supersedes",
+      "prefix": "**<Field>:** "
+    },
+    "title": {
+      "length_chars": { "min": 1, "max": 80 },
+      "forbidden_chars": ["[", "]", "\n", "\t"]
+    }
+  },
+  "stale_thresholds_months": {
+    "gotcha": 12,
+    "pattern": 12,
+    "stack-note": 3
+  },
+  "stale_rules": {
+    "absolute": "entry.date older than stale_thresholds_months[entry.kind] from today",
+    "relative": "a newer entry of the same kind sharing >=1 tag with this entry",
+    "advisory_only": true,
+    "skip_superseded": true
+  },
+  "read_api_defaults": {
+    "limit_total": 20,
+    "limit_per_kind": 6,
+    "include_superseded": false,
+    "ordering": "newest-first within kind; gotcha then pattern then stack-note across kinds",
+    "trim_order_when_over_total": ["stack-note", "pattern", "gotcha"],
+    "preserve_min_per_nonempty_kind": 1
+  },
+  "write_payload_contract": {
+    "required_fields": [
+      "caller",
+      "kind",
+      "proposed.title",
+      "proposed.context",
+      "proposed.lesson",
+      "source.files",
+      "source.commit",
+      "source.session_marker"
+    ],
+    "optional_fields": [
+      "proposed.tags"
+    ],
+    "kind_values": ["gotcha", "pattern", "stack-note"],
+    "cycle_guard": {
+      "rejected_caller": "knowledge-capture",
+      "action": "log error to stderr, return without acting"
+    }
+  },
+  "files": {
+    "gotchas": "gotchas.md",
+    "patterns": "patterns.md",
+    "stack-notes": "stack-notes.md",
+    "index": "README.md",
+    "schema": ".schema.json"
+  },
+  "directory_lifecycle": {
+    "created_on": "first WRITE in a repo",
+    "first_read_on_missing_dir": "return empty digest, no side effects",
+    "first_write_creates": [
+      ".claude-knowledge/",
+      ".claude-knowledge/.schema.json",
+      ".claude-knowledge/gotchas.md",
+      ".claude-knowledge/patterns.md",
+      ".claude-knowledge/stack-notes.md",
+      ".claude-knowledge/README.md"
+    ],
+    "gitignore_append": ".claude-knowledge/",
+    "gitignore_idempotent": true
+  },
+  "write_policy": {
+    "silent_writes_allowed": false,
+    "confirmation_required": "always",
+    "interactive_mode_flow": "queue across session, batched AskUserQuestion at session end",
+    "auto_mode_flow": "log proposed entries to .claude-plans/<active>/open-questions.md as deferred reviewables",
+    "v1_rule": "the 'always ask' rule is permanent for v1 - do not add an auto-write opt-in"
+  }
+}
