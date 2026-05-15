@@ -5,15 +5,7 @@ description: Use this skill whenever UI changes need browser verification — af
 
 # UI Validation
 
-Drive a real browser through your UI changes, capture screenshots per viewport, diff against baselines, and route failures to a disciplined root-cause loop — so styling regressions, auth-gated breakages, and viewport-specific layout issues surface before the user sees them.
-
 **Announce at start:** "Using ui-validation to run browser checks on the declared surfaces."
-
-## When to trigger
-
-Auto-trigger when: any task completes that touches `.tsx`, `.jsx`, `.vue`, `.svelte`, `.css`, `.scss`, or HTML templates; user explicitly requests browser verification; execute-plan or verify-before-done invokes with a surface list.
-
-Skip when: user explicitly opts out, no frontend files changed, the task is backend-only.
 
 ## Inputs — resolution order
 
@@ -85,11 +77,7 @@ Many surfaces require auth. The skill **NEVER writes credentials without user co
 
 ## Playwright detection and execution paths
 
-Detection order (cheapest first):
-
-1. `package.json` has `@playwright/test` in deps → repo has Playwright.
-2. `playwright.config.{ts,js,mjs}` exists at a common location → repo has Playwright.
-3. Neither → fall back to Playwright MCP.
+Detection (cheapest first): (1) `@playwright/test` in `package.json` deps; (2) `playwright.config.{ts,js,mjs}` at a common path; (3) neither → fall back to Playwright MCP.
 
 Default mode: **headless**. Pass `headless: false` in the caller-supplied contract or phrase "run headed" to override. When invoked from debug-loop, prefer headed to make failures visible — but this remains an open question (see below).
 
@@ -119,9 +107,9 @@ Surface to the user after any Path C run that adding Playwright to the repo woul
 
 When a baseline exists: pixel diff with a 2% default threshold, overridable per surface. Paths A and B use Playwright's built-in `toHaveScreenshot`; Path C uses the pixelmatch helper above.
 
-When no baseline exists: skip diff, output screenshots only, and note "no baseline — please review screenshots manually." Offer to save the first run as the new baseline after the user confirms it looks correct. Saving baselines is always opt-in, never automatic.
+When no baseline exists: output screenshots only; note "no baseline — please review manually." Offer to save as baseline only after user confirms it looks correct — always opt-in, never automatic.
 
-Baseline location: prefer the repo's existing baseline directory (framework-conventional: `playwright/__screenshots__/`, `tests/e2e/baselines/`). If none exists, prompt the user before creating one.
+Baseline location: prefer repo-conventional dirs (`playwright/__screenshots__/`, `tests/e2e/baselines/`). If none exists, prompt before creating one.
 
 ## Reporting format
 
@@ -155,7 +143,7 @@ On any failure:
 - **Callers:** execute-plan (per-task smoke check, passing `caller=execute-plan` and a narrow `{surfaces}` contract); verify-before-done (end-of-plan sweep, passing `caller=verify-before-done`).
 - **Callees:** debug-loop (on failure, with `caller=ui-validation`). If debug-loop is not installed, surface the failure report to the user directly and note the missing sibling.
 - **Reads:** active workspace's `plan.md` for surface declarations; `.env*` files for credential detection (read-only probe, never secrets); `decisions.md` for the active-workspace algorithm.
-- **Writes:** screenshot tree under `.claude-plans/<active>/screenshots/task-<N>/` or `/final/` (workspace mode) or `./.claude-results/<ts>/ui-validation/` (ad-hoc mode); `pixel-diff.mjs` helper under `.claude-plans/<active>/scripts/`; idempotent `.gitignore` appends for `.claude-results/` and any ad-hoc scratch test files.
+- **Writes:** screenshot tree (see Screenshot paths section); `pixel-diff.mjs` under `.claude-plans/<active>/scripts/`; idempotent `.gitignore` appends for `.claude-results/` and ad-hoc scratch test files.
 
 If a referenced sibling skill is not installed, mention it once and degrade gracefully — don't fail the workflow.
 
