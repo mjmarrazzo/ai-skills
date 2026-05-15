@@ -36,38 +36,24 @@ Goal: confirm the failure is deterministic before investing in localization. A f
 
 Run the minimal command that should trigger the failure. If it reproduces: proceed. If it doesn't: investigate whether the first failure was environment-dependent (missing env var, stale build artifact, race condition).
 
-**Intermittent failures** are handled explicitly rather than punted. Default path:
+**Intermittent failures** are characterized, not punted:
 
-1. Run the failing test or command up to N=5 times, noting the failure rate and any pattern (always fails on iteration 2, only fails under load, fails if run after another test, etc.). The entire rerun sequence wraps a **90-second total wall-clock budget**. If 90 seconds elapse before N=5 completes, surface partial results immediately: "ran N=`<x>` within 90s budget, observed `<y>` failures, `<z>` passes — proceeding with partial characterization." Do not keep running past the budget.
-2. Attempt determinization: seed known RNG sources, mock the clock if time-dependent (`Date.now`, `time.time`), disable retries if the test framework has them, isolate the test from parallel execution. Run again (same 90s budget for any further reruns).
-3. If still non-deterministic after determinization attempts: surface a characterization report — failure rate, observed variance, what you tried, what you suspect (shared state, timing window, external service call) — and ask the user how to proceed. Do not continue hypothesizing about root cause until reproduction is reliable; a flaky test that sometimes passes can falsely confirm a wrong hypothesis.
+1. Rerun the failing command up to N=5 times within a **90-second total wall-clock budget**, noting the failure rate and any pattern (fails only on iteration 2, only under load, only after another test, etc.). If 90s elapses first, surface partial results: "ran N=`<x>` within 90s budget, observed `<y>` failures, `<z>` passes — proceeding with partial characterization." Do not exceed the budget.
+2. Attempt determinization: seed RNG, mock the clock (`Date.now`, `time.time`), disable framework retries, isolate from parallel execution. Rerun under the same 90s budget.
+3. If still non-deterministic: surface a characterization report (rate, variance, what you tried, what you suspect) and ask the user how to proceed. A flaky test can falsely confirm a wrong hypothesis — do not move to root-cause work until reproduction is reliable.
 
 ## Phase 2: Localize
 
 Goal: narrow to the smallest context in which the failure occurs. The smaller the case, the fewer variables a hypothesis has to explain.
 
-Localization technique depends on the failure class:
+Localization technique depends on the failure class — pick the matching playbook:
 
-**Playbook T — Test failure**
-- Identify the specific assertion that failed. A test with ten assertions that fails on the third one doesn't require reading the other seven.
-- Check the diff since the last passing state (`git diff <last-green-sha>`). Failures that appear right after a change are usually caused by that change.
-- Run the test file in isolation before running the full suite. A test that only fails in the full suite has a state-pollution bug, not the bug you think it has.
-- If the test file is large, comment out test cases until you have the minimal failing case.
+- **Playbook T — Test failure:** isolate the failing assertion, check the diff since the last green SHA, run the test file alone before the suite, comment out cases to find the minimal failing one.
+- **Playbook B — Build / compile failure:** fix the first error in the output (the rest is cascade), check imports and type signatures at that file. Error *count* is not a severity signal.
+- **Playbook R — Runtime exception:** read the stack trace top-to-bottom, find the first frame in code you own, check recent changes to it, trace any value named in the exception message backward to where it was set.
+- **Playbook W — Wrong output, no exception:** narrow the input to the smallest one that misbehaves; add a temp observation point (see Phase 6 sentinel) before the output; diff expected vs. actual precisely ("off by one", not "wrong").
 
-**Playbook B — Build / compile failure**
-- Find the first error in the compiler output. Everything after it is a cascade and will auto-resolve once the root is fixed.
-- Check imports and type signatures of the file the first error points to; build failures are usually missing dependencies, signature mismatches, or a type change that propagated.
-- Do not read the error count as a measure of problem severity — 47 TypeScript errors from one bad interface change is still one problem.
-
-**Playbook R — Runtime exception**
-- Read the stack trace from the top (throw site) to the bottom (entry point). Find the frame in code you own — skip library internals.
-- Check recent changes to the files named in that frame (`git log -p -- <file>`).
-- If the exception message contains a value (e.g. "Cannot read properties of undefined (reading 'id')"), find where that value is supposed to be set and trace backward.
-
-**Playbook W — Wrong output, no exception**
-- Narrow the input: find the smallest input that produces the wrong output.
-- Narrow the code path: add a temporary observation point (see Phase 6 on tracking temp logging) just before the output is produced. If the value entering the final step is already wrong, the bug is upstream; repeat.
-- Diff expected vs. actual precisely — "wrong" is not useful, "off by one in the count" or "missing the last record" is.
+Full per-class detail with concrete commands and examples is in `references/playbooks.md`.
 
 ## Phase 3: Hypothesize
 
@@ -116,19 +102,13 @@ With root cause confirmed, write a fix that addresses the cause, not the observa
 
 Run the same reproduction command from Phase 1. The failure must not occur. Then run the broader test suite for the affected module to confirm no regression was introduced.
 
-**Tracking temporary logging.** Any `print`, `console.log`, `logger.debug`, or debugger statement added during hypothesis testing MUST be marked with a sentinel comment:
+**Tracking temporary logging.** Any `print`, `console.log`, `logger.debug`, or debugger statement added during hypothesis testing MUST embed the literal sentinel string `DEBUG-LOOP-TEMP`:
 
-```python
-print(f"DEBUG-LOOP-TEMP: user_id={user_id}")  # Python
 ```
-```typescript
-console.log('DEBUG-LOOP-TEMP:', value);  // TypeScript/JavaScript
-```
-```go
-fmt.Printf("DEBUG-LOOP-TEMP: %v\n", val)  // Go
-```
-```java
-System.out.println("DEBUG-LOOP-TEMP: " + val);  // Java
+print(f"DEBUG-LOOP-TEMP: user_id={user_id}")           # Python
+console.log('DEBUG-LOOP-TEMP:', value);                // TypeScript/JavaScript
+fmt.Printf("DEBUG-LOOP-TEMP: %v\n", val)               // Go
+System.out.println("DEBUG-LOOP-TEMP: " + val);         // Java
 ```
 
 Before declaring verify complete, grep for `DEBUG-LOOP-TEMP` across all modified files. NEVER declare done while any sentinel is present — it is a verification failure, not a minor omission.
@@ -288,7 +268,7 @@ These are the default LLM debugging behaviors. Each one makes the failure harder
 - **Reads:** `.claude-plans/<active-dir>/handoff.md` and `decisions.md` for repo context; `plan.md` for task scope; changed files via git diff.
 - **Writes:** `DEBUG-LOOP-TEMP` sentinels during hypothesis testing (removed before verify completes); decision log entry to `.claude-plans/<active-dir>/decisions.md` when applicable; exhaustion report to chat when terminating without resolution. Proposes (but does not write directly) `knowledge-capture` entries — that skill owns the user interaction.
 
-If a sibling is not installed: print a one-line notice ("if `ui-validation` were installed I'd run a browser check here") and continue. Sibling-installed check: `~/.claude/skills/<name>/SKILL.md` OR `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`.
+If a sibling is not installed: print a one-line notice ("if `ui-validation` were installed I'd run a browser check here") and continue. Sibling-installed check, `caller=` cycle-guard convention, and active-workspace resolution all follow the shared rules in `.claude-plans/2026-05-14-composition-skills/decisions.md`.
 
 ## Open questions
 
