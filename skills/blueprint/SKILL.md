@@ -70,13 +70,25 @@ digraph phases {
 
 Goal: produce `handoff.md`, a dossier any fresh LLM could read to understand what's being built and why.
 
+The default mode is **interactive**: blueprint asks the user a wave of questions before drafting anything. Autonomous mode is opt-in (user says "go full auto", "skip the gates", or caller passes `mode=auto`); in auto mode, blueprint proceeds past gates without pausing but logs every non-trivial decision to `open-questions.md`. The questionnaire below runs the same in both modes — only the gating differs.
+
 1. **Repo recon, in parallel where independent.** Read the obvious context (CLAUDE.md, README, the directory the work touches, recent commits in that area, any referenced ticket). If the codebase is unfamiliar, dispatch an `Explore` subagent to map the relevant surface area — don't waste tokens reading the whole repo from this session.
 
-2. **Structured questions first** (max 4 per round via `AskUserQuestion`). Use these for choices with a clean option set: which subsystem owns this, sync vs async, new module vs extend existing, etc. Multiple-choice is fast for the user and unambiguous for you.
+2. **Read `.claude-knowledge/` if `knowledge-capture` is installed.** Invoke `knowledge-capture` with `caller=blueprint` to receive the digest of known gotchas, patterns, and stack-notes for this repo. Fold the digest into `handoff.md` under a "Known about this repo" section. If `knowledge-capture` isn't installed: skip; print "if `knowledge-capture` were installed I'd surface known repo gotchas here" once and continue. If the digest is empty: omit the section.
 
-3. **Free-form questions for depth.** Once core decisions are pinned, switch to typed dialogue for the open-ended stuff — invariants the user knows that aren't in the code, edge cases they've hit before, performance/compliance constraints, who else is touching this area. One question per message. Stop when you have enough to draft.
+3. **Read prior `open-questions.md` if continuing work.** If the workspace slug matches recent work or the user references "continue from", read the prior session's `open-questions.md` and summarize relevant deferred decisions in the "Continuation log" section of `handoff.md`.
 
-4. **Write `handoff.md`** using the template in `references/handoff-template.md`. Lead with the goal in one sentence, then context, constraints, open questions resolved, and pointers to the files/docs you read.
+4. **Offer `pre-task-research` for unfamiliar/large work.** Heuristic for offering it: more than 5 files touched in the anticipated change, new subsystem, or cross-cutting concerns (auth, billing, migrations). Interactive mode: `AskUserQuestion` "Should I run `pre-task-research` first (Confluence, JIRA, recent PRs, AWS/MS docs, local knowledge)? It produces a research.md that informs the spec." Auto mode: run it when the heuristic fires and log "ran pre-task-research" to `open-questions.md` so the user knows. If `pre-task-research` isn't installed: skip; print a one-line note.
+
+5. **Run visual-digest on attached mockups.** If the user attached an image (mockup, design, screenshot) and `visual-digest` is installed, invoke it with `mode=describe`, `caller=blueprint`, the image path, and (interactive) ask the user for `expected_complexity` + `flow_step`. The digest goes to `./.claude-results/<ts>/visual-digest/` first; after workspace creation, blueprint moves it into `.claude-plans/<active>/visual-digests/`. The digest's `regions`, `elements`, and `hierarchy` are referenced in the discovery questionnaire ("the mockup shows 3 inputs and a primary CTA in the main region — does the data layer need to support all three or only the email field for v1?").
+
+6. **Structured questions first** (max 4 per round via `AskUserQuestion`). Use these for choices with a clean option set: which subsystem owns this, sync vs async, new module vs extend existing, etc. Multiple-choice is fast for the user and unambiguous for you. **This wave is the methodology** — front-load decisions before drafting anything.
+
+7. **Free-form questions for depth.** Once core decisions are pinned, switch to typed dialogue for the open-ended stuff — invariants the user knows that aren't in the code, edge cases they've hit before, performance/compliance constraints, who else is touching this area. One question per message. Stop when you have enough to draft.
+
+8. **Write `handoff.md`** using the template in `references/handoff-template.md`. Lead with the goal in one sentence, then context, constraints, open questions resolved, and pointers to the files/docs you read.
+
+**Auto mode note:** in auto mode, steps 6–7 don't fire prompts — the agent reasons about repo state, pre-task-research output, and visual-digest output to make assumptions itself, and logs every assumption it would have asked about to `open-questions.md` with the format documented at workspace layout above.
 
 ### Phase 2 — Draft the spec (this session)
 
@@ -147,6 +159,9 @@ Write decisions as they're made — at end of Phase 1 (scoping), end of Phase 3 
 
 Blueprint stands alone and composes loosely with siblings — it never embeds them.
 
+- **`knowledge-capture`:** Phase 1 reads its digest into `handoff.md`. Read-only invocation; blueprint never writes via this skill.
+- **`pre-task-research`:** Phase 1 offers it (interactive) or auto-runs it (auto mode + heuristic) for unfamiliar/large work. Output `research.md` lives in the workspace; blueprint folds findings into `handoff.md`.
+- **`visual-digest`:** Phase 1 runs it on any attached mockup. Output YAML digest lives in `<workspace>/visual-digests/` after workspace creation.
 - **UI / styling work:** if `spec.md` touches frontend rendering, add a section to `plan.md` that hands off browser verification to a `ui-validation` skill (when installed). The plan should name the surfaces to verify, viewports, and any credential setup (e.g. "ask the user how to populate `.env.local` with `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` before running"). Don't bake Playwright into this skill.
 - **Markdown preview / diff viewer:** at any user-review gate, if a `vscode-preview` skill (or similar) is installed, offer to open the current file or a diff against the prior `.vN` version. Otherwise just print the path.
 - **Execution:** at Phase 7, defer to `subagent-driven-development`, `executing-plans`, or just hand off — never reimplement.
