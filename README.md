@@ -38,10 +38,14 @@ Skills here are intended to compose freely. A skill may reference a sibling skil
 
 ## Skills
 
-The set composes around a planning → executing → verifying → shipping spine, with cross-cutting utilities. Every skill stands alone and degrades gracefully when its siblings aren't installed.
+13 skills organized around a research → planning → executing → verifying → shipping spine. Every skill stands alone and degrades gracefully when its siblings aren't installed. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
+
+### Research & knowledge
+- [`pre-task-research`](skills/pre-task-research/SKILL.md) — optional Phase 0 before blueprint. Parallel research subagents (Confluence, JIRA, recent PRs, AWS docs, MS Learn, local knowledge) with hard token budgets. Produces `research.md` that blueprint folds into `handoff.md`.
+- [`knowledge-capture`](skills/knowledge-capture/SKILL.md) — per-repo gitignored `.claude-knowledge/` (gotchas, patterns, stack-notes) read by blueprint and pre-task-research on every run; written at checkpoints by debug-loop, execute-plan, finish-branch. Append-only with supersede; never silent writes.
 
 ### Planning
-- [`blueprint`](skills/blueprint/SKILL.md) — discovery questionnaire → parallel-reviewed spec → bite-sized implementation plan, all gitignored under `.claude-plans/`. The entry point for substantive engineering work.
+- [`blueprint`](skills/blueprint/SKILL.md) — discovery questionnaire → parallel-reviewed spec → bite-sized implementation plan, all gitignored under `.claude-plans/`. Phase 1 reads knowledge-capture, offers pre-task-research, runs visual-digest on attached mockups. The entry point for substantive engineering work.
 
 ### Executing
 - [`execute-plan`](skills/execute-plan/SKILL.md) — walks `plan.md` task-by-task in one of two modes (subagent-per-task with two-stage review, or inline batch with checkpoints). Owns `progress.json` for resume across sessions.
@@ -53,6 +57,7 @@ The set composes around a planning → executing → verifying → shipping spin
 
 ### UI verification
 - [`ui-validation`](skills/ui-validation/SKILL.md) — Playwright-driven browser checks (real repo tests, ad-hoc spec, or MCP-only fallback). Look-then-ask credential flow, per-viewport screenshots, pixelmatch diff in Path C.
+- [`visual-digest`](skills/visual-digest/SKILL.md) — schema-forced screenshot/mockup analyzer. Returns structured YAML (regions, elements, hierarchy, flows) instead of prose, with blank-canvas detection FIRST and independent-then-diff compare mode. Stops "looks good" vibes on incomplete UI.
 
 ### Shipping
 - [`finish-branch`](skills/finish-branch/SKILL.md) — clean-state gates → triangulated MSP detection → PR title + 5-section body from spec/handoff/decisions → `gh pr create`. Refuses to PR from main; `--force-with-lease` only.
@@ -68,4 +73,4 @@ The set composes around a planning → executing → verifying → shipping spin
 
 Skills compose by name, not by nesting. Cross-skill invocations pass `caller=<skill-name>` to prevent cycles (e.g., debug-loop ↔ ui-validation). Shared conventions (active-workspace resolution, ad-hoc artifact root, sibling-installed detection, MSP repo triangulation, TodoWrite as the in-session progress tool) are pinned across all skills.
 
-Workspace artifacts (handoff, spec, plan, decisions, screenshots, verify logs, progress.json) live under `.claude-plans/<YYYY-MM-DD>-<slug>/`. Always gitignored, never committed.
+Workspace artifacts (handoff, spec, plan, decisions, screenshots, verify logs, progress.json, **open-questions.md**) live under `.claude-plans/<YYYY-MM-DD>-<slug>/`. Always gitignored, never committed. `open-questions.md` is the running log of deferred decisions (auto mode) or things the user wants to revisit (interactive mode) — surfaced at end of run and read by Phase 1 of any continuation workspace.
