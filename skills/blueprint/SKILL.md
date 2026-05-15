@@ -5,29 +5,21 @@ description: Use this skill whenever the user requests substantive engineering w
 
 # Blueprint
 
-Turn a request into a reviewed spec and an actionable plan, with the heavy lifting (architecture research, business-logic discovery, alternatives analysis, reviewer pushback) done by subagents — the human stays in the loop as gatekeeper, never as scribe.
+Spec and plan first, code never before the user gates it. Subagents do the heavy lifting; the human is the gatekeeper.
 
 **Announce at start:** "Using blueprint to discover, spec, and plan this before we touch code."
 
 ## When to run, when to skip
 
-```dot
-digraph trigger {
-    "Request received" [shape=box];
-    "Trivial edit?" [shape=diamond];
-    "User opted out?" [shape=diamond];
-    "Run blueprint" [shape=doublecircle];
-    "Proceed directly" [shape=doublecircle];
+Default bias is **run**. Decision path:
 
-    "Request received" -> "Trivial edit?";
-    "Trivial edit?" -> "Proceed directly" [label="yes (1-line, rename, typo)"];
-    "Trivial edit?" -> "User opted out?" [label="no"];
-    "User opted out?" -> "Proceed directly" [label="'just do it' / 'quick fix'"];
-    "User opted out?" -> "Run blueprint" [label="no"];
-}
+```
+Request → Trivial edit? → yes → Proceed directly (1-line, rename, typo)
+                        → no  → User opted out? → yes → Proceed directly ("just do it")
+                                                → no  → Run blueprint
 ```
 
-The default bias is to run. "Did the user ask for a quick fix?" is a higher bar than "could a careful engineer skip planning?" — they don't get the value of the dossier and review unless you actually run it.
+"Did the user ask for a quick fix?" is a higher bar than "could a careful engineer skip planning?"
 
 ## Workspace layout
 
@@ -52,7 +44,7 @@ All artifacts live in a **gitignored** `.claude-plans/` directory at the repo ro
 **Before creating the workspace:**
 
 1. Resolve the workspace root: `git rev-parse --show-toplevel 2>/dev/null || pwd`.
-2. Ensure `.claude-plans/` is gitignored. If a `.gitignore` exists and doesn't already list it, append the line. If no `.gitignore` exists and the dir is a git repo, create one with just `.claude-plans/`. Never commit on the user's behalf.
+2. Ensure `.claude-plans/` is in `.gitignore` (idempotent append; create `.gitignore` if missing and in a git repo).
 3. `mkdir -p .claude-plans/<YYYY-MM-DD>-<slug>/`.
 
 ## Phases
@@ -92,23 +84,21 @@ The default mode is **interactive**: blueprint asks the user a wave of questions
 
 ### Phase 2 — Draft the spec (this session)
 
-Draft `spec.md` from `handoff.md`. The spec is the **what**: architecture, contracts, data model, error/edge behavior, observability hooks. Not steps. The implementation plan is downstream.
-
-Structure: see `references/spec-template.md`. Keep claims grounded in what's actually in the repo — link file paths and line ranges when describing existing code being modified.
+Draft `spec.md` from `handoff.md`. The spec is the **what**: architecture, contracts, data model, error/edge behavior, observability hooks — not steps. See `references/spec-template.md`. Keep claims grounded in what's actually in the repo — link file paths and line ranges when describing existing code being modified.
 
 ### Phase 3 — Parallel review (scaled to complexity)
 
-Judge the spec's complexity from these signals: files touched, new modules introduced, cross-cutting concerns (auth, billing, data migration), reversibility, blast radius if wrong. Then:
+Complexity signals: files touched, new modules, cross-cutting concerns (auth, billing, migration), reversibility, blast radius.
 
 | Complexity | Reviewers |
 |---|---|
 | **Trivial** (single subsystem, additive, well-understood) | None — skip to phase 4. |
-| **Medium** (multi-file, single subsystem) | One reviewer: a `general-purpose` Agent with `model: sonnet`. |
-| **Complex** (cross-cutting, new subsystem, architectural, irreversible) | Two reviewers **in parallel, same message**: codex MCP (`mcp__codex__codex`) AND a `general-purpose` Agent with `model: sonnet`. |
+| **Medium** (multi-file, single subsystem) | One: `general-purpose` Agent with `model: sonnet`. |
+| **Complex** (cross-cutting, new subsystem, architectural, irreversible) | Two in parallel: codex MCP (`mcp__codex__codex`) AND `general-purpose` Agent with `model: sonnet`. |
 
 Full reviewer prompts: `references/reviewer-prompts.md`. They review the same `spec.md` independently — don't show them each other's feedback.
 
-When both finish, **you** (this session, opus) reconcile: take the union of valid concerns, drop anything that contradicts the user's stated constraints, and apply the changes to `spec.md` directly. Note conflicts between reviewers in `decisions.md` with how you resolved them.
+Reconcile: take the union of valid concerns, drop anything contradicting the user's stated constraints, apply changes to `spec.md`. Log reviewer conflicts in `decisions.md`.
 
 ### Phase 4 — Spec gate (human review)
 
@@ -122,9 +112,7 @@ If a `vscode-preview` (or similar) sibling skill is installed, offer to open the
 
 ### Phase 5 — Draft the implementation plan (this session)
 
-Once the spec is approved, draft `plan.md` from it. Plan structure follows the bite-sized-task pattern that's worked elsewhere (one action per step, 2-5 minutes, exact file paths, exact code, test before implementation): see `references/plan-template.md`.
-
-The plan does **not** get a separate review round by default — the spec is where architectural disagreement should surface. Re-trigger Phase 3 reviewers on the plan only if the user explicitly asks for it or the plan ended up making decisions the spec didn't pin down.
+Draft `plan.md` from the approved spec. One action per step, 2-5 minutes, exact file paths, exact code, test before implementation: see `references/plan-template.md`. No review round by default — spec is where architectural disagreement surfaces. Re-trigger Phase 3 reviewers only if the user asks or the plan makes decisions the spec didn't pin down.
 
 ### Phase 6 — Plan gate (human review)
 
@@ -139,11 +127,11 @@ Once `plan.md` is approved, offer the user a choice:
 > 2. **Execute now in this session** — I work through the plan step by step, checking in at meaningful checkpoints.
 > 3. **Subagent-driven execution** — dispatch a fresh subagent per task with two-stage review (requires the `subagent-driven-development` skill, or equivalent).
 
-The default recommendation is (1) for unfamiliar codebases or anything risky, (2) for self-contained work, (3) when you want maximum velocity on a well-scoped plan.
+Default: (1) for unfamiliar/risky work, (2) for self-contained work, (3) for maximum velocity on a well-scoped plan.
 
 ## Decisions log (decisions.md)
 
-Every non-obvious choice goes here, ADR-style. One entry per decision:
+Every non-obvious choice, ADR-style (write at end of Phase 1, Phase 3, and on every pushback round):
 
 ```markdown
 ## YYYY-MM-DD — <short title>
@@ -153,20 +141,16 @@ Every non-obvious choice goes here, ADR-style. One entry per decision:
 **Reviewer conflict (if any):** <how codex/sonnet disagreed and how we resolved it>
 ```
 
-Write decisions as they're made — at end of Phase 1 (scoping), end of Phase 3 (after reconciling reviewer feedback), and on every user-pushback round.
-
 ## Composition with sibling skills
 
-Blueprint stands alone and composes loosely with siblings — it never embeds them.
+Blueprint stands alone and composes loosely with siblings — it never embeds them. Sibling-installed detection: probe `~/.claude/skills/<name>/SKILL.md` or `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`. If a sibling isn't installed, mention it once and proceed without it.
 
-- **`knowledge-capture`:** Phase 1 reads its digest into `handoff.md`. Read-only invocation; blueprint never writes via this skill.
-- **`pre-task-research`:** Phase 1 offers it (interactive) or auto-runs it (auto mode + heuristic) for unfamiliar/large work. Output `research.md` lives in the workspace; blueprint folds findings into `handoff.md`.
-- **`visual-digest`:** Phase 1 runs it on any attached mockup. Output YAML digest lives in `<workspace>/visual-digests/` after workspace creation.
-- **UI / styling work:** if `spec.md` touches frontend rendering, add a section to `plan.md` that hands off browser verification to a `ui-validation` skill (when installed). The plan should name the surfaces to verify, viewports, and any credential setup (e.g. "ask the user how to populate `.env.local` with `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` before running"). Don't bake Playwright into this skill.
-- **Markdown preview / diff viewer:** at any user-review gate, if a `vscode-preview` skill (or similar) is installed, offer to open the current file or a diff against the prior `.vN` version. Otherwise just print the path.
-- **Execution:** at Phase 7, defer to `subagent-driven-development`, `executing-plans`, or just hand off — never reimplement.
-
-If a referenced skill isn't installed, mention it once and proceed without it. Don't fail the workflow on a missing sibling.
+- **`knowledge-capture`:** Phase 1 reads its digest (read-only) into `handoff.md`.
+- **`pre-task-research`:** Phase 1 offers it interactively (or auto-runs on heuristic hit). Output `research.md` folds into `handoff.md`.
+- **`visual-digest`:** Phase 1 runs it on any attached mockup; output YAML lands in `<workspace>/visual-digests/`.
+- **`ui-validation`:** when `spec.md` touches frontend rendering, `plan.md` should include a verification task naming surfaces, viewports, and credential setup. Don't bake Playwright into this skill.
+- **`vscode-preview`:** at any user-review gate, offer to open the current file or diff against the prior `.vN` version. Otherwise just print the path.
+- **Execution:** at Phase 7, defer to `execute-plan` or `isolated-work` — never reimplement.
 
 ## Anti-patterns
 
