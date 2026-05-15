@@ -358,7 +358,9 @@ When the last task is `done` in `progress.json`:
 
    If any are not satisfied, do not invoke. Surface the gap and ask the user.
 
-4. Invoke `verify-before-done` with `caller=execute-plan` and the active workspace path.
+4. **Propose knowledge-capture entries for blocked or over-budget tasks.** For each task whose final status was `BLOCKED` during execution OR which exceeded its time budget, invoke `knowledge-capture` (if installed) with `caller=execute-plan`, `kind=gotcha`, and a `proposed` block derived from the task's blocker notes. `source.files` from `git diff --name-only` over the task's commit range; `source.commit` from the task's terminal SHA; `source.session_marker = "execute-plan-task-<N>"`. `knowledge-capture` batches in interactive mode (one prompt now) or queues to `open-questions.md` in auto mode. If the skill isn't installed, print "if `knowledge-capture` were installed I'd propose saving these gotchas for next time" and continue.
+
+5. Invoke `verify-before-done` with `caller=execute-plan` and the active workspace path.
 
 If `verify-before-done` isn't installed, print:
 
@@ -384,6 +386,7 @@ If `verify-before-done` isn't installed, print:
 - **Calls** — all pass `caller=execute-plan`:
   - `debug-loop` on failure. Cap: 2 per task.
   - `ui-validation` after any task touching frontend files (narrow per-task scope).
+  - `knowledge-capture` at end-of-plan for any task that finished `BLOCKED` or over-budget.
   - `verify-before-done` once at end of plan.
   - `isolated-work` optionally, before execution, when risky signals fire and the worktree-guard returned false.
 - **Sibling-installed check:** `~/.claude/skills/<name>/SKILL.md` OR `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`. Missing → one-line graceful-degradation note, continue.

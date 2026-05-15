@@ -64,6 +64,16 @@ Run `git merge-base --is-ancestor <base> HEAD`. If base has commits the branch d
 
 Do not rebase without explicit user confirmation.
 
+**6. Knowledge-capture reflection (interactive mode only)**
+
+Single batched prompt (skip entirely in auto mode — auto mode relies on debug-loop / execute-plan having queued any captures to `open-questions.md` during execution):
+
+> Anything new worth remembering about this work before opening the PR? (Yes / No / Show suggestions from this session)
+
+If `knowledge-capture` is installed, invoke it with `caller=finish-branch`, `kind=pattern` or `kind=stack-note` (skill asks the user which), and the user's free-form input. If not installed, print "if `knowledge-capture` were installed I'd save that for next time" and continue. If user says No or skips: continue without writing.
+
+Note any deferred captures from `open-questions.md` and surface count: "3 deferred captures from this session — review in `.claude-plans/<active>/open-questions.md` before merging."
+
 ## Branch convention enforcement
 
 ### MSP detection (triangulated)
@@ -251,9 +261,9 @@ Always print the exact command and wait for confirmation:
 ## Composition
 
 - **Callers:** verify-before-done hands off here on success; blueprint Phase 7 on user's "PR it" choice; direct user invocation after any green session.
-- **Reads:** `verify.json`, `progress.json`, `spec.md`, `handoff.md`, `plan.md`, `decisions.md` — all from `<active>/`, all optional; degrades gracefully to git-log body when workspace is absent.
-- **Writes:** nothing to repo or workspace. Side effects: `git push` and `gh pr create` / `gh pr edit` only.
-- **Calls:** none. finish-branch does not invoke verify-before-done. The two skills are separate gates with separate failure modes: verify runs many times during development; finish-branch runs once per PR. The boundary is real.
+- **Reads:** `verify.json`, `progress.json`, `spec.md`, `handoff.md`, `plan.md`, `decisions.md`, `open-questions.md` — all from `<active>/`, all optional; degrades gracefully to git-log body when workspace is absent. `open-questions.md` count is surfaced in the pre-flight summary.
+- **Writes:** nothing to repo or workspace directly. Side effects: `git push` and `gh pr create` / `gh pr edit` only. May invoke `knowledge-capture` (which owns its own writes).
+- **Calls:** `knowledge-capture` once at pre-flight gate #6 (interactive mode only), passing `caller=finish-branch`. finish-branch does not invoke verify-before-done. verify and finish-branch are separate gates with separate failure modes: verify runs many times during development; finish-branch runs once per PR. The boundary is real.
 - **Cycle prevention:** if a future caller opts in to invoking verify-before-done from within this skill, pass `caller=finish-branch` so verify-before-done suppresses its own finish-branch hand-off (no re-entry).
 - **Sibling absent:** if verify-before-done isn't installed and `verify.json` is missing, say so once, then proceed per user's explicit confirmation.
 
