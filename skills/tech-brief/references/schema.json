@@ -1,17 +1,18 @@
 {
-  "schema_version": 1,
-  "description": "Pinned format for ~/.claude/data/library-briefs/. Bumps require a written migration path. This file is the literal initial content written to ~/.claude/data/library-briefs/.schema.json on first write by the library-brief skill.",
+  "schema_version": 2,
+  "description": "Pinned format for ~/.claude/data/tech-briefs/. Bumps require a written migration path. This file is the literal initial content written to ~/.claude/data/tech-briefs/.schema.json on first write by the tech-brief skill.",
   "storage": {
-    "root_default": "~/.claude/data/library-briefs/",
-    "root_env_override": "CLAUDE_LIBRARY_BRIEFS_DIR",
-    "brief_path_pattern": "<root>/<ecosystem>/<library>.md",
-    "archive_rename_pattern": "<library>.archived-<YYYY-MM-DD>.md",
-    "clobber_archival_pattern": "<library>.v<N>.md",
-    "ref_extraction_dir": "<root>/<ecosystem>/<library>/",
+    "root_default": "~/.claude/data/tech-briefs/",
+    "root_env_override": "CLAUDE_TECH_BRIEFS_DIR",
+    "brief_path_pattern": "<root>/<ecosystem>/<name>.md",
+    "archive_rename_pattern": "<name>.archived-<YYYY-MM-DD>.md",
+    "clobber_archival_pattern": "<name>.v<N>.md",
+    "ref_extraction_dir": "<root>/<ecosystem>/<name>/",
     "index_file": "README.md",
     "schema_file": ".schema.json",
     "audit_log_file": ".audit.log"
   },
+  "kind_enum": ["library", "service", "platform", "tool"],
   "ecosystem_enum": [
     "js",
     "ts",
@@ -33,7 +34,11 @@
     "cli",
     "db",
     "infra",
-    "general"
+    "general",
+    "aws-service",
+    "gcp-service",
+    "azure-service",
+    "platform"
   ],
   "intents": ["research_new", "refresh_existing", "read_only", "archive"],
   "intent_options": {
@@ -77,7 +82,11 @@
     "cli": 365,
     "db": 365,
     "infra": 365,
-    "general": 365
+    "general": 365,
+    "aws-service": 180,
+    "gcp-service": 180,
+    "azure-service": 180,
+    "platform": 270
   },
   "stale_rules": {
     "evaluation": "at READ time against updated + stale_threshold_days",
@@ -86,33 +95,79 @@
     "advisory_only": true,
     "never_auto_refresh": true
   },
-  "body_section_order": [
-    "TL;DR",
-    "When to reach for it / When NOT to",
-    "Mental model",
-    "Common patterns",
-    "Gotchas",
-    "Version history (newest first)",
-    "References"
-  ],
-  "body_line_cap": 200,
+  "body_section_order_by_kind": {
+    "library": [
+      "TL;DR",
+      "When to reach for it / When NOT to",
+      "Mental model",
+      "Common patterns",
+      "Gotchas",
+      "Specifics worth remembering",
+      "Version history (newest first)",
+      "References"
+    ],
+    "service": [
+      "TL;DR",
+      "When to reach for it / When NOT to",
+      "Mental model",
+      "Common patterns",
+      "Pricing model",
+      "Quotas & limits",
+      "IAM / permissions cheatsheet",
+      "Gotchas",
+      "Specifics worth remembering",
+      "Version history (newest first)",
+      "References"
+    ],
+    "platform": [
+      "TL;DR",
+      "When to reach for it / When NOT to",
+      "Mental model",
+      "Common patterns",
+      "Gotchas",
+      "Specifics worth remembering",
+      "Version history (newest first)",
+      "References"
+    ],
+    "tool": [
+      "TL;DR",
+      "When to reach for it / When NOT to",
+      "Mental model",
+      "Common patterns",
+      "Gotchas",
+      "Specifics worth remembering",
+      "Version history (newest first)",
+      "References"
+    ]
+  },
+  "body_line_cap_by_kind": {
+    "library": 200,
+    "service": 280,
+    "platform": 220,
+    "tool": 180
+  },
   "body_line_cap_deep_mode": 350,
   "tag_count_cap": 6,
-  "see_also_format": "<ecosystem>/<library>",
+  "see_also_format": "<ecosystem>/<name>",
   "see_also_auto_traverse": false,
   "audit_log_rotation_bytes": 10485760,
   "audit_log_backup_count": 1,
   "frontmatter_required_fields": [
     "name",
     "display_name",
+    "kind",
     "ecosystem",
     "homepage",
-    "versions_explored",
-    "version_last_seen",
     "created",
     "updated",
     "schema_version"
   ],
+  "frontmatter_required_fields_by_kind": {
+    "library": ["versions_explored", "version_last_seen"],
+    "tool": ["versions_explored", "version_last_seen"],
+    "platform": ["versions_explored", "version_last_seen"],
+    "service": ["snapshots_explored", "snapshot_last_seen"]
+  },
   "frontmatter_optional_fields": [
     "repo",
     "aliases",
@@ -120,7 +175,8 @@
     "stale_threshold_days",
     "see_also"
   ],
-  "version_last_seen_rule": "computed as semver_max(versions_explored) at write time; NOT the last-appended element",
+  "version_last_seen_rule": "computed as semver_max(versions_explored) at write time for kind=library|tool; most recent entry for kind=platform; use snapshot_last_seen for kind=service",
+  "snapshot_last_seen_rule": "most recently appended entry in snapshots_explored (chronologically by Date examined); NOT semver-max; kind=service only",
   "source_priority_drop_order": [
     "ms-learn",
     "aws-docs",
@@ -130,22 +186,23 @@
     "repo-readme"
   ],
   "source_never_dropped": ["knowledge-capture", "homepage"],
+  "source_never_dropped_aws_service": ["knowledge-capture", "homepage", "aws-docs"],
   "source_budget_tokens": {
     "per_source": 600,
     "total": 2400
   },
   "subagent_timeout_seconds": 90,
   "cycle_guard": {
-    "rejected_caller": "library-brief",
+    "rejected_caller": "tech-brief",
     "action": "log error to stderr, return without acting"
   },
   "interactive_question_wave": {
     "questions": 2,
-    "first": "confirm library + ecosystem + version",
+    "first": "confirm name + kind + ecosystem + version/snapshot",
     "second": "sources + depth (standard | shallow | deep | custom)"
   },
   "auto_mode_deferral_file": ".claude-plans/<active>/open-questions.md",
-  "auto_mode_deferral_file_ad_hoc": "./.claude-results/<ts>/library-brief/open-questions.md",
+  "auto_mode_deferral_file_ad_hoc": "./.claude-results/<ts>/tech-brief/open-questions.md",
   "directory_lifecycle": {
     "created_on": "first WRITE in $HOME",
     "first_read_on_missing_dir": "return status: not_found, no side effects",
@@ -169,6 +226,11 @@
   },
   "cross_machine_sync": {
     "supported": false,
-    "v2_path": "symlink ~/.claude/data/library-briefs to a dotfiles dir, or set CLAUDE_LIBRARY_BRIEFS_DIR"
+    "v2_path": "symlink ~/.claude/data/tech-briefs to a dotfiles dir, or set CLAUDE_TECH_BRIEFS_DIR"
+  },
+  "readme_index_format": "grouped by kind (Libraries / Services / Platforms / Tools), then by ecosystem, newest first within each group",
+  "schema_version_history": {
+    "1": "initial library-brief schema (library kind only)",
+    "2": "tech-brief rename; added kind enum; added aws-service/gcp-service/azure-service/platform ecosystem values; service-only sections; Specifics worth remembering; per-kind line caps; snapshot-based version tracking for services"
   }
 }

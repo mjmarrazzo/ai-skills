@@ -1,6 +1,26 @@
 # source-prompts
 
-Per-source subagent prompts for `research_new` and `refresh_existing` fan-out. Mirrors `pre-task-research`'s structured-record discipline, scoped to one library.
+Per-source subagent prompts for `research_new` and `refresh_existing` fan-out. Mirrors `pre-task-research`'s structured-record discipline, scoped to one tech item.
+
+## Source selection by kind
+
+Before dispatching sources, the parent skill selects which sources to run based on `kind`. This preamble governs dispatch order; individual source prompts below remain kind-agnostic.
+
+For **`kind: library`**: dispatch Homepage (1) → Repo README (2) → CHANGELOG (3) → knowledge-capture (4, never dropped) → ecosystem MCP (AWS docs for `ecosystem=aws`, MS Learn for `ecosystem=dotnet`) in that order. CHANGELOG is the primary delta source on `refresh_existing`.
+
+For **`kind: service`**: dispatch AWS Documentation MCP (`mcp__aws-documentation__search_documentation` + `mcp__aws-documentation__read_documentation`) as **PRIMARY** when `ecosystem=aws-service`. For `ecosystem=gcp-service`, use Google Cloud docs via WebFetch. For `ecosystem=azure-service`, use MS Learn MCP as PRIMARY. Homepage WebFetch runs second. CHANGELOG source is SKIPPED — services do not maintain CHANGELOG files. Use the AWS docs "New" section (via `mcp__aws-documentation__recommend`) and official feature-announcement pages instead. Knowledge-capture runs last (never dropped).
+
+For **`kind: platform`**: dispatch official docs (WebFetch on homepage) → recent release notes page → knowledge-capture (never dropped). No CHANGELOG fallback — use the platform's releases/changelog page if one exists.
+
+For **`kind: tool`**: dispatch Repo README (WebFetch) → CHANGELOG / GitHub releases → Homepage → knowledge-capture (never dropped). Similar to `kind: library` but CHANGELOG and GitHub releases are higher priority than the homepage.
+
+Token budgets are unchanged (600/source, 2400 total). Drop order when total exceeds budget:
+
+```
+ms-learn → aws-docs → confluence → general-mcp → changelog → repo-readme → knowledge-capture (NEVER) → homepage (NEVER)
+```
+
+For `kind: service, ecosystem: aws-service`, `aws-docs` is elevated to NEVER-dropped status alongside knowledge-capture and homepage; it is the primary authoritative source.
 
 ## Budget
 
@@ -50,7 +70,7 @@ Always run. Highest priority. `WebFetch` the library's homepage / canonical docs
 
 **Subagent prompt:**
 
-> You are researching the library `<library>` (ecosystem: `<ecosystem>`, target version: `<version>`).
+> You are researching the tech item `<name>` (kind: `<kind>`, ecosystem: `<ecosystem>`, target version/snapshot: `<version>`).
 >
 > Fetch the canonical docs at `<homepage-url>`. Return at most 8 records, each formatted EXACTLY as:
 >
@@ -68,7 +88,7 @@ Always run. `WebFetch` the raw README URL.
 
 **Subagent prompt:**
 
-> You are researching the library `<library>` (ecosystem: `<ecosystem>`).
+> You are researching the tech item `<name>` (kind: `<kind>`, ecosystem: `<ecosystem>`).
 >
 > Fetch the raw README at `<readme-url>`. Return at most 6 records, each formatted EXACTLY as:
 >
@@ -78,9 +98,11 @@ Always run. `WebFetch` the raw README URL.
 >
 > Total output must not exceed 10 lines.
 
-### 3. CHANGELOG / GitHub releases (generic)
+### 3. CHANGELOG / GitHub releases (kind=library | tool | platform)
 
-For `research_new`: fetch the changelog summary for the target version. For `refresh_existing`: fetch the delta between `prior_v` and `target_version`.
+**SKIP for `kind: service`** — services do not maintain CHANGELOG files. For services, use AWS docs "New" section via `mcp__aws-documentation__recommend` (Source 5) instead.
+
+For `research_new` (library/tool/platform): fetch the changelog summary for the target version. For `refresh_existing`: fetch the delta between `prior_v` and `target_version`.
 
 **Primary path:** `WebFetch` on `https://raw.githubusercontent.com/<org>/<repo>/HEAD/CHANGELOG.md` (or `HISTORY.md`, `RELEASES.md`, `NEWS.md` — first hit wins).
 
@@ -88,7 +110,7 @@ For `research_new`: fetch the changelog summary for the target version. For `ref
 
 **Subagent prompt (refresh delta):**
 
-> You are researching the delta in `<library>` from version `<prior_v>` to `<target_version>`.
+> You are researching the delta in `<name>` from version `<prior_v>` to `<target_version>`.
 >
 > Fetch `<changelog-url>`. If it 404s, run `gh release list -R <org>/<repo> --limit 20` and then `gh api repos/<org>/<repo>/releases/tags/<target_version>` for the version body.
 >
@@ -106,7 +128,7 @@ For `research_new`: fetch the changelog summary for the target version. For `ref
 
 **Subagent prompt (research_new — single version):**
 
-> You are researching version `<target_version>` of `<library>`.
+> You are researching version `<target_version>` of `<name>`.
 >
 > Fetch `<changelog-url>` or `gh api repos/<org>/<repo>/releases/tags/<target_version>`. Return up to 4 records, one per major theme of this version (breaking changes, new feature group, deprecation, infra). Format EXACTLY:
 >
@@ -122,21 +144,36 @@ For `research_new`: fetch the changelog summary for the target version. For `ref
 
 ### 4. knowledge-capture local entries (composition)
 
-Always run. NEVER dropped on overflow. Invoke `knowledge-capture` with `caller=library-brief`, `read_entries(kind="all", limit=20, since=null)`. Filter the returned digest to entries whose tags or title contain the library canonical name OR any alias.
+Always run. NEVER dropped on overflow. Invoke `knowledge-capture` with `caller=tech-brief`, `read_entries(kind="all", limit=20, since=null)`. Filter the returned digest to entries whose tags or title contain the canonical name OR any alias.
 
-**No subagent — this is a direct read API call.** The parent skill folds matching entries into the Gotchas section as candidate bullets (subject to user review in interactive mode).
+**No subagent — this is a direct read API call.** The parent skill folds matching entries into the Gotchas and "Specifics worth remembering" sections as candidate bullets (subject to user review in interactive mode).
 
-If knowledge-capture is not installed (sibling-installed check fails): skip this source, log to `open-questions.md` ("knowledge-capture sibling not installed; library-tagged gotchas not pulled"). Do NOT block.
+If knowledge-capture is not installed (sibling-installed check fails): skip this source, log to `open-questions.md` ("knowledge-capture sibling not installed; tech-tagged gotchas not pulled"). Do NOT block.
 
-### 5. AWS docs MCP (ecosystem=aws)
+### 5. AWS docs MCP (ecosystem=aws OR ecosystem=aws-service)
 
-Run only when `ecosystem == aws`. Uses `mcp__aws-documentation__search_documentation` + `mcp__aws-documentation__read_documentation`.
+Run when `ecosystem == aws` OR `ecosystem == aws-service`. For `kind: service, ecosystem: aws-service`, this source runs FIRST (before homepage) and is NEVER dropped on overflow. Uses `mcp__aws-documentation__search_documentation` + `mcp__aws-documentation__read_documentation` + `mcp__aws-documentation__recommend` (for "New" / recently released content).
 
-**Subagent prompt:**
+**Subagent prompt (kind=service, ecosystem=aws-service):**
 
-> You are researching the AWS service or SDK `<library>` for inclusion in a library brief.
+> You are researching the AWS service `<name>` for inclusion in a tech brief.
 >
-> 1. Call `mcp__aws-documentation__search_documentation` with `search_phrase: "<library> overview"`.
+> 1. Call `mcp__aws-documentation__search_documentation` with `search_phrase: "<name> overview"`.
+> 2. For the top 2 results, call `mcp__aws-documentation__read_documentation`.
+> 3. For each of the top 2 URLs, also call `mcp__aws-documentation__recommend` to surface the "New" section and related recently updated pages.
+> 4. Return at most 8 records, each formatted EXACTLY as:
+>
+>    `- **<title>** — <url> — <one-line takeaway under 25 words>`
+>
+> Cover: service purpose (1), main API entry points (1-2), pricing model dimensions (1), hard limits/quotas (1), common IAM actions (1), and any "New" items from the last 6 months (1-2). Cite the documentation URL on every record per AWS docs MCP best practice. If search returns nothing relevant, return `none`.
+>
+> Total output must not exceed 12 lines.
+
+**Subagent prompt (kind=library, ecosystem=aws — SDK brief):**
+
+> You are researching the AWS service or SDK `<name>` for inclusion in a tech brief.
+>
+> 1. Call `mcp__aws-documentation__search_documentation` with `search_phrase: "<name> overview"`.
 > 2. For the top 2 results, call `mcp__aws-documentation__read_documentation`.
 > 3. Return at most 5 records, each formatted EXACTLY as:
 >
@@ -154,7 +191,7 @@ Run only when `ecosystem == dotnet`. Uses `mcp__claude_ai_Microsoft_Learn__micro
 
 **Subagent prompt:**
 
-> You are researching the .NET library `<library>` for inclusion in a library brief.
+> You are researching the .NET library `<library>` for inclusion in a tech brief.
 >
 > 1. Call `mcp__claude_ai_Microsoft_Learn__microsoft_docs_search` with the library name.
 > 2. For the top 2 results, call `mcp__claude_ai_Microsoft_Learn__microsoft_docs_fetch`.
@@ -174,7 +211,7 @@ Run only when MSP-detected (triangulated check from composition-skills decisions
 
 **Subagent prompt:**
 
-> You are researching the internal MSP library `<library>` for inclusion in a library brief.
+> You are researching the internal MSP library `<library>` for inclusion in a tech brief.
 >
 > 1. Call `mcp__claude_ai_Atlassian__search` with `query: "<library>"` and `cloudId: "nicusa.atlassian.net"`.
 > 2. For the top 2 Confluence page results, fetch via `mcp__claude_ai_Atlassian__fetch`.
