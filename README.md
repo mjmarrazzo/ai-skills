@@ -38,7 +38,7 @@ Skills here are intended to compose freely. A skill may reference a sibling skil
 
 ## Skills
 
-14 skills organized around a research → planning → executing → verifying → shipping spine. Every skill stands alone and degrades gracefully when its siblings aren't installed. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
+15 skills organized around a research → planning → executing → verifying → shipping spine. Every skill stands alone and degrades gracefully when its siblings aren't installed. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
 
 ### Research & knowledge
 - [`pre-task-research`](skills/pre-task-research/SKILL.md) — optional Phase 0 before blueprint. Parallel research subagents (library briefs, Confluence, JIRA, recent PRs, AWS docs, MS Learn, local knowledge) with hard token budgets. Produces `research.md` that blueprint folds into `handoff.md`.
@@ -69,6 +69,9 @@ Skills here are intended to compose freely. A skill may reference a sibling skil
 
 ### Utilities
 - [`vscode-preview`](skills/vscode-preview/SKILL.md) — opens markdown rendered preview or diff in VSCode/Cursor at review gates. Honest about the `code --command markdown.showPreview` flag not being real; uses `code -r` + keybinding hint.
+
+### Output register
+- [`caveman`](skills/caveman/SKILL.md) — togglable terse-output register. `/caveman on` for this session, `/caveman persist` to survive new sessions (requires a one-time SessionStart hook install — see `skills/caveman/references/hook-snippet.md`). Code, URLs, paths, and sibling-skill templates preserved verbatim. Default OFF.
 
 ## Composition
 
