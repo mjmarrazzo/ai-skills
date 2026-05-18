@@ -13,12 +13,14 @@ Togglable terse-output register for Claude Code. Compresses free-form narration;
 
 | Invocation | Effect |
 |---|---|
-| `/caveman`, `/caveman on`, "talk like caveman", "caveman mode" | Session-only mode on. Apply `references/caveman-rules.md` to all subsequent free-form output in this session. |
-| `/caveman persist`, "make caveman persistent" | Same as `on` PLUS `mkdir -p ~/.claude/state && touch ~/.claude/state/caveman.on` so the `SessionStart` hook re-injects the rules on every new session. |
+| `/caveman`, `/caveman on`, "talk like caveman", "caveman mode" | Session-only mode on at `full` intensity. Apply `references/caveman-rules.md` to all subsequent free-form output in this session. |
+| `/caveman lite` | Session-only mode on at `lite` intensity (filler/hedging dropped, full sentences kept). |
+| `/caveman full` | Switch active session to `full` intensity. |
+| `/caveman persist`, "make caveman persistent" | Same as `on` PLUS write the current intensity (`lite` or `full`) to `~/.claude/state/caveman.on` so the `SessionStart` hook re-injects the rules on every new session at that intensity. `/caveman persist lite` and `/caveman persist full` set intensity explicitly. |
 | `/caveman off`, "caveman off", "stop talking like caveman" | `rm -f ~/.claude/state/caveman.on`. Drop the caveman rules from the current session's working register. |
 | `/caveman status` | Report persistent-flag presence, current-session register, and whether the SessionStart hook is installed. |
 
-If the action is ambiguous (bare `/caveman` with no arg), treat as `on`.
+If the action is ambiguous (bare `/caveman` with no arg), treat as `on` at `full` intensity.
 
 ## The rule-set
 
@@ -27,8 +29,8 @@ If the action is ambiguous (bare `/caveman` with no arg), treat as `on`.
 ## Flag-file contract
 
 - **Path:** `~/.claude/state/caveman.on`.
-- **Format:** zero-byte empty file. Presence = persistent mode on.
-- **Writers:** `/caveman persist` (create), `/caveman off` (delete).
+- **Format:** plaintext file containing `lite` or `full`. Presence = persistent mode on; contents = default intensity for new sessions. Empty file or unrecognized value falls back to `full`.
+- **Writers:** `/caveman persist` (write intensity), `/caveman off` (delete).
 - **Readers:** `/caveman status`, `scripts/session-start.sh`.
 
 When creating the flag the first time, `mkdir -p ~/.claude/state` first — the directory may not exist.
@@ -57,9 +59,13 @@ warning: persistent flag set but SessionStart hook missing — see references/ho
 
 ## Activation behavior
 
-- On first activation in a session, emit exactly: `caveman on`. (Or `caveman on (persistent — applies to new sessions)` for `persist`.)
+- On first activation in a session, emit exactly: `caveman on`. (Or `caveman on (persistent — applies to new sessions)` for `persist`, or `caveman on (lite)` for `lite`.)
 - After that, do not narrate the mode. The whole point is to shorten output, not announce it.
 - Free-form output following the rule-set: fragments OK, drop filler, but preserve everything in the verbatim list.
+
+## Auto-clarity
+
+Even when caveman is on, the rules suspend compression for security warnings, irreversible actions, ambiguous multi-step sequences, and clarification requests. See `references/caveman-rules.md` for the exact conditions. The mode flag does not change — just the affected paragraph is written in full prose, then compression resumes.
 
 ## Composition with sibling skills
 
