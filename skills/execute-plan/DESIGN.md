@@ -64,7 +64,7 @@ Ask once via `AskUserQuestion`:
 > 1. **Subagent-per-task** — Fresh subagent drafts each task, sonnet reviewer checks the diff against the task definition. Slower, isolated, less context contamination. Best for plans with >5 tasks or sensitive code.
 > 2. **Inline batch** — I execute each task in this session, pausing at task boundaries. Faster, more context overlap. Best for tight plans where you want to read my reasoning live.
 
-Default highlight: subagent-per-task if file count > 10 or any "risky" signal fires (see Isolated-work suggestion); inline batch otherwise.
+Default highlight: **subagent-per-task**. Premise: plan carries the heavy reasoning, drafter tasks can run on sonnet with auto-escalation to opus on `BLOCKED` re-dispatch and on sensitive paths. Per-task isolation + reviewer pass for free. Inline batch is the escape hatch — pick it for tight 1-3 task plans or when you want main-thread reasoning visibility. Note: with `/clear` between blueprint and execute-plan being the common workflow, the old "main thread already heavy from blueprint" rationale for subagent isolation no longer dominates — the live justification is per-task isolation and the reviewer.
 
 ### 5. Branch check
 
@@ -344,7 +344,7 @@ If `verify-before-done` isn't installed, print:
 - **Don't run the full `ui-validation` surface list per task.** Per-task UI is a smoke check on the routes the task touched. Full sweep is `verify-before-done`'s job.
 - **Don't retry the same failing command in a loop.** If the first run failed with a real error (compile, test assert, type error), running it again with no change is wasted tokens. Diagnose, change something, then retry — or hand to debug-loop.
 - **Don't skip the freshness check because the plan "feels recent".** A plan written yesterday against an already-shifted codebase is worse than no plan, because its code blocks look authoritative.
-- **Don't pick subagent-per-task as the default just because it sounds rigorous.** It's slow and tokens-heavy. Default to inline batch unless the plan is large or risky.
+- **Don't pick inline batch as the default for non-trivial plans.** Loses per-task isolation and the reviewer pass. Subagent-per-task is the default; inline is the escape hatch for tight 1-3 task plans or when you want main-thread visibility into reasoning.
 - **Don't invent verification commands the plan didn't specify.** The plan author chose the per-task verifications deliberately. Extra checks belong in `verify-before-done`.
 - **Don't treat `BLOCKED` as a retry signal.** It's a "this task as defined can't proceed" signal. Either fix the context, fix the plan, or escalate.
 

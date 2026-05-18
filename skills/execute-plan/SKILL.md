@@ -64,10 +64,10 @@ Ask once via `AskUserQuestion`:
 
 > How do you want to execute this plan?
 >
-> 1. **Subagent-per-task** — Fresh subagent drafts each task; sonnet reviewer checks the diff against the task definition. Slower, isolated, less context contamination. Best for plans with >5 tasks or sensitive code.
-> 2. **Inline batch** — I execute each task in this session, pausing at task boundaries. Faster, more context overlap. Best for tight plans where you want to read my reasoning live.
+> 1. **Subagent-per-task** (default) — Fresh sonnet drafter per task; sonnet reviewer checks the diff against the task definition. Per-task context isolation, built-in reviewer pass, auto-escalation to opus on `BLOCKED` re-dispatch and on auth/migration/root-config paths. Recommended for any plan with multiple tasks.
+> 2. **Inline batch** — I execute each task in this session, pausing at task boundaries. No reviewer pass; you watch the reasoning live in the main thread. Best for tight 1-3 task plans.
 
-Default highlight: subagent-per-task if `Files` count > 10 or any risky-plan signal fires (see § Isolated-work suggestion); inline batch otherwise.
+Default highlight: **subagent-per-task**. The plan carries the heavy reasoning; per-task drafters can run cheap (sonnet) with auto-escalation to opus on `BLOCKED` re-dispatch and on sensitive paths (auth/migrations/root-config — see Reviewer section). Per-task isolation and the reviewer pass come for free. Pick inline batch only for tight 1-3 task plans, or when you specifically want to read reasoning live in the main thread.
 
 ### 6. Branch check
 
@@ -325,7 +325,7 @@ If `verify-before-done` isn't installed, print:
 - **Don't run the full `ui-validation` surface list per task.** Per-task UI is a smoke check on the routes the task touched; the full sweep belongs to `verify-before-done`.
 - **Don't retry the same failing command in a loop.** Change something or hand to `debug-loop` — re-running a real failure with no change is wasted tokens.
 - **Don't skip the freshness check because the plan "feels recent".** A plan written against an already-shifted codebase is worse than no plan; its code blocks look authoritative.
-- **Don't pick subagent-per-task as the default just because it sounds rigorous.** It's slow and tokens-heavy. Default to inline batch unless the plan is large or risky.
+- **Don't pick inline batch as the default for non-trivial plans.** You lose per-task context isolation and the reviewer pass — both load-bearing for catching drafter drift. Subagent-per-task is the default; inline is the escape hatch for tight 1-3 task plans or when you want main-thread reasoning visibility.
 - **Don't invent verification commands the plan didn't specify.** The plan author chose them deliberately; extras belong in `verify-before-done`.
 - **Don't treat `BLOCKED` as a retry signal.** It means "this task as defined can't proceed." Fix the context, fix the plan, or escalate — don't loop.
 
