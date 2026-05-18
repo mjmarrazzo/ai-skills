@@ -122,16 +122,29 @@ Draft `plan.v1.md` from the approved spec (or `plan.v<N+1>.md` on pushback — s
 
 Same pattern as Phase 4 — the path quoted to the user is `plan.v<N>.md` (the current highest N). On pushback: do NOT copy; write a fresh `plan.v<N+1>.md` and present that. Diff arg order is `<plan.v<N>.md> <plan.v<N+1>.md>` (older → newer).
 
-### Phase 7 — Offer execution
+### Phase 7 — Hand off execution
 
-Once the current `plan.v<N>.md` is approved, offer the user a choice:
+Once the current `plan.v<N>.md` is approved, **print a copy-pasteable execution prompt and stop**. The user has two paths, and both route through the same prompt:
 
-> Plan approved. How do you want to execute?
-> 1. **Hand off** — I stop here. You (or a fresh session) can pick up from `handoff.md` + the latest `plan.v<N>.md` whenever.
-> 2. **Execute now in this session** — I work through the plan step by step, checking in at meaningful checkpoints.
-> 3. **Subagent-driven execution** — dispatch a fresh subagent per task with two-stage review (requires the `subagent-driven-development` skill, or equivalent).
+- **Fresh context (recommended for longer plans):** `/clear`, paste the prompt — a fresh session picks up cold from the artifacts. This is the default — context the planning phases consumed (subagent traces, reviewer output, discovery dialogue) is dead weight to the executor.
+- **Stay in this session:** say `execute` (or `go`, `run it`) — this agent re-reads the workspace and runs the plan, exactly as a fresh session would.
 
-Default: (1) for unfamiliar/risky work, (2) for self-contained work, (3) for maximum velocity on a well-scoped plan.
+Print the prompt verbatim in a fenced ```` ```text ```` block so the user can triple-click to copy. Substitute `<abs>` with the workspace's absolute path (from `git rev-parse --show-toplevel` or `pwd` at workspace creation), `<dir>` with the slug directory, and `<N>` with the current highest-numbered plan/spec:
+
+```text
+Execute the implementation plan at <abs>/.claude-plans/<dir>/plan.v<N>.md.
+
+Supporting context in the same directory:
+- handoff.md — discovery and constraints
+- spec.v<N>.md — the architectural "what" the plan implements
+- decisions.md — non-obvious choices already locked in (don't re-litigate)
+- open-questions.md — deferred questions; surface any still relevant before assuming
+
+Use the `execute-plan` skill if installed. Otherwise walk the plan task-by-task,
+running tests as the plan specifies, and hand failures to `debug-loop` if installed.
+```
+
+After printing: do not start executing in this session unless the user explicitly says so. If they `/clear`, the next session has the prompt in hand and the workspace on disk — that's everything it needs. If they reply with an execute trigger (`execute`, `go`, `run it`, `do it now`) in this session, invoke `execute-plan` on the current `plan.v<N>.md` immediately — no further prompting.
 
 ## Decisions log (decisions.md)
 
