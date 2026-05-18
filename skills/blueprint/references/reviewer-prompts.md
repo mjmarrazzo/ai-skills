@@ -1,10 +1,10 @@
 # Reviewer prompts
 
-Two reviewers, dispatched in parallel on a complex spec (one of them on a medium spec). They review the same `spec.md` independently — don't show them each other's feedback. You (opus, the orchestrator) reconcile.
+Two reviewers, dispatched in parallel on a complex spec (one of them on a medium spec). They review the same `spec.v<N>.md` independently — don't show them each other's feedback. You (opus, the orchestrator) reconcile.
 
 Both reviewers receive the same inputs:
 
-- The full text of `spec.md`.
+- The full text of `spec.v<N>.md`.
 - The full text of `handoff.md` (for context, constraints, and out-of-scope decisions).
 - A pointer to the workspace root and the repo root, so they can read source files they need.
 - The reviewer-specific prompt below.
@@ -27,7 +27,7 @@ You are reviewing an engineering spec for accuracy, completeness, and architectu
 You are NOT writing code, not implementing, not drafting an alternate spec. You are reviewing.
 
 Inputs:
-- Spec: <path to spec.md>
+- Spec: <path to spec.v<N>.md>
 - Handoff (context, constraints): <path to handoff.md>
 - Repo root: <path>
 
@@ -63,7 +63,7 @@ If the spec is solid, say so plainly. Don't manufacture concerns to look thoroug
 The codex MCP accepts a prompt and runs autonomously. Use the same review framing but tuned for codex's strengths (deep code-grounded analysis):
 
 ```
-Review the engineering spec at <path to spec.md>.
+Review the engineering spec at <path to spec.v<N>.md>.
 
 Context for the review: <path to handoff.md>. The spec describes a change to a codebase
 rooted at <repo root>. You may read any files the spec references; do not explore the
@@ -98,8 +98,8 @@ After both reviewers respond:
 1. **Union the concerns.** Any item raised by either reviewer is on the table.
 2. **Dedupe.** If both flagged the same thing, note it as high-confidence in `decisions.md`.
 3. **Filter against handoff constraints.** If a reviewer suggested something that contradicts a user-stated constraint, drop it and note why in `decisions.md`.
-4. **Apply changes directly to `spec.md`.** Don't ask the user to mediate reviewer feedback — that's the orchestrator's job. The user sees the result at the spec gate.
-5. **Append a "Reviewer notes folded in" bullet list** to the bottom of `spec.md` summarizing what changed.
+4. **Apply changes directly to `spec.v<N>.md`.** Don't ask the user to mediate reviewer feedback — that's the orchestrator's job. The user sees the result at the spec gate.
+5. **Append a "Reviewer notes folded in" bullet list** to the bottom of `spec.v<N>.md` summarizing what changed.
 6. **Log every non-obvious resolution in `decisions.md`**, especially places where reviewers disagreed.
 
-The user reviews the post-reconciliation `spec.md`, not the raw reviewer output. They're the gatekeeper, not the referee.
+The user reviews the post-reconciliation `spec.v<N>.md`, not the raw reviewer output. They're the gatekeeper, not the referee.

@@ -1,4 +1,4 @@
-# plan.md template
+# plan.v<N>.md template
 
 The plan is what an engineer (or subagent) needs to execute the spec without thinking architecturally. Bite-sized tasks, exact file paths, exact code where code is shown, exact commands with expected output.
 
@@ -11,7 +11,7 @@ Every plan starts with:
 ```markdown
 # <Slug> — Implementation Plan
 
-> Spec: `spec.md`. Handoff: `handoff.md`. Decisions: `decisions.md`.
+> Spec: `spec.v<N>.md` (current highest-numbered spec). Handoff: `handoff.md`. Decisions: `decisions.md`.
 
 **Goal:** <one sentence>
 **Approach:** <2-3 sentences summarizing the architecture from the spec>

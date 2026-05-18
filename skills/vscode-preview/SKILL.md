@@ -43,10 +43,10 @@ For Cursor, the invocation is identical (`cursor -r /abs/path/to/file.md`). Curs
 ## Diff view
 
 ```sh
-code --diff /abs/path/to/spec.v1.md /abs/path/to/spec.md
+code --diff /abs/path/to/spec.v<N-1>.md /abs/path/to/spec.v<N>.md
 ```
 
-Argument order: `<old> <new>`. This matches blueprint's versioning convention — `spec.v1.md` is the prior version, `spec.md` is current. The diff pane opens automatically; no keybinding hint is needed.
+Argument order: `<old> <new>` — older version on the left, newer on the right. The diff pane opens automatically; no keybinding hint is needed.
 
 Note: the diff view renders raw text, not rendered markdown. There is no CLI path to a rendered-markdown diff. If the user wants rendered reading, use single-file preview on the current version instead.
 

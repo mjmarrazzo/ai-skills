@@ -1,4 +1,4 @@
-# spec.md template
+# spec.v<N>.md template
 
 The spec is the **what**, not the **how**. It locks in architecture, contracts, and behavior. The implementation plan is downstream — don't list steps here.
 

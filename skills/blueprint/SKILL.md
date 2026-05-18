@@ -29,13 +29,15 @@ All artifacts live in a **gitignored** `.claude-plans/` directory at the repo ro
 .claude-plans/
 └── <YYYY-MM-DD>-<slug>/
     ├── handoff.md          # discovery findings: any fresh LLM can pick this up cold
-    ├── spec.md             # current spec (the "what")
-    ├── spec.v1.md          # prior iteration, written when user pushes back
-    ├── plan.md             # current implementation plan (the "how")
-    ├── plan.v1.md          # prior iteration
+    ├── spec.v1.md          # first spec draft (the "what")
+    ├── spec.v2.md          # next version, written when user pushes back
+    ├── plan.v1.md          # first implementation plan (the "how")
+    ├── plan.v2.md          # next version
     ├── decisions.md        # ADR-style log of every non-obvious choice + rationale
     └── open-questions.md   # deferred questions / decisions auto-mode rolled with — user reviews after
 ```
+
+**Versioning convention:** spec and plan are *always* written as numbered files — never a bare `spec.md` or `plan.md`. The **current** version is the highest N (`ls spec.v*.md | sort -V | tail -1`). Reviewers, the user, and `vscode-preview` always operate on that highest-numbered file. `handoff.md`, `decisions.md`, and `open-questions.md` are append-only artifacts and stay unnumbered.
 
 `open-questions.md` is the running log of things the agent didn't pause to ask about (auto mode) or things that surfaced during work the user wants to revisit. Surfaced at end of run ("3 deferred questions in open-questions.md"). When continuing related work in a follow-up session, Phase 1 reads it first.
 
@@ -51,10 +53,10 @@ All artifacts live in a **gitignored** `.claude-plans/` directory at the repo ro
 
 ```dot
 digraph phases {
-    "1. Discovery" -> "2. Spec draft" -> "3. Parallel review" -> "4. Reconcile + write spec.md";
-    "4. Reconcile + write spec.md" -> "5. User reviews spec" -> "6. Plan draft" -> "7. User reviews plan" -> "8. Offer execution";
-    "5. User reviews spec" -> "2. Spec draft" [label="pushback (version + regen)"];
-    "7. User reviews plan" -> "6. Plan draft" [label="pushback (version + regen)"];
+    "1. Discovery" -> "2. Spec draft" -> "3. Parallel review" -> "4. Reconcile spec.v<N>.md";
+    "4. Reconcile spec.v<N>.md" -> "5. User reviews spec" -> "6. Plan draft" -> "7. User reviews plan" -> "8. Offer execution";
+    "5. User reviews spec" -> "2. Spec draft" [label="pushback (write spec.v<N+1>.md)"];
+    "7. User reviews plan" -> "6. Plan draft" [label="pushback (write plan.v<N+1>.md)"];
 }
 ```
 
@@ -86,7 +88,7 @@ The default mode is **interactive**: blueprint asks the user a wave of questions
 
 ### Phase 2 — Draft the spec (this session)
 
-Draft `spec.md` from `handoff.md`. The spec is the **what**: architecture, contracts, data model, error/edge behavior, observability hooks — not steps. See `references/spec-template.md`. Keep claims grounded in what's actually in the repo — link file paths and line ranges when describing existing code being modified.
+Draft `spec.v1.md` from `handoff.md` (or `spec.v<N+1>.md` on pushback — see Phase 4). The spec is the **what**: architecture, contracts, data model, error/edge behavior, observability hooks — not steps. See `references/spec-template.md`. Keep claims grounded in what's actually in the repo — link file paths and line ranges when describing existing code being modified.
 
 ### Phase 3 — Parallel review (scaled to complexity)
 
@@ -98,34 +100,34 @@ Complexity signals: files touched, new modules, cross-cutting concerns (auth, bi
 | **Medium** (multi-file, single subsystem) | One: `general-purpose` Agent with `model: sonnet`. |
 | **Complex** (cross-cutting, new subsystem, architectural, irreversible) | Two in parallel: codex MCP (`mcp__codex__codex`) AND `general-purpose` Agent with `model: sonnet`. |
 
-Full reviewer prompts: `references/reviewer-prompts.md`. They review the same `spec.md` independently — don't show them each other's feedback.
+Full reviewer prompts: `references/reviewer-prompts.md`. They review the same `spec.v<N>.md` (the current highest-numbered spec) independently — don't show them each other's feedback.
 
-Reconcile: take the union of valid concerns, drop anything contradicting the user's stated constraints, apply changes to `spec.md`. Log reviewer conflicts in `decisions.md`.
+Reconcile: take the union of valid concerns, drop anything contradicting the user's stated constraints, apply changes to the current `spec.v<N>.md` in place (Phase 3 reconcile is part of producing the *current* version — it does not bump N). Log reviewer conflicts in `decisions.md`.
 
 ### Phase 4 — Spec gate (human review)
 
-Tell the user:
+Tell the user (substituting the actual current N — i.e. the highest-numbered `spec.v*.md` in the workspace):
 
-> Spec ready at `.claude-plans/<dir>/spec.md`. Handoff dossier at `handoff.md`. Reviewer notes folded in; decisions logged at `decisions.md`. Please review the spec and tell me if anything needs to change before I draft the implementation plan.
+> Spec ready at `.claude-plans/<dir>/spec.v<N>.md`. Handoff dossier at `handoff.md`. Reviewer notes folded in; decisions logged at `decisions.md`. Please review the spec and tell me if anything needs to change before I draft the implementation plan.
 
 If a `vscode-preview` (or similar) sibling skill is installed, offer to open the spec in markdown preview. Otherwise just point at the path.
 
-**On pushback:** `cp spec.md spec.v<N>.md` (next available N) BEFORE editing, then regenerate `spec.md` incorporating the user's feedback. Reviewing the diff between versions is how the user sees what changed. Re-run Phase 3 review only if the pushback was substantive (new constraint, scope change). Cosmetic edits don't warrant a full re-review.
+**On pushback:** do NOT copy the current spec to a snapshot — the current version already lives at `spec.v<N>.md`. Write a fresh `spec.v<N+1>.md` incorporating the user's feedback, leaving `spec.v<N>.md` untouched as the prior version. Present `spec.v<N+1>.md` (the new current). Reviewing the diff between versions is how the user sees what changed — diff arg order is `<spec.v<N>.md> <spec.v<N+1>.md>` (older → newer). Re-run Phase 3 review only if the pushback was substantive (new constraint, scope change). Cosmetic edits don't warrant a full re-review.
 
 ### Phase 5 — Draft the implementation plan (this session)
 
-Draft `plan.md` from the approved spec. One action per step, 2-5 minutes, exact file paths, exact code, test before implementation: see `references/plan-template.md`. No review round by default — spec is where architectural disagreement surfaces. Re-trigger Phase 3 reviewers only if the user asks or the plan makes decisions the spec didn't pin down.
+Draft `plan.v1.md` from the approved spec (or `plan.v<N+1>.md` on pushback — see Phase 6). One action per step, 2-5 minutes, exact file paths, exact code, test before implementation: see `references/plan-template.md`. No review round by default — spec is where architectural disagreement surfaces. Re-trigger Phase 3 reviewers only if the user asks or the plan makes decisions the spec didn't pin down.
 
 ### Phase 6 — Plan gate (human review)
 
-Same pattern as Phase 4. On pushback: version (`plan.v<N>.md`), regenerate, re-present.
+Same pattern as Phase 4 — the path quoted to the user is `plan.v<N>.md` (the current highest N). On pushback: do NOT copy; write a fresh `plan.v<N+1>.md` and present that. Diff arg order is `<plan.v<N>.md> <plan.v<N+1>.md>` (older → newer).
 
 ### Phase 7 — Offer execution
 
-Once `plan.md` is approved, offer the user a choice:
+Once the current `plan.v<N>.md` is approved, offer the user a choice:
 
 > Plan approved. How do you want to execute?
-> 1. **Hand off** — I stop here. You (or a fresh session) can pick up from `handoff.md` + `plan.md` whenever.
+> 1. **Hand off** — I stop here. You (or a fresh session) can pick up from `handoff.md` + the latest `plan.v<N>.md` whenever.
 > 2. **Execute now in this session** — I work through the plan step by step, checking in at meaningful checkpoints.
 > 3. **Subagent-driven execution** — dispatch a fresh subagent per task with two-stage review (requires the `subagent-driven-development` skill, or equivalent).
 
@@ -151,13 +153,13 @@ Blueprint stands alone and composes loosely with siblings — it never embeds th
 - **`tech-brief`:** Phase 1 reads existing briefs for libraries named in the request or detected in repo manifests; offers ONE batched create-brief opportunity for un-briefed libs. Tech-brief output lives in `~/.claude/data/tech-briefs/<ecosystem>/<library>.md` — central, not per-repo.
 - **`pre-task-research`:** Phase 1 offers it interactively (or auto-runs on heuristic hit). Output `research.md` folds into `handoff.md`.
 - **`visual-digest`:** Phase 1 runs it on any attached mockup; output YAML lands in `<workspace>/visual-digests/`.
-- **`ui-validation`:** when `spec.md` touches frontend rendering, `plan.md` should include a verification task naming surfaces, viewports, and credential setup. Don't bake Playwright into this skill.
-- **`vscode-preview`:** at any user-review gate, offer to open the current file or diff against the prior `.vN` version. Otherwise just print the path.
+- **`ui-validation`:** when the current `spec.v<N>.md` touches frontend rendering, the current `plan.v<N>.md` should include a verification task naming surfaces, viewports, and credential setup. Don't bake Playwright into this skill.
+- **`vscode-preview`:** at any user-review gate, offer to open the current `spec.v<N>.md` / `plan.v<N>.md`, or diff it against the prior `v<N-1>` version. Otherwise just print the path.
 - **Execution:** at Phase 7, defer to `execute-plan` or `isolated-work` — never reimplement.
 
 ## Anti-patterns
 
-- **Don't draft the spec in chat before writing the file.** Write directly to `spec.md`. The chat is for orientation and gates, not for prose the user has to re-read in two places.
+- **Don't draft the spec in chat before writing the file.** Write directly to `spec.v<N>.md`. The chat is for orientation and gates, not for prose the user has to re-read in two places.
 - **Don't skip Phase 1 because the request "seems clear".** A 60-second questionnaire catches more rework than it costs. Ambiguity hides in obvious-looking requests.
 - **Don't run both reviewers on a trivial spec to look thorough.** Token cost is real and reviewer fatigue (you reading two reviews that both say "lgtm") trains you to ignore them when they matter.
 - **Don't commit the workspace.** `.claude-plans/` is the user's working surface. The whole point of this skill is they hated planning docs in git.
