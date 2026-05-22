@@ -60,6 +60,40 @@ digraph phases {
 }
 ```
 
+## Context-clear gates (lean-context policy)
+
+Blueprint treats this session's context window as scarce even on 1M-context models. Each phase produces a durable artifact on disk (`handoff.md`, `spec.v<N>.md`, `plan.v<N>.md`, `decisions.md`, `open-questions.md`); the chat transcript that *produced* that artifact (subagent traces, reviewer output, discovery dialogue, repo reads) is dead weight to the next phase. A fresh session reading the artifact starts cleaner and faster than this session continuing with everything still loaded.
+
+After Phase 1, Phase 4, and Phase 6 — every point where a durable artifact has just landed — blueprint prints a **context-clear gate**: a copy-pasteable resume prompt and a one-line "continue in this thread" trigger. The user chooses per gate; default recommendation is *clear* unless the phase produced almost no chat activity.
+
+### Gate output format
+
+At each context-clear gate, print this verbatim (substituting `<abs>`, `<dir>`, `<N>`, `<NEXT-PHASE>`, and the phase-specific resume body):
+
+```text
+─── context-clear gate (end of <PHASE NAME>) ───
+
+Artifact landed at <abs>/.claude-plans/<dir>/<artifact>.
+
+Two options:
+  (a) Clear context (recommended for lean runs):
+      Run `/clear`, then paste the prompt below. A fresh session picks up cold
+      from the workspace files — no need to recompact this thread.
+  (b) Continue here:
+      Reply `continue` (or `keep going`, `same thread`) and I'll proceed to
+      <NEXT-PHASE> without clearing.
+
+─── resume prompt (paste after /clear) ───
+
+<phase-specific resume body — see each phase>
+
+─── end gate ───
+```
+
+Auto-mode behavior: in `mode=auto`, blueprint still **prints** the gate (so the artifact path and resume prompt are recorded in the transcript) but does NOT pause — it logs `auto-continued past <phase> context-clear gate` to `open-questions.md` and proceeds inline. The user can read the gate output post-hoc and choose to clear-and-resume from any prior gate.
+
+The resume prompt for each phase is defined in that phase's section below.
+
 ### Phase 1 — Discovery (this session)
 
 Goal: produce `handoff.md`, a dossier any fresh LLM could read to understand what's being built and why.
@@ -84,6 +118,28 @@ The default mode is **interactive**: blueprint asks the user a wave of questions
 
 9. **Write `handoff.md`** using the template in `references/handoff-template.md`. Lead with the goal in one sentence, then context, constraints, open questions resolved, and pointers to the files/docs you read.
 
+10. **Emit the Phase 1 context-clear gate** (see "Context-clear gates" above). The phase name is `Phase 1 — Discovery`; the next phase is `Phase 2 — Spec draft`; the artifact is `handoff.md` (plus any `research.md`, `visual-digests/`, and the `tech-brief` digest folded in). Phase 1 is typically the heaviest context-burner — subagent recon, knowledge-capture digest, pre-task-research fan-out, and the questionnaire all live in this session — so the *clear* option is the default recommendation here.
+
+    Resume-prompt body for this gate:
+
+    ```text
+    Continue blueprint at Phase 2 (spec draft) for the workspace at
+    <abs>/.claude-plans/<dir>/.
+
+    Inputs already on disk:
+    - handoff.md — discovery findings, constraints, decisions, repo recon
+    - decisions.md — non-obvious choices locked in during discovery
+    - open-questions.md — deferred questions (if any)
+    - research.md — pre-task-research output (if present)
+    - visual-digests/ — mockup digests (if present)
+
+    Re-read those files, then draft spec.v1.md per blueprint's
+    references/spec-template.md. Do NOT re-run discovery questions —
+    they are already captured. Run Phase 3 reviewers per the complexity
+    matrix in blueprint's SKILL.md, reconcile into spec.v1.md, then emit
+    the Phase 4 spec gate.
+    ```
+
 **Auto mode note:** in auto mode, steps 7–8 don't fire prompts — the agent reasons about repo state, pre-task-research output, and visual-digest output to make assumptions itself, and logs every assumption it would have asked about to `open-questions.md` with the format documented at workspace layout above.
 
 ### Phase 2 — Draft the spec (this session)
@@ -104,7 +160,7 @@ Full reviewer prompts: `references/reviewer-prompts.md`. They review the same `s
 
 Reconcile: take the union of valid concerns, drop anything contradicting the user's stated constraints, apply changes to the current `spec.v<N>.md` in place (Phase 3 reconcile is part of producing the *current* version — it does not bump N). Log reviewer conflicts in `decisions.md`.
 
-### Phase 4 — Spec gate (human review)
+### Phase 4 — Spec gate (human review + context-clear gate)
 
 Tell the user (substituting the actual current N — i.e. the highest-numbered `spec.v*.md` in the workspace):
 
@@ -112,15 +168,44 @@ Tell the user (substituting the actual current N — i.e. the highest-numbered `
 
 If a `vscode-preview` (or similar) sibling skill is installed, offer to open the spec in markdown preview. Otherwise just point at the path.
 
+**After the user approves the spec** (no pushback path — pushback writes `spec.v<N+1>.md` and re-runs this gate), emit the Phase 4 context-clear gate per the format in "Context-clear gates" above. Phase name `Phase 4 — Spec gate`; next phase `Phase 5 — Plan draft`; artifact `spec.v<N>.md`. Phase 3 reviewer traces (codex + sonnet) live in this session's context and are dead weight to plan drafting — recommend clearing unless the spec landed without reviewers (trivial complexity).
+
+Resume-prompt body for this gate:
+
+```text
+Continue blueprint at Phase 5 (plan draft) for the workspace at
+<abs>/.claude-plans/<dir>/.
+
+Inputs already on disk:
+- handoff.md — discovery findings and constraints
+- spec.v<N>.md — APPROVED spec (current highest N — do not re-litigate)
+- decisions.md — locked-in choices including reviewer reconciliation
+- open-questions.md — deferred questions (if any)
+
+Re-read spec.v<N>.md and handoff.md, then draft plan.v1.md per blueprint's
+references/plan-template.md. Hardcore TDD ordering is mandatory: every
+behavioral task starts with a failing test step before any implementation
+code. Tasks that skip TDD must declare why in the task header (config-only,
+UI-only, codegen, migration). After drafting, emit the Phase 6 plan gate.
+```
+
 **On pushback:** do NOT copy the current spec to a snapshot — the current version already lives at `spec.v<N>.md`. Write a fresh `spec.v<N+1>.md` incorporating the user's feedback, leaving `spec.v<N>.md` untouched as the prior version. Present `spec.v<N+1>.md` (the new current). Reviewing the diff between versions is how the user sees what changed — diff arg order is `<spec.v<N>.md> <spec.v<N+1>.md>` (older → newer). Re-run Phase 3 review only if the pushback was substantive (new constraint, scope change). Cosmetic edits don't warrant a full re-review.
 
 ### Phase 5 — Draft the implementation plan (this session)
 
-Draft `plan.v1.md` from the approved spec (or `plan.v<N+1>.md` on pushback — see Phase 6). One action per step, 2-5 minutes, exact file paths, exact code, test before implementation: see `references/plan-template.md`. No review round by default — spec is where architectural disagreement surfaces. Re-trigger Phase 3 reviewers only if the user asks or the plan makes decisions the spec didn't pin down.
+Draft `plan.v1.md` from the approved spec (or `plan.v<N+1>.md` on pushback — see Phase 6). One action per step, 2-5 minutes, exact file paths, exact code: see `references/plan-template.md`.
 
-### Phase 6 — Plan gate (human review)
+**TDD-first is mandatory.** Every behavioral task starts with a failing test step *before* any implementation code. The failing-test run is an explicit step with the specific failure mode named. Tasks that legitimately can't be TDD'd (pure config, UI styling verified by `ui-validation`, codegen, one-shot migrations) MUST declare the reason in the task header and replace Steps 1–4 with a concrete verification step. See `references/plan-template.md` § "TDD-first ordering" for the full rules. The self-review pass at the end of plan drafting explicitly checks TDD ordering across every task.
+
+No review round by default — spec is where architectural disagreement surfaces. Re-trigger Phase 3 reviewers only if the user asks or the plan makes decisions the spec didn't pin down.
+
+### Phase 6 — Plan gate (human review + context-clear gate)
 
 Same pattern as Phase 4 — the path quoted to the user is `plan.v<N>.md` (the current highest N). On pushback: do NOT copy; write a fresh `plan.v<N+1>.md` and present that. Diff arg order is `<plan.v<N>.md> <plan.v<N+1>.md>` (older → newer).
+
+**After the user approves the plan**, emit the Phase 6 context-clear gate per the format in "Context-clear gates" above. Phase name `Phase 6 — Plan gate`; next phase `Phase 7 — Execution handoff`; artifact `plan.v<N>.md`. Strongly recommend clearing here — execution wants a clean context to walk the plan task-by-task, and the planning-phase chat (handoff drafting, reviewer reconciliation, plan drafting) has zero value to the executor.
+
+Resume-prompt body for this gate is the **Phase 7 execution prompt** (see Phase 7 below) — Phase 6's context-clear gate effectively *is* the execution handoff for users who choose to clear. Users who reply `continue` get the same prompt printed inline in Phase 7 and the same `execute`/`go` triggers.
 
 ### Phase 7 — Hand off execution
 
@@ -140,9 +225,16 @@ Supporting context in the same directory:
 - decisions.md — non-obvious choices already locked in (don't re-litigate)
 - open-questions.md — deferred questions; surface any still relevant before assuming
 
+The plan is TDD-ordered: for every behavioral task, write the failing test
+FIRST, run it and confirm it fails the way the plan predicts, THEN implement
+until it passes. Tasks that legitimately skip TDD declare why in their
+header — honor that. Do not collapse the red/green cycle into a single step.
+
 Use the `execute-plan` skill if installed. Otherwise walk the plan task-by-task,
 running tests as the plan specifies, and hand failures to `debug-loop` if installed.
 ```
+
+This is the same prompt referenced by the Phase 6 context-clear gate — Phase 6 and Phase 7 share one resume prompt, two trigger paths (`/clear` + paste, or `continue` / `execute` inline).
 
 After printing: do not start executing in this session unless the user explicitly says so. If they `/clear`, the next session has the prompt in hand and the workspace on disk — that's everything it needs. If they reply with an execute trigger (`execute`, `go`, `run it`, `do it now`) in this session, invoke `execute-plan` on the current `plan.v<N>.md` immediately — no further prompting.
 
@@ -177,3 +269,5 @@ Blueprint stands alone and composes loosely with siblings — it never embeds th
 - **Don't run both reviewers on a trivial spec to look thorough.** Token cost is real and reviewer fatigue (you reading two reviews that both say "lgtm") trains you to ignore them when they matter.
 - **Don't commit the workspace.** `.claude-plans/` is the user's working surface. The whole point of this skill is they hated planning docs in git.
 - **Don't promote yourself past a gate.** When you write "Plan ready, please review", actually wait. The skill is human-in-the-loop by design.
+- **Don't skip the context-clear gate even when it feels unnecessary.** Print it at end of Phase 1, end of Phase 4, end of Phase 6. The artifact-first design is the *point* — the user can't choose to clear if you don't offer.
+- **Don't put implementation before its test in the plan.** TDD ordering is mandatory in `references/plan-template.md`. If you find yourself drafting a task where Step 1 is code, stop and re-order — failing test first, then code, then green run. The only exemptions are declared in the task header (config, UI styling, codegen, migration).
