@@ -94,6 +94,21 @@ Auto-mode behavior: in `mode=auto`, blueprint still **prints** the gate (so the 
 
 The resume prompt for each phase is defined in that phase's section below.
 
+### Auto-copy to clipboard (best effort)
+
+Right after printing each gate (including the Phase 7 execution prompt), pipe the resume prompt to the platform clipboard so the user doesn't have to triple-click:
+
+```bash
+# macOS
+command -v pbcopy >/dev/null && printf '%s' "$RESUME_PROMPT" | pbcopy
+# Linux (Wayland)
+command -v wl-copy >/dev/null && printf '%s' "$RESUME_PROMPT" | wl-copy
+# Linux (X11)
+command -v xclip   >/dev/null && printf '%s' "$RESUME_PROMPT" | xclip -selection clipboard
+```
+
+Run via Bash with the prompt body in a heredoc-fed variable so quoting stays correct. After the copy attempt, append one line to the chat: `(copied to clipboard via pbcopy)` on success, or `(no clipboard tool found — copy from the block above)` if all three commands are missing. Don't prompt for permission; don't fall back to a destructive option. If the Bash call fails for any reason, just print the fallback line — don't retry, don't escalate.
+
 ### Phase 1 — Discovery (this session)
 
 Goal: produce `handoff.md`, a dossier any fresh LLM could read to understand what's being built and why.
