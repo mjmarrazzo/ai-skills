@@ -4,6 +4,28 @@ The plan is what an engineer (or subagent) needs to execute the spec without thi
 
 Assume the executor knows how to code but knows little about this codebase. Don't make them re-derive what the spec already pinned down.
 
+## TDD-first ordering (mandatory when tests apply)
+
+Tests are written **before** the code they verify, and the failing-test run is an explicit step. This is not a stylistic preference — it is the default discipline of every plan blueprint produces.
+
+Rules:
+
+- **Every behavioral task starts with a failing test step.** The test code is shown in full, ready to paste. No "write tests later", no "add tests at the end of the task".
+- **The run-and-fail step is explicit.** Show the exact command and the specific failure mode expected (`AssertionError`, `ImportError`, `NameError`, HTTP 404, etc.). "Expect failure" without a reason is a plan failure — the executor needs to know the *right* failure vs. a setup problem.
+- **Implementation code follows the failing test.** Never put implementation before its test.
+- **The run-and-pass step is explicit.** Same command, expected PASS.
+- **One commit per red→green cycle** unless tasks are tightly coupled.
+- **Refactor (optional step 6) goes after green**, never before.
+
+When TDD does *not* apply, the task header MUST say so and why. Acceptable reasons:
+
+- Pure config / infrastructure changes (Dockerfile tweaks, IAM policy, CI YAML) with no logic to assert.
+- UI styling changes where the verification belongs to `ui-validation`, not unit tests.
+- Migrations / one-shot scripts where the assertion is "ran without error against a copy of prod data" — call that out explicitly as the verification step.
+- Generated code (codegen output, OpenAPI stubs).
+
+For these, replace Steps 1–4 with a single **Verification** step that names the concrete check (command, screenshot diff, manual smoke). Don't fake a unit test that doesn't actually exercise the change.
+
 ## Header
 
 Every plan starts with:
@@ -34,7 +56,7 @@ Before the tasks, list every file the plan will create or modify. Locks in decom
 
 ## Tasks
 
-Each task is a coherent unit (one component, one endpoint, one migration). Inside the task, each step is one action, 2-5 minutes:
+Each task is a coherent unit (one component, one endpoint, one migration). Inside the task, each step is one action, 2-5 minutes. **Step 1 is always the failing test** when TDD applies (see "TDD-first ordering" above):
 
 ````markdown
 ### Task N: <component name>
@@ -95,6 +117,7 @@ After drafting the plan, read it once with fresh eyes:
 2. **Placeholder scan:** Grep for the patterns above. Fix.
 3. **Type / name consistency:** Method names, type names, and property names referenced in later tasks match what earlier tasks defined.
 4. **UI verification:** If the spec touches frontend, the plan includes a verification task that hands off to a UI-validation skill (or names the surfaces / viewports / credentials that need checking).
+5. **TDD ordering:** Every behavioral task starts with a failing test step before any implementation code. Tasks that skip TDD have an explicit reason in the header (config-only, UI-only, codegen, migration). No task hides implementation before its test.
 
 Fix issues inline. No need to re-review — just fix and move on.
 
