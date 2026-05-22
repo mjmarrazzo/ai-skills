@@ -38,7 +38,7 @@ Skills here are intended to compose freely. A skill may reference a sibling skil
 
 ## Skills
 
-15 skills organized around a research → planning → executing → verifying → shipping spine. Every skill stands alone and degrades gracefully when its siblings aren't installed. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
+16 skills organized around a research → planning → executing → verifying → shipping spine. Every skill stands alone and degrades gracefully when its siblings aren't installed. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
 
 ### Research & knowledge
 - [`pre-task-research`](skills/pre-task-research/SKILL.md) — optional Phase 0 before blueprint. Parallel research subagents (library briefs, Confluence, JIRA, recent PRs, AWS docs, MS Learn, local knowledge) with hard token budgets. Produces `research.md` that blueprint folds into `handoff.md`.
@@ -47,6 +47,7 @@ Skills here are intended to compose freely. A skill may reference a sibling skil
 
 ### Planning
 - [`blueprint`](skills/blueprint/SKILL.md) — discovery questionnaire → parallel-reviewed spec → bite-sized implementation plan, all gitignored under `.claude-plans/`. Phase 1 reads knowledge-capture, offers pre-task-research, runs visual-digest on attached mockups. The entry point for substantive engineering work.
+- [`draft-ticket`](skills/draft-ticket/SKILL.md) — light discovery → optional verification → high-level bullets → workshop loop → JIRA create, for work the user is scoping but **not** implementing themselves. Produces ONE ticket whose body is detailed enough for another team or LLM to plan and implement from. Interactive only — no auto mode. Mutually exclusive with `blueprint` (heavier; for "we'll implement this"), `atlassian:spec-to-backlog` (multi-ticket), and `atlassian:capture-tasks-from-meeting-notes` (doc-driven).
 
 ### Executing
 - [`execute-plan`](skills/execute-plan/SKILL.md) — walks `plan.md` task-by-task in one of two modes (subagent-per-task with two-stage review, or inline batch with checkpoints). Owns `progress.json` for resume across sessions.
