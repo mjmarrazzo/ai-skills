@@ -1,0 +1,8 @@
+{
+  "name": "executing",
+  "version": "0.1.0",
+  "description": "Executing phase — execute-plan, isolated-work. Task-by-task plan execution with resume, optionally sandboxed in a git worktree.",
+  "author": {
+    "name": "mjmarrazzo"
+  }
+}
