@@ -31,7 +31,7 @@ The caller MUST declare `viewports_match: bool` when invoking compare mode. If f
 - **Auto-set `comparison_mode: structural`.** Even if the caller asked for `exact`. Exact comparison across different viewports is incoherent.
 - **Suppress region-level deltas.** Don't flag "header in mockup, no header in impl" when one is mobile and the other desktop; that's expected responsive behavior, not a regression.
 - **Suppress `parent_region` in `mismatched.field`.** Responsive layouts legitimately reassign regions (a sidebar nav becomes a hamburger menu's contents on mobile). Flagging it as a mismatch is noise.
-- **Drop `meta.confidence` to `medium`.** This is one of the few places confidence DOES move — the caller asked us to compare across viewports, that's intrinsically lossy.
+- **Drop `meta.legibility` to `medium`** (v2; this was `meta.confidence` before the split). Reading element correspondences across mismatched viewports is intrinsically lossy — that's an observation-reliability statement, so it lands on `legibility`. `confidence` (enumeration completeness) is unaffected and stays as enumerated.
 
 The 20% auto-detection is a fallback. Callers should still pass `viewports_match` honestly; the auto-detect catches misuse.
 

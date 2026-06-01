@@ -4,7 +4,9 @@ The single authoritative version of the `visual-digest` YAML schema. Referenced 
 
 **Format:** YAML. Chosen because (a) human-readable for review, (b) structurally greppable by callers, (c) parseable by any future helper. JSON was rejected on readability — the user opens these files.
 
-**Version:** v1.
+**Version:** v2. Changelog at the bottom (["Version history"](#version-history)).
+
+> **v2 (2026-05-28):** Split the single `confidence` field into two axes — `confidence` (enumeration completeness) and `legibility` (observation reliability) — and added the optional `cross_frame_deltas` block for describe-mode variant sets. **Caller action required:** any caller reading `meta.confidence` must now also read `meta.legibility`; a high `confidence` no longer implies the read was reliable.
 
 ---
 
@@ -21,6 +23,9 @@ mockup_vs_impl_deltas:   # compare mode only; required when mode == compare
   missing: [ ... ]
   extra: [ ... ]
   mismatched: [ ... ]
+cross_frame_deltas:      # describe-mode variant sets only (variant_set: true); optional
+  baseline_frame: <basename>
+  per_frame: [ ... ]
 ```
 
 ---
@@ -34,7 +39,8 @@ mockup_vs_impl_deltas:   # compare mode only; required when mode == compare
 | `viewport` | `{ w: int, h: int }` | yes | Read from image dimensions. |
 | `status` | enum | yes | `ok` \| `halted_blank` \| `halted_error` \| `low_confidence`. **Populated FIRST.** |
 | `status_reason` | string | conditional | Required when `status != ok`. One sentence. |
-| `confidence` | enum | yes | `high` \| `medium` \| `low`. Self-honest. |
+| `confidence` | enum | yes | `high` \| `medium` \| `low`. **Enumeration confidence** — how completely the visible regions/elements were enumerated. Says nothing about whether the read was *correct*. Self-honest. |
+| `legibility` | enum | cond. | Required when `status == ok`. `high` \| `medium` \| `low`. **Observation confidence** — how reliably the image could actually be read (resolution, blur, downscaling, occlusion, overlap). A crisp-structure / fuzzy-text mockup is honestly `confidence: high, legibility: low`. |
 | `blank_or_error_detected` | bool | yes | Set FIRST in the workflow. Implies `status` ∈ {`halted_blank`, `halted_error`}. |
 | `notes_on_image_quality` | string | optional | e.g. "low-res, text hard to read", "small image, bbox omitted". |
 | `expected_complexity` | enum | optional | Echoed from caller: `simple` \| `form` \| `data-grid` \| `checkout` \| `dashboard`. |
@@ -50,6 +56,13 @@ mockup_vs_impl_deltas:   # compare mode only; required when mode == compare
 - `low_confidence`: digest filled but the model is genuinely uncertain. `confidence` is `low`. Caller consumes as advisory.
 
 Callers MUST check `meta.status` BEFORE consuming any other field.
+
+**Two confidence axes (v2).** `confidence` and `legibility` measure different things and move independently:
+
+- `confidence` = **enumeration completeness.** "Did I find and name every region/element I could see?" Coverage-check misses surface as `open_questions`; they do NOT move `confidence` (see the workflow file).
+- `legibility` = **observation reliability.** "Can I trust what I read off these pixels?" Driven by image quality, not by how thorough the enumeration was.
+
+The two are deliberately orthogonal. A downscaled mockup can have `confidence: high` (every region enumerated) and `legibility: low` (label text too fuzzy to trust) at the same time — and that combination is the honest answer, not a contradiction. Neither field is a correctness guarantee; both can be `high` on a digest that still misread a label. **Hard rule:** when `notes_on_image_quality` flags a readability problem, `legibility` must not be `high`.
 
 ---
 
@@ -94,7 +107,7 @@ elements:
 | `label` | string | yes | The user-visible label. Empty string for label-less elements (e.g. icons). |
 | `state` | enum | yes | `enabled` \| `disabled` \| `loading` \| `hidden` \| `unknown`. |
 | `parent_region` | region-id | yes | Must reference a region in `regions[]`. |
-| `bbox_pct` | floats (1 decimal) | optional | Omit when uncertain or image <200px. |
+| `bbox_pct` | floats (1 decimal) | optional | **Default-omit in describe mode**; always omit for mockups and any downscaled / non-full-resolution image — eyeballed coordinates off a shrunken image are noise dressed as signal, and they cost attention. Populate only for full-resolution live screenshots, or `exact` compare mode where a human will act on the pixels. Also omit when uncertain or image dim <200px. |
 | `notes` | string | optional | Short free-form note. |
 
 **`kind` enum:** `button` \| `input` \| `link` \| `image` \| `tile` \| `card` \| `badge` \| `text` \| `icon` \| `divider` \| `other`.
@@ -192,6 +205,34 @@ mockup_vs_impl_deltas:
 
 ---
 
+## `cross_frame_deltas` block (describe-mode variant sets only)
+
+Present only when `mode == describe` AND the caller passed `variant_set: true` (≥2 images that are variants of the *same* screen — design alternatives, A/B frames, before/after of one view). This is NOT compare mode: there is no mockup-vs-impl "right answer," just N frames of one screen whose differences are the point.
+
+Every frame still gets its OWN full, independent describe digest on disk — the forced full enumeration of each frame is exactly what surfaces the deltas (a body paragraph present in one frame and absent in another only shows up because both were fully enumerated, not skimmed). `cross_frame_deltas` is then a **string diff of those typed digests** — never a fresh side-by-side vision pass — and it is the consolidated artifact a human or caller actually reads instead of eyeballing N sprawling digests.
+
+```yaml
+cross_frame_deltas:
+  baseline_frame: grid-default          # the canonical frame other frames diff against
+  per_frame:
+    - frame: grid-empty-state           # basename of the sibling frame's digest
+      missing:                          # in baseline, absent in this frame
+        - id: body-copy
+          kind: text
+          label: "Choose a template to get started"
+          parent_region: main
+      extra: []                         # in this frame, absent in baseline
+      mismatched:                       # same element, differing whitelisted field
+        - id: cta-primary
+          field: state
+          baseline_value: enabled
+          frame_value: disabled
+```
+
+Same matching and field-whitelist rules as `mockup_vs_impl_deltas` (match by `id` then `(kind, label)`; diff the per-kind whitelist). The baseline frame is the most complete / canonical variant; pick it explicitly and note the choice in `open_questions` if it isn't obvious.
+
+---
+
 ## Worked example: describe mode, mockup
 
 ```yaml
@@ -202,6 +243,7 @@ meta:
   viewport: { w: 1440, h: 900 }
   status: ok
   confidence: high
+  legibility: high
   blank_or_error_detected: false
   expected_complexity: checkout
 
@@ -268,6 +310,7 @@ meta:
   viewport: { w: 1280, h: 800 }
   status: ok
   confidence: high
+  legibility: high
   blank_or_error_detected: false
   expected_complexity: dashboard
 
@@ -333,6 +376,7 @@ meta:
   viewport: { w: 1440, h: 900 }
   status: ok
   confidence: high
+  legibility: high
   blank_or_error_detected: false
   expected_complexity: checkout
   comparison_mode: structural
@@ -400,5 +444,14 @@ Caller (`ui-validation`) reads `meta.status: halted_blank`, treats as verificati
 - Every `element.parent_region` references a `region.id` in the same file.
 - Every id in `region.contents[]` references an `element.id` in the same file.
 - `mockup_vs_impl_deltas` appears only when `mode == compare`.
-- `bbox_pct` values are floats with one decimal of precision. Omitted entirely when image dim <200px or model uncertainty is high.
+- `cross_frame_deltas` appears only when `mode == describe` AND `variant_set: true`. Each frame referenced in it has its own full describe digest on disk.
+- `meta.legibility` is present whenever `meta.status == ok` (and whenever any content was read). It is independent of `meta.confidence`.
+- `bbox_pct` values are floats with one decimal of precision. Default-omitted in describe mode and always omitted for mockups / non-full-res / downscaled images; omitted entirely when image dim <200px or model uncertainty is high.
 - `viewports_match: false` implies `comparison_mode: structural` automatically (skill enforces this).
+
+---
+
+## Version history
+
+- **v2 (2026-05-28):** Split `confidence` into `confidence` (enumeration completeness) + `legibility` (observation reliability) — the old single field conflated "I found everything" with "I can trust what I read," letting a possibly-misread image report `confidence: high`. Added `cross_frame_deltas` for describe-mode variant sets so the value of forced cross-frame enumeration has a structured home. Strengthened `bbox_pct` to default-omit in describe mode / on non-full-res images. **Caller migration:** read `meta.legibility` alongside `meta.confidence`; a clean digest is an attention artifact, not a correctness certificate.
+- **v1:** Initial schema — `meta`, `regions`, `elements`, `flows`, `hierarchy`, `open_questions`, `mockup_vs_impl_deltas`.

@@ -26,6 +26,8 @@ Fill `meta.status` and `meta.blank_or_error_detected` BEFORE looking at anything
 | Content present, model uncertain | `low_confidence` | `false` |
 | Content present, model confident | `ok` | `false` |
 
+**Then set `legibility` (v2) — a separate axis from `confidence`.** Before enumerating anything, judge how *readable* the image actually is: full-resolution and crisp → `high`; downscaled, compressed, or small but the structure is still clear → `medium`; blurry, tiny, or heavily occluded such that labels/states are guesses → `low`. This is observation reliability, and it is independent of how completely you later enumerate (`confidence`). A downscaled mockup whose every region you can name but whose label text you're half-guessing is `confidence: high, legibility: low` — that is the honest digest, not a contradiction. If you write a `notes_on_image_quality` about readability, `legibility` must not be `high`.
+
 **On `halted_*`:**
 
 - Set `meta.status` and `meta.status_reason` (one sentence).
@@ -62,7 +64,7 @@ For each region from step 2, enumerate the elements inside it. Each element gets
 - `label`: user-visible text. Empty string for label-less elements (icons, dividers). Don't invent labels.
 - `state`: `enabled | disabled | loading | hidden | unknown`. Use `unknown` honestly when state isn't legible.
 - `parent_region`: id of the region from step 2 that contains this element. **Required.** Every element MUST have a parent.
-- `bbox_pct`: **OPTIONAL.** Omit when uncertain, when image dim <200px (then add `notes_on_image_quality`), or when the element overlaps so much with neighbors that boundaries aren't crisp.
+- `bbox_pct`: **OPTIONAL, and default-omit in describe mode.** Always omit for mockups and any downscaled / non-full-resolution image: coordinates eyeballed off a shrunken mock are directionally-ok theater — useless for pixel work and a tax on attention. Populate bbox only for full-resolution live screenshots, or `exact` compare mode where a human will act on the pixels. Also omit when uncertain, when image dim <200px (then add `notes_on_image_quality`), or when neighbors overlap so much that boundaries aren't crisp.
 - `notes`: optional one-liner. Used for intentionality hints ("primary CTA, looks intentional") or layout cues ("appears off-grid, possibly intentional").
 
 **Element ordering rule:** within a region, walk top-to-bottom, then left-to-right. Predictable order makes diffs cheaper for compare mode.
@@ -94,6 +96,23 @@ After enumeration, count elements and cross-check against `expected_complexity` 
 
 ---
 
+## Step 5 — Cross-frame delta (describe-mode variant sets only)
+
+Runs only when `mode == describe` and the caller passed `variant_set: true` (≥2 images that are variants of the *same* screen). Skip entirely otherwise.
+
+The field-tested payoff of this skill showed up here: forcing a full `elements` enumeration on two near-identical grid frames surfaced that one had a body paragraph the other didn't — which drove a correct architectural inference. The delta only appeared because both frames were enumerated in full, not skimmed.
+
+**Mechanics — same independent-then-diff discipline as compare mode:**
+
+1. Pick the **baseline frame**: the most complete / canonical variant. Record it as `cross_frame_deltas.baseline_frame`.
+2. Run Steps 1–4 **fully and independently on every frame**, including the siblings. Do NOT shortcut siblings to a "delta-only" glance against the baseline — that re-opens the exact rubber-stamp failure ("looks like the baseline, moving on") this skill exists to close. Each frame gets its own full digest on disk.
+3. **String-diff** each sibling's typed digest against the baseline's (match by `id` then `(kind, label)`, diff the per-kind whitelist). Never re-look at the images side-by-side to compare.
+4. Write the consolidated result to `cross_frame_deltas`. This block — not the N full digests — is what the caller/human reads to see what differs.
+
+**On the scope tradeoff:** yes, this means N full digests for N frames rather than "one full plus delta-only siblings." That cost is deliberate. Full enumeration of each frame is the forcing function; the consolidation a reviewer wants lives in `cross_frame_deltas`, not in enumerating less. Cheaper enumeration would have missed the body-paragraph delta.
+
+---
+
 ## Anti-patterns specific to the workflow
 
 - **Returning prose instead of filling the schema.** The most damaging misuse. A free-text description ("This screenshot shows a checkout page with a payment form and an order summary on the right") is exactly what the skill exists to prevent. Fill every required schema field; the schema IS the digest.
@@ -102,5 +121,8 @@ After enumeration, count elements and cross-check against `expected_complexity` 
 - **Ratcheting `confidence` down on every mid-flow screenshot.** Coverage misses attach an `open_question`; they don't move `confidence`. False positives in a "this might be wrong" channel are corrosive — users learn to ignore the field.
 - **Skipping the regions pass and going straight to elements.** Without regions-first, the elements list reflects salience, not structure. Diffs against future digests become noise.
 - **Filling `bbox_pct` with low-confidence guesses.** Omit when uncertain. Padding to seem thorough is exactly the failure mode the schema is designed to prevent.
+- **Filling `bbox_pct` at all in describe mode / on a mockup.** Coordinates eyeballed off a downscaled mock are theater — directionally ok, useless for pixel work, and a tax on attention. Default-omit; bbox is for full-res live screenshots and `exact` compare only.
 - **Listing every element with `bbox_pct` of the same value** (e.g. `[0.0, 0.0, 100.0, 100.0]`). Sign that the model gave up and copied a placeholder; reviewers will catch it.
 - **Inventing `flow_step` when the caller didn't provide it.** Step counting requires context the model doesn't have. If the caller didn't pass it, the coverage check uses the full floor.
+- **Delta-only digesting the siblings in a variant set.** Tempting for token savings; fatal to the mechanism. Each frame gets a full independent digest — the cross-frame delta is computed from those, not from a skim.
+- **Treating a complete digest as a correctness check.** The digest proves you *looked* at every region; it does not prove you read them right. Correctness is a separate, downstream verification.

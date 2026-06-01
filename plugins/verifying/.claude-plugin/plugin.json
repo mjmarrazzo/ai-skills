@@ -1,0 +1,8 @@
+{
+  "name": "verifying",
+  "version": "0.1.0",
+  "description": "Debugging & verification phase — debug-loop, verify-before-done, ui-validation, visual-digest. Root-cause debugging, pre-commit gates, Playwright browser checks, and schema-forced screenshot analysis.",
+  "author": {
+    "name": "mjmarrazzo"
+  }
+}

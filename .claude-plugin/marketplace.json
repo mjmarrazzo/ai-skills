@@ -1,0 +1,42 @@
+{
+  "name": "ai-skills",
+  "owner": {
+    "name": "mjmarrazzo"
+  },
+  "metadata": {
+    "description": "A composable spine of Claude skills for engineering work: research → planning → executing → verifying → shipping, plus cross-cutting utilities. Skills compose by name and degrade gracefully when siblings aren't installed.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "research",
+      "source": "./plugins/research",
+      "description": "Research & knowledge — pre-task-research, knowledge-capture, tech-brief."
+    },
+    {
+      "name": "planning",
+      "source": "./plugins/planning",
+      "description": "Planning — blueprint, draft-ticket, grill-me."
+    },
+    {
+      "name": "executing",
+      "source": "./plugins/executing",
+      "description": "Executing — execute-plan, isolated-work."
+    },
+    {
+      "name": "verifying",
+      "source": "./plugins/verifying",
+      "description": "Debugging & verification — debug-loop, verify-before-done, ui-validation, visual-digest."
+    },
+    {
+      "name": "shipping",
+      "source": "./plugins/shipping",
+      "description": "Shipping — finish-branch, pr-review-triage."
+    },
+    {
+      "name": "toolkit",
+      "source": "./plugins/toolkit",
+      "description": "Cross-cutting utilities — fdm, vscode-preview, caveman."
+    }
+  ]
+}
