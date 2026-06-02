@@ -1,6 +1,6 @@
 # ai-skills
 
-A composable spine of Claude skills for engineering work, packaged as a **Claude Code plugin marketplace**. Skills are grouped by lifecycle phase — research → planning → executing → verifying → shipping — plus a toolkit of cross-cutting utilities. Each skill stands on its own and composes by referencing siblings *by name*, never by nesting; every skill degrades gracefully when its siblings aren't installed.
+A composable spine of Claude skills for engineering work, packaged as a **Claude Code plugin marketplace**. Skills are grouped by lifecycle phase — research → planning → executing → verifying → review — plus a toolkit of cross-cutting utilities. Each skill stands on its own and composes by referencing siblings *by name*, never by nesting; every skill degrades gracefully when its siblings aren't installed.
 
 ## Install (marketplace)
 
@@ -46,7 +46,7 @@ bash link.sh
 
 ## Plugins (6) → Skills (17)
 
-Skills are grouped around a research → planning → executing → verifying → shipping spine, plus cross-cutting utilities. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
+Skills are grouped around a research → planning → executing → verifying → review spine, plus cross-cutting utilities. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
 
 ### `research` — Research & knowledge
 - [`pre-task-research`](plugins/research/skills/pre-task-research/SKILL.md) — optional Phase 0 before blueprint. Parallel research subagents (library briefs, Confluence, JIRA, recent PRs, AWS docs, MS Learn, local knowledge) with hard token budgets. Produces `research.md` that blueprint folds into `handoff.md`.
@@ -68,9 +68,9 @@ Skills are grouped around a research → planning → executing → verifying �
 - [`ui-validation`](plugins/verifying/skills/ui-validation/SKILL.md) — Playwright-driven browser checks (real repo tests, ad-hoc spec, or MCP-only fallback). Look-then-ask credential flow, per-viewport screenshots, pixelmatch diff in Path C.
 - [`visual-digest`](plugins/verifying/skills/visual-digest/SKILL.md) — schema-forced screenshot/mockup analyzer. Returns structured YAML (regions, elements, hierarchy, flows) instead of prose, with blank-canvas detection FIRST and independent-then-diff compare mode. Stops "looks good" vibes on incomplete UI.
 
-### `shipping` — Shipping
-- [`finish-branch`](plugins/shipping/skills/finish-branch/SKILL.md) — clean-state gates → triangulated MSP detection → PR title + 5-section body from spec/handoff/decisions → `gh pr create`. Refuses to PR from main; `--force-with-lease` only.
-- [`pr-review-triage`](plugins/shipping/skills/pr-review-triage/SKILL.md) — pulls PR comments via `gh` (Copilot, CodeRabbit, Codex, humans), grades each against plan/spec/decisions, proposes fix or won't-fix, gets your approval, applies, commits, comments back with the hash, resolves the thread. The post-PR loop you actually run.
+### `review` — Code review lifecycle
+- [`finish-branch`](plugins/review/skills/finish-branch/SKILL.md) — clean-state gates → triangulated MSP detection → PR title + 5-section body from spec/handoff/decisions → `gh pr create`. Refuses to PR from main; `--force-with-lease` only. Opens the branch *for review*.
+- [`pr-review-triage`](plugins/review/skills/pr-review-triage/SKILL.md) — pulls PR comments via `gh` (Copilot, CodeRabbit, Codex, humans), grades each against plan/spec/decisions, proposes fix or won't-fix, gets your approval, applies, commits, comments back with the hash, resolves the thread. The post-PR review loop you actually run.
 
 ### `toolkit` — Cross-cutting utilities
 - [`fdm`](plugins/toolkit/skills/fdm/SKILL.md) — applies Functional Domain Modeling discipline to feature work: pushes I/O to the edge, keeps domain functions pure, three-file (handler / domain / repository) decomposition, mock-free domain tests. References cover backend stacks (Go, Java/Spring, TypeScript/Node, Python/FastAPI) and frontend stacks (React, Vue, Svelte).
