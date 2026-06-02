@@ -4,7 +4,7 @@
     "name": "mjmarrazzo"
   },
   "metadata": {
-    "description": "A composable spine of Claude skills for engineering work: research → planning → executing → verifying → shipping, plus cross-cutting utilities. Skills compose by name and degrade gracefully when siblings aren't installed.",
+    "description": "A composable spine of Claude skills for engineering work: research → planning → executing → verifying → review, plus cross-cutting utilities. Skills compose by name and degrade gracefully when siblings aren't installed.",
     "version": "0.1.0"
   },
   "plugins": [
@@ -29,9 +29,9 @@
       "description": "Debugging & verification — debug-loop, verify-before-done, ui-validation, visual-digest."
     },
     {
-      "name": "shipping",
-      "source": "./plugins/shipping",
-      "description": "Shipping — finish-branch, pr-review-triage."
+      "name": "review",
+      "source": "./plugins/review",
+      "description": "Code review lifecycle — finish-branch, pr-review-triage."
     },
     {
       "name": "toolkit",

@@ -1,0 +1,8 @@
+{
+  "name": "review",
+  "version": "0.1.0",
+  "description": "Code review lifecycle — finish-branch, pr-review-triage. Open a clean-state PR from spec/handoff, then triage the review feedback with fix-and-reply.",
+  "author": {
+    "name": "mjmarrazzo"
+  }
+}

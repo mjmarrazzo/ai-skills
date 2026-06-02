@@ -1,8 +1,0 @@
-{
-  "name": "shipping",
-  "version": "0.1.0",
-  "description": "Shipping phase — finish-branch, pr-review-triage. Clean-state PR creation from spec/handoff and post-PR review-comment triage with fix-and-reply.",
-  "author": {
-    "name": "mjmarrazzo"
-  }
-}
