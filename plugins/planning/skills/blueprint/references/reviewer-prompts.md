@@ -14,11 +14,24 @@ Both reviewers receive the same inputs:
 - **Sonnet subagent** (via `Agent` tool, `subagent_type: general-purpose`, `model: sonnet`): fresh perspective, no context contamination from this session. Catches things opus missed because it drafted the spec and is anchored on it. Cheap and fast.
 - **Codex MCP** (via `mcp__codex__codex`): a different model family — different training, different failure modes, different blind spots. The point isn't "two opinions are better than one" — it's that **independent failure modes are better than redundant ones**. If both reviewers flag the same thing, that's a strong signal. If they disagree, that's where the interesting reconciliation happens, and the conflict goes in `decisions.md`.
 
+  Pin the codex reviewer to `gpt-5.4` at `high` reasoning via per-call override (see Dispatch below) — cross-family independence at a fraction of the `gpt-5.5`/`xhigh` cost. The override only affects this call; it does not touch the user's global `~/.codex/config.toml` default.
+
 If only one reviewer is warranted (medium complexity), use the sonnet subagent. The codex round-trip costs more and is best reserved for genuinely high-stakes specs.
 
 ## Dispatch — parallel, same message
 
+**Usage gate — check first.** Before dispatching codex, run `test -f ~/.claude/state/blueprint-codex.off`. If the flag exists, the paid codex reviewer is gated off: skip it entirely and run only the sonnet subagent, even on a complex spec. Tell the user codex was skipped due to the usage gate and that deleting the flag re-enables it. Only proceed with the dual dispatch below when the flag is absent.
+
 When running both, send the `Agent` tool call and the `mcp__codex__codex` call **in the same message**. The reviewers run concurrently, which is the whole point.
+
+On the `mcp__codex__codex` call, set the cheaper model and reasoning effort explicitly so it does not inherit the user's frontier default:
+
+```
+model: "gpt-5.4"
+config: { model_reasoning_effort: "high" }
+sandbox: "read-only"
+prompt: <the codex reviewer prompt below>
+```
 
 ## Reviewer prompt — sonnet subagent
 

@@ -169,7 +169,9 @@ Complexity signals: files touched, new modules, cross-cutting concerns (auth, bi
 |---|---|
 | **Trivial** (single subsystem, additive, well-understood) | None — skip to phase 4. |
 | **Medium** (multi-file, single subsystem) | One: `general-purpose` Agent with `model: sonnet`. |
-| **Complex** (cross-cutting, new subsystem, architectural, irreversible) | Two in parallel: codex MCP (`mcp__codex__codex`) AND `general-purpose` Agent with `model: sonnet`. |
+| **Complex** (cross-cutting, new subsystem, architectural, irreversible) | Two in parallel: codex MCP (`mcp__codex__codex`, pinned to `gpt-5.4` at `high` reasoning — see reviewer-prompts.md) AND `general-purpose` Agent with `model: sonnet`. |
+
+**Usage gate (check before any codex dispatch):** if `~/.claude/state/blueprint-codex.off` exists, the paid codex reviewer is gated off. On a Complex spec, skip codex and run the sonnet reviewer alone (i.e. treat it as Medium for reviewer purposes); note in the spec-gate message that codex review was skipped due to the usage gate. To re-enable, delete the file. Check with `test -f ~/.claude/state/blueprint-codex.off`.
 
 Full reviewer prompts: `references/reviewer-prompts.md`. They review the same `spec.v<N>.md` (the current highest-numbered spec) independently — don't show them each other's feedback.
 
