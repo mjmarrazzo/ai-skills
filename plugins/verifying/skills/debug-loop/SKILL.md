@@ -263,7 +263,7 @@ These are the default LLM debugging behaviors. Each one makes the failure harder
 
 ## Composition
 
-- **Called by:** execute-plan (on task failure), ui-validation (on browser check failure), verify-before-done (on gate failure). Each caller is responsible for passing the failure bundle (error output + what was being attempted + what changed) and a `caller=<skill-name>` parameter.
+- **Called by:** execute-plan (on task failure), ui-validation (on browser check failure), verify-before-done (on gate failure), ci-check-triage (on a real CI check failure), pr-review-triage (on a verify failure after applying a review fix). Each caller is responsible for passing the failure bundle (error output + what was being attempted + what changed) and a `caller=<skill-name>` parameter.
 - **Calls:** ui-validation (at end of Phase 6 if frontend code was modified and ui-validation is installed, passing `caller=debug-loop`); `knowledge-capture` (Phase 7, when the conditions for proposing an entry are met, passing `caller=debug-loop`); vscode-preview (to display the decisions.md entry if the sibling is installed — optional).
 - **Reads:** `.claude-plans/<active-dir>/handoff.md` and `decisions.md` for repo context; `plan.md` for task scope; changed files via git diff.
 - **Writes:** `DEBUG-LOOP-TEMP` sentinels during hypothesis testing (removed before verify completes); decision log entry to `.claude-plans/<active-dir>/decisions.md` when applicable; exhaustion report to chat when terminating without resolution. Proposes (but does not write directly) `knowledge-capture` entries — that skill owns the user interaction.

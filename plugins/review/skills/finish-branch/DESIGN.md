@@ -4,14 +4,29 @@ Status: draft. Replaces `SKILL.md` once user approves.
 
 ## Goal
 
-Turn a green branch into a merged-ready PR — title generated from spec/handoff, body drawn from the
-blueprint workspace, ticket linked, state verified clean — without the user typing a single line of the
-PR description. Owns the "did you mean to ship exactly this?" moment before the PR is visible to
-anyone else.
+Turn a green branch into a PR and shepherd it to genuinely review-ready — title generated from
+spec/handoff, body drawn from the blueprint workspace, ticket linked, state verified clean — without the
+user typing a single line of the PR description or babysitting the checks tab. Owns the "did you mean to
+ship exactly this?" moment before the PR is visible to anyone else, AND the "is this actually clean
+enough to ping a human?" moment before reviewers are notified.
+
+The PR always opens as a draft. finish-branch then watches CI checks and automated reviewers settle,
+dispatches anything red to the right fixer (`ci-check-triage` for checks, `pr-review-triage` for
+comments), and promotes the PR to ready-for-review only once it comes back clean.
 
 Not in scope: merging, rebasing interactively, closing the branch after merge, routing the user through
-a menu of merge-vs-keep-vs-discard options. Those are separate acts. finish-branch does one thing: open
-a PR (or update the one already open).
+a menu of merge-vs-keep-vs-discard options, and — critically — *fixing* anything itself. finish-branch
+dispatches; the triage skills and debug-loop fix. The lifecycle it owns is: open draft → watch →
+dispatch → promote.
+
+## Why always-draft (the 2026-06 rework)
+
+Originally finish-branch opened draft *or* ready based on signals (WIP markers, skipped verify). The user
+kept hand-steering the same sequence every PR: open a draft, wait for checks and the Copilot review, then
+triage whatever popped up before marking ready. Persisting that: draft becomes the unconditional staging
+state, "ready" becomes an earned promotion, and the watch+dispatch loop is built in. The payoff the user
+cares about — human reviewers are pinged *only* on work that's actually clean — falls out of making
+"ready" something the PR has to earn rather than the default.
 
 ## When to trigger
 
@@ -304,7 +319,9 @@ Reviewer assignment is **not folded into finish-branch**. The user knows who sho
 better than this skill does, and hardcoding teammates is a maintenance burden. The user can pass
 `-r <handle>` as an override: "make the PR, add @alice as reviewer".
 
-If an override is given, append `--reviewer <handle>` to the `gh pr create` call.
+If an override is given, hold the handle(s) and apply them at **promotion** —
+`gh pr edit <num> --add-reviewer <handle>` after `gh pr ready` — never on the draft. A human reviewer is
+notified only once the watch loop has confirmed the PR is clean.
 
 finish-branch does NOT call the `requesting-code-review` superpowers skill. That skill's useful
 concern (setting context for the reviewer) is handled by the PR body itself — the summary, test
@@ -313,20 +330,34 @@ plan, and decisions sections are the review brief.
 If the user later wants to iterate on review feedback, `receiving-code-review` (when installed)
 handles that interaction; it's out of scope here.
 
-## Draft vs ready
+## Always-draft + watch-and-promote
 
-Default behavior based on evidence in the workspace:
+Every PR opens `gh pr create --draft`. No signal-based draft-vs-ready decision anymore — draft is
+unconditional. "Ready" is reached by promotion (`gh pr ready`) after the watch loop comes back clean,
+not by a flag at creation.
 
-| Signal | Default |
-|---|---|
-| `spec.md` contains "WIP" or "work in progress" anywhere | draft |
-| `verify.json` `result != "pass"` but user skipped the gate | draft |
-| User phrase contains "draft", "wip", "not ready" | draft |
-| All green, user confirmed | ready |
+The watch-and-promote phase:
 
-The user can override at the confirmation prompt: "make it a draft" or "ready to review".
-Translate to `gh pr create --draft` or no flag, respectively. Don't be clever about inferred
-readiness — if in doubt, ask at the confirmation checkpoint rather than guessing.
+1. **Background the watch** via `ScheduleWakeup`. Each wake-up polls `gh pr checks` (settled when no
+   bucket is `pending`) and `gh pr view --json reviewDecision,latestReviews,statusCheckRollup` (has the
+   bot reviewed yet?). Delay tuned to repo check duration; a give-up window (~10 min) prevents waiting
+   forever on a bot review that may never come (some repos only review on ready).
+2. **Dispatch by type** when settled: failed/cancelled checks → `ci-check-triage`; unresolved comments →
+   `pr-review-triage`; both → checks first (a red build often causes review noise). `caller=finish-branch`
+   + `PR_NUMBER` on each. No confirmation gate here because each triage skill has its own hard approval
+   gate — finish-branch auto-*enters* triage, never auto-applies a fix.
+3. **Loop, capped at 3 rounds.** A triage push re-triggers checks; next wake-up re-evaluates. After 3
+   rounds still-red, or on any `escalate` / unappliable fix / rejected push, stop and hand back to the
+   user. No infinite green-chasing.
+4. **Promote** when clean: `gh pr ready`, then add reviewers (held from the invoking message, or offered).
+   Reviewers are never attached to the draft — a human is pinged only at promotion.
+
+Override: the user can opt *out* of the watch ("just open the draft"). There is no "open straight to
+ready" path; if insisted on, open draft → promote immediately → warn that checks/reviews haven't settled.
+
+Loop-safety rationale: the cap and the caller flag together bound the cycle. The triage skills never call
+finish-branch back; re-entry is driven only by finish-branch's own wake-ups re-polling. So the worst case
+is 3 dispatch rounds, then a human takes over — never a runaway.
 
 ## Force-push policy
 
@@ -363,9 +394,19 @@ call it out at the confirmation checkpoint. Don't silently let an oversized diff
 **Swallowing verify-before-done failures.** If the gate failed and the user skipped it, the
 draft-PR default and the body warning note are the only safety net. Do not pretend the gate passed.
 
-**Routing through the finish/merge/keep/discard options menu.** finish-branch opens a PR. It is
-not a multi-mode branch router. Users who want to merge locally or discard work can do that with
-git directly. Adding a menu dilutes the skill's single clear purpose.
+**Routing through the finish/merge/keep/discard options menu.** finish-branch owns the open→watch→
+dispatch→promote lifecycle, not a merge-vs-keep-vs-discard menu. Merging belongs to git/GitHub. Note
+the distinction from dispatch: routing red checks to `ci-check-triage` and comments to
+`pr-review-triage` is part of shepherding the PR to ready; offering the user a branch-disposition menu
+is not. The former is the skill's job; the latter dilutes it.
+
+**Fixing checks or comments inline during the watch.** Tempting once a failure is visible, but it
+duplicates the triage skills and bypasses their approval gates. Always dispatch; the triage skills and
+debug-loop own the fixing.
+
+**Promoting while red, or looping forever.** Ready is earned — never `gh pr ready` with failing checks
+or open threads (unless the user explicitly overrode the watch). And cap the watch→fix→re-check loop at
+3 rounds; a failure that survives 3 rounds needs human judgment, not a 4th pass.
 
 **Embedding `.claude-plans/` file paths in the PR body.** Those paths are gitignored and
 meaningless to reviewers. Inline the content; don't reference the path.
@@ -377,12 +418,15 @@ meaningless to reviewers. Inline the content; don't reference the path.
 - **Reads:** `.claude-plans/<slug>/verify.json`, `spec.md`, `handoff.md`, `plan.md`,
   `decisions.md`. All reads are optional — the skill degrades gracefully to git-log-based body
   generation when the workspace is absent.
-- **Writes:** nothing to the repo or workspace. Side effects are entirely through `git push` and
-  `gh pr create` / `gh pr edit`.
-- **Calls:** none. finish-branch doesn't call verify-before-done for you — that's a deliberate
-  boundary. The two skills are separate gates with separate failure modes (re-running verify is
-  cheap; creating a PR is a visible external action). Keeping them separate lets the user run
-  verify many times during development and invoke finish-branch exactly once.
+- **Writes:** nothing to the repo or workspace. Side effects: `git push`, `gh pr create --draft`,
+  `gh pr edit`, `gh pr ready`, `gh pr edit --add-reviewer`, and `ScheduleWakeup` for the watch.
+- **Calls:** `ci-check-triage` (on red checks) and `pr-review-triage` (on unresolved comments) during
+  the watch phase, each with `caller=finish-branch` + `PR_NUMBER`; `knowledge-capture` at pre-flight
+  gate #6. finish-branch doesn't call verify-before-done — that's a deliberate boundary. verify and
+  finish-branch are separate gates with separate failure modes (re-running verify is cheap; creating a
+  PR is a visible external action). finish-branch dispatches to the triage skills but never fixes
+  anything itself; the triage skills carry their own approval gates and delegate real fixes to
+  debug-loop. The watch loop is bounded (3-round cap + caller flag) so the composition can't run away.
 
 If `verify-before-done` or `debug-loop` aren't installed: mention it once if the gate artifact is
 missing, then proceed per the user's explicit confirmation.
@@ -410,4 +454,20 @@ missing, then proceed per the user's explicit confirmation.
 
 5. **Body update on push (not PR open).** If the user `git push`es new commits after the PR is
    open, should finish-branch offer to refresh the PR body? Currently: no — user invokes
-   finish-branch explicitly. Could be noisy as a hook. Revisit.
+   finish-branch explicitly. Note the watch loop *does* push (via triage) but only refreshes
+   checks/threads, not the body. Revisit if the body drifts from the diff after triage rounds.
+
+6. **Watch cadence + give-up window.** Default ~120–270s active polling, ~10 min bot-review give-up,
+   3-round cap. All three are guesses pending dogfooding. Repos with slow integration suites or
+   Copilot-on-ready-only configs may need different numbers. Candidate for caller-overridable params.
+
+7. **Bot review on drafts.** Assumes automated reviewers (Copilot, CodeRabbit) run on draft PRs. Some
+   org configs only review on ready — in which case the give-up window fires, the PR promotes, and the
+   bot review arrives *after* ready, to be handled by a later `pr-review-triage` invocation. Acceptable
+   degradation, but worth confirming against the user's actual repo settings during dogfooding.
+
+8. **Auto vs interactive in the watch.** The dispatch to triage is gate-free because the triage skills
+   gate themselves. But the watch runs across backgrounded wake-ups — if the user is away, the triage
+   skills will stop at their approval gate and wait. That's correct (human-in-the-loop default) but
+   means an unattended finish-branch can stall mid-loop. Confirm this is the desired behavior vs. an
+   opt-in auto-approve for fully-unattended runs.

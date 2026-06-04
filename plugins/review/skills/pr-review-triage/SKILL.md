@@ -258,7 +258,7 @@ If verify wasn't run, swap that last line for `Verify: not run (verify-before-do
 
 ## Composition
 
-- **Called by:** the user directly. `finish-branch` may suggest it as a one-line tail message after PR creation (one-directional; no coupling).
+- **Called by:** the user directly; `finish-branch` automatically during its watch-and-promote phase when a draft PR has unresolved review comments (passing `caller=finish-branch` + `PR_NUMBER`). When invoked this way, run normally — the approval gate still applies (finish-branch auto-*enters* triage but never bypasses the gate). Do not call finish-branch back; it drives the loop via its own wake-ups.
 - **Calls:** `verify-before-done` (after fixes) with `caller=pr-review-triage`; `debug-loop` (on verify failure) with `caller=pr-review-triage` + failure bundle. `blueprint` is **never auto-invoked** — escalations are text recommendations only.
 - **Reads:** `handoff.md`, `spec.md`, `plan.md`, `decisions.md` (all optional); PR diff + thread state via `gh`.
 - **Writes:** code edits (per approved fix); git commit(s); GitHub replies + thread resolves via `gh api`.

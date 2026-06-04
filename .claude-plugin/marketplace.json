@@ -31,7 +31,7 @@
     {
       "name": "review",
       "source": "./plugins/review",
-      "description": "Code review lifecycle — finish-branch, pr-review-triage."
+      "description": "Code review lifecycle — finish-branch, pr-review-triage, ci-check-triage."
     },
     {
       "name": "toolkit",
