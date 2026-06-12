@@ -13,3 +13,6 @@ orchestration-workspace/
 
 # all-skills triggering-eval workspace (skill-creator)
 triggering-workspace/
+
+# local-only LOC stats helper
+loc-stats.py
