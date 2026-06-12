@@ -127,9 +127,9 @@ Idempotent — subsequent writes skip steps 1-5.
 
 Auto-mode deferred entries DO go to the active workspace's `open-questions.md`, resolved per the canonical algorithm in `.claude-plans/2026-05-14-composition-skills/decisions.md` (briefly: `WORKSPACE_PATH` first, then enumerate `.claude-plans/*/` containing `plan.md` or `spec.md`, prefer matching branch ticket key, fall back to most-recent mtime, ad-hoc if zero matches).
 
-## MSP repo detection
+## Ticket-convention detection
 
-Per the triangulated check in `.claude-plans/2026-05-14-composition-skills/decisions.md` (remote URL contains `nicusa`/`tylertech` OR branch matches `^MSP-\d+/` OR `user.email` ends in `@tylertech.com`). When MSP-detected, bias `source.session_marker` to include the branch ticket key. No other behaviour change.
+A ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+` (e.g. `PROJ-1234`), or from a `CLAUDE.md`-declared branch/commit convention. When a ticket key is detected, bias `source.session_marker` to include the branch ticket key. No other behaviour change.
 
 ## Composition
 

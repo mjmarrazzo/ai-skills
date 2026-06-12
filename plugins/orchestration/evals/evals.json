@@ -1,0 +1,98 @@
+{
+  "skill_name": "orchestration (auto-ship + doctrine-audit)",
+  "eval_type": "triggering-classification",
+  "notes": "Each prompt is routed by a subagent given the full skill roster. We measure whether the two new orchestrators fire when they should (recall) and are NOT stolen for ordinary single-phase work (precision). gold_with = correct skill when orchestration is installed. acceptable_without = plausible routes when orchestration is absent (baseline / graceful degradation).",
+  "evals": [
+    {
+      "id": 0, "name": "autoship-explicit-issue",
+      "prompt": "auto-ship issue #214 — take it all the way to a PR for me",
+      "category": "should-fire-autoship",
+      "gold_with": "orchestration:auto-ship",
+      "acceptable_without": ["planning:blueprint", "none"]
+    },
+    {
+      "id": 1, "name": "autoship-pipeline-phrase",
+      "prompt": "Run the whole pipeline autonomously on this ticket and get it to a ready-for-review PR without me babysitting it.",
+      "category": "should-fire-autoship",
+      "gold_with": "orchestration:auto-ship",
+      "acceptable_without": ["planning:blueprint", "none"]
+    },
+    {
+      "id": 2, "name": "autoship-end-to-end",
+      "prompt": "Drive this end to end and open the PR — don't stop to ask me at each step.",
+      "category": "should-fire-autoship",
+      "gold_with": "orchestration:auto-ship",
+      "acceptable_without": ["planning:blueprint", "none"]
+    },
+    {
+      "id": 3, "name": "decoy-plain-feature",
+      "prompt": "Add a rate limiter to the login endpoint.",
+      "category": "decoy-not-autoship",
+      "gold_with": "planning:blueprint",
+      "acceptable_without": ["planning:blueprint"]
+    },
+    {
+      "id": 4, "name": "decoy-open-pr",
+      "prompt": "Open a PR for this branch.",
+      "category": "decoy-not-autoship",
+      "gold_with": "review:finish-branch",
+      "acceptable_without": ["review:finish-branch"]
+    },
+    {
+      "id": 5, "name": "decoy-execute-plan",
+      "prompt": "Execute the plan.",
+      "category": "decoy-not-autoship",
+      "gold_with": "executing:execute-plan",
+      "acceptable_without": ["executing:execute-plan"]
+    },
+    {
+      "id": 6, "name": "decoy-plan-together",
+      "prompt": "Let's plan this feature together — I want to review each step before we write anything.",
+      "category": "decoy-not-autoship",
+      "gold_with": "planning:blueprint",
+      "acceptable_without": ["planning:blueprint"]
+    },
+    {
+      "id": 7, "name": "decoy-bare-ship-it",
+      "prompt": "Looks good, ship it.",
+      "category": "decoy-not-autoship-hard",
+      "gold_with": "review:finish-branch",
+      "acceptable_without": ["review:finish-branch"]
+    },
+    {
+      "id": 8, "name": "audit-explicit-claudemd",
+      "prompt": "Audit the whole codebase against our CLAUDE.md and lint rules and file issues for everything that's drifted.",
+      "category": "should-fire-audit",
+      "gold_with": "orchestration:doctrine-audit",
+      "acceptable_without": ["none", "code-review"]
+    },
+    {
+      "id": 9, "name": "audit-own-rules",
+      "prompt": "Where are we breaking our own architecture rules? Open tickets for each violation.",
+      "category": "should-fire-audit",
+      "gold_with": "orchestration:doctrine-audit",
+      "acceptable_without": ["none", "code-review"]
+    },
+    {
+      "id": 10, "name": "decoy-review-pr",
+      "prompt": "Review this PR.",
+      "category": "decoy-not-audit",
+      "gold_with": "code-review",
+      "acceptable_without": ["code-review"]
+    },
+    {
+      "id": 11, "name": "decoy-bot-comments",
+      "prompt": "Handle the copilot comments on the PR.",
+      "category": "decoy-not-audit",
+      "gold_with": "review:pr-review-triage",
+      "acceptable_without": ["review:pr-review-triage"]
+    },
+    {
+      "id": 12, "name": "decoy-quick-look-no-file",
+      "prompt": "Do we follow our own conventions? Just take a quick look, don't file anything.",
+      "category": "decoy-not-audit-hard",
+      "gold_with": "none",
+      "acceptable_without": ["none"]
+    }
+  ]
+}

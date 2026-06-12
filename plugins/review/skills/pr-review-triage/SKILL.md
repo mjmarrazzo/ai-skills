@@ -149,7 +149,7 @@ Present a single table:
 
 ```
 PR #1234 — 12 unresolved comments (8 bot, 4 human)
-Workspace: .claude-plans/2026-05-14-MSP-7032-orchestrion/
+Workspace: .claude-plans/2026-05-14-PROJ-1234-orchestrion/
 
   # | Author          | File:Line       | Verdict          | Conf   | Action
  ---|-----------------|-----------------|------------------|--------|----------------------
@@ -192,7 +192,7 @@ If a fix can't apply cleanly (the surrounding context the comment referenced has
 
 ### 2. Run verify-before-done if installed
 
-Sibling-installed check (per composition-skills decisions.md). If installed: hand off with `caller=pr-review-triage`.
+Sibling-installed check (cycle-prevention convention). If installed: hand off with `caller=pr-review-triage`.
 - `pass` → continue.
 - `fail` → hand off to `debug-loop` with `caller=pr-review-triage` + failure bundle (file, command, output, triggering comment).
 
@@ -200,13 +200,13 @@ If not installed: continue, note in summary.
 
 ### 3. Commit
 
-**MSP detection:** triangulated per composition-skills decisions.md. Any match = MSP; extract ticket key from branch.
+**Ticket-convention detection:** a ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. A match means a ticket key is in play; extract that key for the commit prefix.
 
 **Commit policy:** single commit by default — clean review history. Per-fix commits offered at approval time.
 
 Default message:
-- MSP: `MSP-XXXX: address PR review feedback`
-- Non-MSP: `Address PR review feedback`
+- With a ticket key: `<KEY>-XXXX: address PR review feedback`
+- Without one: `Address PR review feedback`
 
 Body lists one line per applied fix: `- <file>:<line>: <summary>`.
 
@@ -237,7 +237,7 @@ After all replies and resolves, surface to the user:
 ```
 pr-review-triage — done
 ─────────────────────────
-PR #1234 — branch MSP-7032/add-orchestrion
+PR #1234 — branch PROJ-1234/add-orchestrion
 
 Applied: 5 fixes — commit a1b2c3d (pushed to origin)
 Replied: 4 won't-fix, 1 answer, 1 escalate
@@ -262,7 +262,7 @@ If verify wasn't run, swap that last line for `Verify: not run (verify-before-do
 - **Calls:** `verify-before-done` (after fixes) with `caller=pr-review-triage`; `debug-loop` (on verify failure) with `caller=pr-review-triage` + failure bundle. `blueprint` is **never auto-invoked** — escalations are text recommendations only.
 - **Reads:** `handoff.md`, `spec.md`, `plan.md`, `decisions.md` (all optional); PR diff + thread state via `gh`.
 - **Writes:** code edits (per approved fix); git commit(s); GitHub replies + thread resolves via `gh api`.
-- **Caller flag:** pass `caller=pr-review-triage` to all sibling invocations (cycle-prevention convention per composition-skills decisions.md).
+- **Caller flag:** pass `caller=pr-review-triage` to all sibling invocations (cycle-prevention convention).
 - **Sibling absent:** verify-before-done → commit without verify, note in summary. debug-loop → surface failure and stop. blueprint → escalations still emitted as text.
 
 ## Anti-patterns

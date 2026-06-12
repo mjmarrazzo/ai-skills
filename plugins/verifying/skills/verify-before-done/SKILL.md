@@ -19,7 +19,7 @@ Skip silently when: no diff against branch base; diff is docs-only (`.md`, `.txt
 
 ## Active-workspace resolution
 
-Resolve the active workspace via the shared algorithm: if the caller passes `WORKSPACE_PATH`, use it; otherwise find the newest `.claude-plans/*/` directory containing `plan.md` or `spec.md`, tie-broken by branch ticket key (e.g., `MSP-7032` in slug). If no workspace is found, run in ad-hoc mode — artifacts go to `./.claude-results/<YYYY-MM-DD-HHMMSS>/verify-before-done/`. Ensure `.claude-results/` is in `.gitignore` (idempotent, one-time append).
+Resolve the active workspace via the shared algorithm: if the caller passes `WORKSPACE_PATH`, use it; otherwise find the newest `.claude-plans/*/` directory containing `plan.md` or `spec.md`, tie-broken by branch ticket key (e.g., `PROJ-1234` in slug). If no workspace is found, run in ad-hoc mode — artifacts go to `./.claude-results/<YYYY-MM-DD-HHMMSS>/verify-before-done/`. Ensure `.claude-results/` is in `.gitignore` (idempotent, one-time append).
 
 Use `TodoWrite` to track check progress in-session.
 

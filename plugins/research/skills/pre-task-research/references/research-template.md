@@ -26,7 +26,7 @@ Total target: ≤250 lines. Per-section budgets below are upper bounds; sections
 <bullet records, ≤15 records, ≤17 lines>
 
 ## JIRA — related tickets
-<bullet records, ≤15 records, ≤17 lines — section omitted entirely when non-MSP and no explicit opt-in>
+<bullet records, ≤15 records, ≤17 lines — section omitted entirely when no tracker signal and no explicit opt-in>
 
 ## Recent PRs touching <paths>
 <bullet records, ≤15 records, ≤17 lines>
@@ -54,7 +54,7 @@ Total target: ≤250 lines. Per-section budgets below are upper bounds; sections
 | Local knowledge | 20 | Owned by `knowledge-capture` read API. NEVER dropped. |
 | Tech briefs | ~52 | 5 briefs × ~10 lines each. Sibling-skill call. NEVER dropped. |
 | Confluence | 17 | 15 records + section header + optional `_[truncated]_` line. |
-| JIRA | 17 | MSP-gated; omitted entirely when off. |
+| JIRA | 17 | Gated on ticket-tracker detection; omitted entirely when off. |
 | Recent PRs / commits | 17 | Heading varies by `gh` availability. |
 | AWS docs | 17 | |
 | Microsoft Learn | 17 | |
@@ -101,7 +101,7 @@ The `## Open questions surfaced` section captures topics the research couldn't r
 ## Open questions surfaced
 
 - Confluence search hit 50 results for "auth flow" — too broad. Narrow to a specific service before next run.
-- JIRA returned `none` but branch is `MSP-7032/...` — ticket exists; possibly access restricted.
+- JIRA returned `none` but branch is `PROJ-1234/...` — ticket exists; possibly access restricted.
 - AWS docs section overflow-dropped; re-run with `total_lines: 350` if AWS context matters here.
 ```
 
@@ -160,12 +160,12 @@ Drops are applied lowest-priority-first. Local knowledge is NEVER dropped. The f
 **Full brief:** `~/.claude/data/tech-briefs/js/stripe.md`
 
 ## Confluence
-- **Stripe Integration Runbook** — https://nicusa.atlassian.net/wiki/spaces/ENG/pages/123 — covers retry semantics, IP allowlist, secret rotation
-- **Billing Architecture Decision Log** — https://nicusa.atlassian.net/wiki/spaces/ENG/pages/456 — Stripe chosen over Adyen 2024-08
+- **Stripe Integration Runbook** — https://example.atlassian.net/wiki/spaces/ENG/pages/123 — covers retry semantics, IP allowlist, secret rotation
+- **Billing Architecture Decision Log** — https://example.atlassian.net/wiki/spaces/ENG/pages/456 — Stripe chosen over Adyen 2024-08
 
 ## JIRA — related tickets
-- **MSP-7032** — https://nicusa.atlassian.net/browse/MSP-7032 — Add Stripe webhook handler: status=In Progress, updated=2026-05-13
-- **MSP-6810** — https://nicusa.atlassian.net/browse/MSP-6810 — Stripe webhook 5xx spike: status=Done, updated=2026-04-02
+- **PROJ-7032** — https://example.atlassian.net/browse/PROJ-7032 — Add Stripe webhook handler: status=In Progress, updated=2026-05-13
+- **PROJ-6810** — https://example.atlassian.net/browse/PROJ-6810 — Stripe webhook 5xx spike: status=Done, updated=2026-04-02
 
 ## Recent PRs touching services/billing/
 - **#1842** — https://github.com/org/repo/pull/1842 — Add idempotency table for webhook events (merged 2026-04-10)

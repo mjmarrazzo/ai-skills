@@ -68,7 +68,7 @@ Default highlight: **subagent-per-task**. Premise: plan carries the heavy reason
 
 ### 5. Branch check
 
-If on `main` / `master` / `develop`, refuse and ask the user to switch (or accept and continue if they really mean it). The MSP branch convention (`MSP-XXXX/short-description`) is in the user's global CLAUDE.md — if the plan's slug starts with `MSP-NNNN`, suggest that branch name.
+If on `main` / `master` / `develop`, refuse and ask the user to switch (or accept and continue if they really mean it). A repo's `CLAUDE.md` may declare a branch/commit convention (e.g. `<KEY>-XXXX/short-description`) — if the plan's slug starts with a ticket key matching `^[A-Z][A-Z0-9]+-\d+` (e.g. `PROJ-1234`), suggest that branch name.
 
 ## Mode 1: Subagent-per-task
 

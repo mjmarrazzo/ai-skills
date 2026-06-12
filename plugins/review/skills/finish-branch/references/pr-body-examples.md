@@ -2,7 +2,7 @@
 
 Full rendered examples of the canonical PR body template.
 
-## MSP feature PR (Datadog Orchestrion)
+## Ticket-prefixed feature PR (Datadog Orchestrion)
 
 ```markdown
 ## Summary
@@ -34,5 +34,5 @@ init(), which removes the need for any `import _ "gopkg.in/DataDog/dd-trace-go.v
 - **Build-time injection** — safer than init() hooks; no runtime panic if dd-agent unreachable
 - **Keep dd-trace-go as a direct dep** — Orchestrion still needs the type definitions at compile time
 
-JIRA: https://nicusa.atlassian.net/browse/MSP-7032
+JIRA: https://example.atlassian.net/browse/PROJ-1234
 ```

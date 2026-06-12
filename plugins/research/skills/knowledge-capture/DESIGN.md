@@ -169,9 +169,9 @@ Graceful degradation: every caller checks the sibling-installed marker (`~/.clau
 
 Auto-mode deferred entries DO land in the active workspace's `open-questions.md` (or `./.claude-results/<ts>/open-questions.md` ad-hoc), using the same resolution algorithm. That's a separate file with a separate lifecycle.
 
-## MSP detection
+## Ticket-convention detection
 
-When the repo is MSP-detected (per the triangulated check in composition-skills decisions.md), the skill biases `source.session_marker` to include the branch's ticket key when available. Example: `debug-loop-MSP-7032-task-3`. Otherwise no behaviour change. Knowledge-capture does NOT inject `MSP-<ticket>:` prefixes anywhere — that's a commit-message convention, not a knowledge-entry one.
+When a ticket key is in play (detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention), the skill biases `source.session_marker` to include the branch's ticket key when available. Example: `debug-loop-PROJ-1234-task-3`. Otherwise no behaviour change. Knowledge-capture does NOT inject `<KEY>: ` prefixes anywhere — that's a commit-message convention, not a knowledge-entry one.
 
 ## First-write bootstrap
 

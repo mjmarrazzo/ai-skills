@@ -6,3 +6,10 @@
 .vscode/
 .idea/
 *.swp
+.claude-results/
+
+# orchestration triggering-eval workspace (skill-creator)
+orchestration-workspace/
+
+# all-skills triggering-eval workspace (skill-creator)
+triggering-workspace/

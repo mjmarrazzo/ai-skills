@@ -66,9 +66,9 @@ git worktree add "../${repo}-${slug}" -b "${branch_name}" "origin/${base}"
 
 ## Branch creation
 
-**Branch naming — MSP repos:** MSP detection via triangulated check — see composition-skills `decisions.md` § "MSP detection: triangulate, don't substring". When detected, use `MSP-<ticket>/<slug>`; ticket number from the active workspace slug (e.g., `.claude-plans/2026-05-14-MSP-7032-add-feature/` → ticket `7032`). Otherwise use `<slug>` or whatever the user provides. Path A passes the slug as `name` to `EnterWorktree`; the harness creates the branch. Path B always branches from `origin/<default>`, never HEAD.
+**Branch naming — repos with a ticket convention:** A ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. When detected, use `<KEY>/<slug>`; the ticket key comes from the active workspace slug (e.g., `.claude-plans/2026-05-14-PROJ-1234-add-feature/` → key `PROJ-1234`). Otherwise use `<slug>` or whatever the user provides. Path A passes the slug as `name` to `EnterWorktree`; the harness creates the branch. Path B always branches from `origin/<default>`, never HEAD.
 
-**Existing branch:** `git worktree add <path> <existing-branch>` (no `-b`) or `EnterWorktree(path: <existing-worktree-path>)` when the user says "continue work in `MSP-1234/my-feature`".
+**Existing branch:** `git worktree add <path> <existing-branch>` (no `-b`) or `EnterWorktree(path: <existing-worktree-path>)` when the user says "continue work in `PROJ-1234/my-feature`".
 
 ## Working-directory hand-off
 
@@ -190,7 +190,7 @@ Do not auto-clean. The user may have parked work there intentionally. Path A wor
 
 ## Open questions
 
-1. **Path A branch naming.** `EnterWorktree(name: "<slug>")` passes the slug to the harness. Does the harness automatically apply the `MSP-XXXX/` convention, or does the skill need to rename the branch post-creation? Until confirmed via dogfooding, document as a constraint: "Path A branch names may not carry the MSP prefix automatically; verify after entry with `git branch --show-current`."
+1. **Path A branch naming.** `EnterWorktree(name: "<slug>")` passes the slug to the harness. Does the harness automatically apply the `<KEY>-XXXX/` convention, or does the skill need to rename the branch post-creation? Until confirmed via dogfooding, document as a constraint: "Path A branch names may not carry the ticket prefix automatically; verify after entry with `git branch --show-current`."
 2. **`.claude-plans/` created inside the worktree.** If the user runs blueprint inside the worktree, the new workspace ends up unreachable after `ExitWorktree`. Treat as a user-error constraint for now; consider a warning on entry in a later version.
 3. **Baseline test run.** Should isolated-work run baseline tests after setup (prior-art pattern) or delegate to execute-plan's first task? Current lean: delegate — execute-plan has per-task context about what "passing" means.
 4. **`ExitWorktree` on Path A failure mid-execution.** If execute-plan fails partway and the user abandons, `discard_changes: true` will drop uncommitted changes. Should the skill list uncommitted files before confirming? Current lean: one confirmation is sufficient given the explicit user trigger.

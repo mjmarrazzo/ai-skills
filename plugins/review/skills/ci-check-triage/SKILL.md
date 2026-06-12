@@ -101,8 +101,8 @@ Apply the canonical active-workspace resolution (same as pr-review-triage and fi
 Present a single table:
 
 ```
-PR #1234 — 3 failed checks (branch MSP-7032/add-orchestrion)
-Workspace: .claude-plans/2026-05-14-MSP-7032-orchestrion/
+PR #1234 — 3 failed checks (branch PROJ-1234/add-orchestrion)
+Workspace: .claude-plans/2026-05-14-PROJ-1234-orchestrion/
 
   # | Check                | Verdict         | Conf   | Action
  ---|----------------------|-----------------|--------|--------------------------------
@@ -155,11 +155,11 @@ Re-running mutates nothing in the repo. Report the re-run was kicked off; the ne
 
 If any code changed (debug-loop fixes or inline lint fixes):
 
-**MSP detection:** triangulated per composition-skills `decisions.md` (remote URL contains `nicusa`/`tylertech`, branch matches `^MSP-\d+/`, or git email ends `@tylertech.com`). Any match = MSP.
+**Ticket-convention detection:** a ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. A match means a ticket key is in play.
 
 **Commit policy:** single commit by default — clean history. Message:
-- MSP: `MSP-XXXX: fix failing CI checks`
-- Non-MSP: `Fix failing CI checks`
+- With a ticket key: `<KEY>-XXXX: fix failing CI checks`
+- Without one: `Fix failing CI checks`
 
 Body lists one line per fix: `- <check>: <one-line summary>`.
 
@@ -172,7 +172,7 @@ After execution:
 ```
 ci-check-triage — done
 ─────────────────────────
-PR #1234 — branch MSP-7032/add-orchestrion
+PR #1234 — branch PROJ-1234/add-orchestrion
 
 Fixed:    2 checks → commit a1b2c3d (pushed; checks will re-run)
   - lint: removed unused import in mapper.go
@@ -193,7 +193,7 @@ If invoked by finish-branch, control returns to its watch loop, which re-evaluat
 - **Calls:** `debug-loop` for every non-trivial real failure (`caller=ci-check-triage` + failure bundle). debug-loop's caller-guard means it won't loop back here. `verify-before-done` is **not** called directly — debug-loop runs its own verify at the end of a fix; for inline lint fixes, re-running the lint command locally is sufficient.
 - **Reads:** `handoff.md`, `spec.md`, `plan.md`, `decisions.md` (all optional) for scope context; check logs + diff via `gh` and git.
 - **Writes:** code edits (only the mechanical inline fixes — debug-loop owns its own edits); git commit(s); `git push`. Triggers `gh run rerun` for flaky checks. Never marks the PR ready — that's finish-branch's call after the watch comes back clean.
-- **Caller flag:** pass `caller=ci-check-triage` to all sibling invocations (cycle-prevention convention per composition-skills `decisions.md`).
+- **Caller flag:** pass `caller=ci-check-triage` to all sibling invocations (cycle-prevention convention).
 - **Sibling absent:** debug-loop not installed → surface the failing command + log and stop before committing; don't guess at a fix. finish-branch not installed → run standalone and offer to watch the re-run yourself.
 
 ## Anti-patterns

@@ -306,7 +306,7 @@ open_questions: []
 # .claude-plans/<active>/visual-digests/dashboard-describe-1280x800.yml
 meta:
   kind: live-screenshot
-  source_path: /Users/me/coding/proj/.claude-plans/MSP-1234-feature/screenshots/task-3/desktop/dashboard.png
+  source_path: /Users/me/coding/proj/.claude-plans/PROJ-1234-feature/screenshots/task-3/desktop/dashboard.png
   viewport: { w: 1280, h: 800 }
   status: ok
   confidence: high
@@ -372,7 +372,7 @@ open_questions:
 #   checkout-impl-describe-1440x900.yml
 meta:
   kind: regression-shot
-  source_path: /Users/me/coding/proj/.claude-plans/MSP-1234/screenshots/task-5/desktop/checkout.png
+  source_path: /Users/me/coding/proj/.claude-plans/PROJ-1234/screenshots/task-5/desktop/checkout.png
   viewport: { w: 1440, h: 900 }
   status: ok
   confidence: high
@@ -422,7 +422,7 @@ mockup_vs_impl_deltas:
 # .claude-plans/<active>/visual-digests/checkout-describe-1440x900.yml
 meta:
   kind: live-screenshot
-  source_path: /Users/me/coding/proj/.claude-plans/MSP-1234/screenshots/task-5/desktop/checkout.png
+  source_path: /Users/me/coding/proj/.claude-plans/PROJ-1234/screenshots/task-5/desktop/checkout.png
   viewport: { w: 1440, h: 900 }
   status: halted_blank
   status_reason: "Image is entirely white viewport with no rendered content"

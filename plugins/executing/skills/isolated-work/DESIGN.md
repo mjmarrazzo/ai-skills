@@ -66,9 +66,9 @@ base=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remot
 git worktree add "../${repo}-${slug}" -b "${branch_name}" "origin/${base}"
 ```
 
-**Branch naming:** check for MSP context (`git remote get-url origin | grep -q 'nicusa'` or current branch matches `MSP-\d+/`) and apply `MSP-XXXX/<slug>`; otherwise use `<slug>` or whatever the user provides.
+**Branch naming:** check for a ticket key — detected from the active workspace slug or a current-branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention — and apply `<KEY>/<slug>`; otherwise use `<slug>` or whatever the user provides.
 
-**Existing branch:** `git worktree add <path> <existing-branch>` (no `-b`) or `EnterWorktree(path: <existing-worktree-path>)`. Use when the user says "continue work in `MSP-1234/my-feature`".
+**Existing branch:** `git worktree add <path> <existing-branch>` (no `-b`) or `EnterWorktree(path: <existing-worktree-path>)`. Use when the user says "continue work in `PROJ-1234/my-feature`".
 
 ## Working-directory hand-off
 
@@ -215,7 +215,7 @@ Do not auto-clean. The user may have parked work there intentionally. Path A wor
 ## Open questions to resolve before SKILL.md
 
 1. **`worktree.baseRef` surfacing.** The skill currently documents this setting but does not modify it. Should isolated-work prompt the user to confirm the base-ref policy before entering, or trust the harness default silently?
-2. **Path A branch naming.** `EnterWorktree(name: "<slug>")` passes the slug to the harness, which names the branch. The harness may or may not apply the `MSP-XXXX/` convention automatically. Verify what the harness produces and whether the skill needs to rename the branch post-creation.
+2. **Path A branch naming.** `EnterWorktree(name: "<slug>")` passes the slug to the harness, which names the branch. The harness may or may not apply the `<KEY>-XXXX/` convention automatically. Verify what the harness produces and whether the skill needs to rename the branch post-creation.
 3. **`.claude-plans/` in the worktree.** The harness clears the plans directory context on `EnterWorktree`. If the user creates a new `.claude-plans/` entry while inside the worktree, it ends up unreachable after `ExitWorktree`. Should isolated-work warn about this? Current recommendation: document as a constraint, don't add complexity.
 4. **Baseline test run.** The prior art (`using-git-worktrees`) always runs baseline tests after setup. Should isolated-work do the same, or delegate to execute-plan's first task? Leaning: let execute-plan own this — it has per-task context about what "passing" means.
 5. **`ExitWorktree` on Path A failure mid-execution.** If execute-plan fails partway and the user abandons, `ExitWorktree(action: "remove", discard_changes: true)` will discard uncommitted changes. The confirm step in the Abandon flow is the safeguard. Is one confirmation sufficient, or should the skill list the uncommitted files first?
