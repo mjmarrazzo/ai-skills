@@ -7,7 +7,7 @@ The handoff dossier exists so a fresh LLM (or a returning human after a week) ca
 
 **Goal (one sentence):** <what we're building, in plain language>
 
-**Ticket / source:** <MSP-XXXX link, GitHub issue, Slack thread, or "ad-hoc request from user">
+**Ticket / source:** <PROJ-XXXX link, GitHub issue, Slack thread, or "ad-hoc request from user">
 
 **Date opened:** YYYY-MM-DD
 

@@ -37,6 +37,11 @@
       "name": "toolkit",
       "source": "./plugins/toolkit",
       "description": "Cross-cutting utilities — fdm, vscode-preview, caveman."
+    },
+    {
+      "name": "orchestration",
+      "source": "./plugins/orchestration",
+      "description": "Orchestration — auto-ship, doctrine-audit. Fleet-style skills that drive the rest of the spine autonomously."
     }
   ]
 }

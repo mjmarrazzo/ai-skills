@@ -11,7 +11,7 @@ Bloat is the antagonist for this skill. Budgets are enforced at three layers: in
 | Local knowledge | 20 records | 22 lines | Owned by `knowledge-capture` read API. |
 | Tech briefs | 5 briefs × ~10 lines each | ~52 lines | Sibling-skill call; cap = top 5 most-relevant briefs. NEVER dropped. |
 | Confluence | 15 | 17 | |
-| JIRA | 15 | 17 | MSP-gated. |
+| JIRA | 15 | 17 | Gated on ticket-tracker detection. |
 | Merged PRs | 15 | 17 | |
 | Recent commits (gh fallback) | 15 | 17 | Replaces merged-PRs section. |
 | AWS docs | 15 | 17 | |
@@ -43,7 +43,7 @@ When projected total > 250 lines, drop entire sections in this order until under
 | 1 (first to drop) | Microsoft Learn | Publicly searchable later; least team-specific. |
 | 2 | AWS docs | Publicly searchable later; same rationale. |
 | 3 | Recent PRs / commits | Recoverable from `git log`; medium specificity. |
-| 4 | JIRA | Team-specific but searchable in JIRA UI; MSP-gated already. |
+| 4 | JIRA | Team-specific but searchable in the JIRA UI; gated already. |
 | 5 (last droppable) | Confluence | Team-specific, harder to re-discover. |
 | NEVER | Tech briefs | Durable curated knowledge about specific deps; defeats the purpose of maintaining briefs if dropped. |
 | NEVER | Local knowledge | Most tribal, least re-discoverable, the whole point of the digest. |

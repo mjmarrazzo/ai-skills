@@ -59,13 +59,13 @@ Questions the implementer should think about but aren't blockers. Drives downstr
 File paths, sibling tickets, docs. Skip the section if empty.
 
 > Example:
-> - MSP-7019 — earlier discussion of API-key rollout pattern.
+> - PROJ-1234 — earlier discussion of API-key rollout pattern.
 > - `services/service-y/middleware/apikey.go` — reference implementation in a sibling service.
-> - Gov2Go API docs: <internal link>
+> - Internal API docs: <internal link>
 
 ## Formatting rules
 
-- Plain markdown, no HTML. JIRA renders the description field as markdown.
+- Plain markdown, no HTML. GitHub issues and JIRA descriptions both render markdown.
 - File paths in backticks. Use `file:line` or `file:line-line` for ranges.
 - No "TBD", no "N/A" — skip the section instead.
 - Code blocks for commands, schemas, and example payloads.

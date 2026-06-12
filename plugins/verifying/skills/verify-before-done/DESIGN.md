@@ -91,8 +91,9 @@ before clippy.
 | Gradle build with ktlint plugin | Lint | `./gradlew ktlintCheck` |
 | Gradle build with detekt | Static analysis | `./gradlew detekt` |
 
-For MSP repos: check whether `AWS_PROFILE` / `AWS_REGION` are set before running
-integration-flavored test tasks. Print a one-line reminder if they're unset.
+For repos that declare cloud-credential env vars in their CLAUDE.md (e.g.,
+`AWS_PROFILE` / `AWS_REGION`): if they're unset before running integration-flavored
+test tasks, print a one-line reminder before proceeding.
 
 ### Multi-language monorepos
 

@@ -17,8 +17,10 @@ Pinned system prompts for each source-typed subagent. Every prompt enforces the 
 - `<PATHS>` — best-effort file paths from the request (space-separated).
 - `<N>` — per-source line cap (default 15).
 - `<M>` — total line cap (default 17).
-- `<TICKET_KEY>` — current branch's MSP ticket (e.g. `MSP-7032`), JIRA only.
-- `<PROJECT_KEY>` — `MSP` for MSP-detected runs, JIRA only.
+- `<TICKET_KEY>` — current branch's ticket key when the branch matches `^[A-Z][A-Z0-9]+-\d+` (e.g. `PROJ-1234`), JIRA only.
+- `<PROJECT_KEY>` — project key from config or the branch ticket prefix, JIRA only. Never hardcoded.
+- `<CLOUD_ID>` — Atlassian cloudId from `CLAUDE.md` config, or the one surfaced by `mcp__claude_ai_Atlassian__getAccessibleAtlassianResources`. JIRA/Confluence only.
+- `<SITE_URL>` — Atlassian site base URL (e.g. `https://<your-site>.atlassian.net`) from the same source as `<CLOUD_ID>`.
 
 ---
 
@@ -33,7 +35,7 @@ Topic: <TOPIC>
 File paths (optional context): <PATHS>
 
 Procedure:
-1. Call `mcp__claude_ai_Atlassian__search` with the topic. Use `cloudId: "nicusa.atlassian.net"` if the workspace is MSP-detected; otherwise use the cloudId surfaced by `mcp__claude_ai_Atlassian__getAccessibleAtlassianResources` (call it once if needed).
+1. Call `mcp__claude_ai_Atlassian__search` with the topic. Use `cloudId: "<CLOUD_ID>"` (resolved by the parent from config or `mcp__claude_ai_Atlassian__getAccessibleAtlassianResources`; call it once if `<CLOUD_ID>` wasn't supplied).
 2. If the call returns an auth error (401, "authenticate first", missing token), STOP and return the literal string:
    `auth-error: authenticate via mcp__claude_ai_Atlassian__authenticate`
 3. Otherwise: rank results by relevance to the topic. Keep the top <N>.
@@ -73,12 +75,12 @@ Procedure:
    - Add `AND (summary ~ "<TOPIC>" OR description ~ "<TOPIC>")`.
    - If <TICKET_KEY> is present, also include `OR issueKey = <TICKET_KEY> OR "Epic Link" = <TICKET_KEY>`.
    - Order by `updated DESC`.
-2. Call `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql` with `cloudId: "nicusa.atlassian.net"`, the JQL, and `fields: ["summary", "status", "updated", "issuetype"]`.
+2. Call `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql` with `cloudId: "<CLOUD_ID>"`, the JQL, and `fields: ["summary", "status", "updated", "issuetype"]`.
 3. If the call returns an auth error, STOP and return:
    `auth-error: authenticate via mcp__claude_ai_Atlassian__authenticate`
 4. Keep the top <N> by relevance + recency.
 5. For each, produce ONE line:
-   `- **<ISSUE-KEY>** — https://nicusa.atlassian.net/browse/<ISSUE-KEY> — <summary>: status=<status>, updated=<YYYY-MM-DD>`
+   `- **<ISSUE-KEY>** — <SITE_URL>/browse/<ISSUE-KEY> — <summary>: status=<status>, updated=<YYYY-MM-DD>`
 
 Hard rules:
 - Return at most <N> records.

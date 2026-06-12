@@ -10,7 +10,7 @@ Both subagents are fresh — no shared context with the main session beyond what
 - **Handoff digest** (~300 tokens). Built once from `handoff.md`. Kept: constraints, open-questions-resolved. Discovery narrative dropped.
 - **Task text**: full verbatim text of the current task block from `plan.md`, including all `- [ ] **Step N: …**` lines, code blocks, and verification commands.
 - **Task file scope**: the `Files:` subsection of the task, with line numbers refreshed against current HEAD.
-- **MSP flag**: true when the active workspace is an MSP repo (triangulated check — see `references/msp-detection.md` or apply inline). When true, append the commit-prefix line to the drafter prompt and to the reviewer's checklist.
+- **Ticket-key flag**: true when a ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. When true, append the commit-prefix line to the drafter prompt and to the reviewer's checklist.
 - **`caller=execute-plan`**: cycle-prevention parameter, passed to any cross-skill invocation the drafter or reviewer ends up triggering downstream. (Drafters and reviewers don't invoke siblings themselves in v1, but the convention applies.)
 
 Digests are rebuilt only if the content hash (sha256) of `spec.md` or `handoff.md` changed since they were built. mtime is not authoritative — re-saves without content change should not bust the cache.
@@ -49,8 +49,8 @@ You are implementing one task from an approved implementation plan.
 - Do not improvise outside the task's file scope. Do not add tests the plan didn't specify.
 - Do not modify `plan.md`, `spec.md`, `handoff.md`, or anything under `.claude-plans/`.
 
-<!-- MSP-only addendum, injected when the active workspace is an MSP repo -->
-- All commit messages MUST start with `MSP-<ticket>: ` where `<ticket>` is the ticket number extracted from the workspace slug (e.g. `MSP-7032-add-orchestrion` → `MSP-7032`).
+<!-- Ticket-prefix addendum, injected when a ticket key is detected -->
+- All commit messages MUST start with `<KEY>: ` where `<KEY>` is the ticket key extracted from the workspace slug (e.g. `PROJ-1234-add-orchestrion` → `PROJ-1234`).
 ```
 
 ### Re-dispatch on `CHANGES_REQUESTED`
@@ -116,8 +116,8 @@ Output exactly one of:
 - `CHANGES_REQUESTED` — followed by a bulleted list of specific, concrete fixes the drafter should make. Cite file paths and line numbers from the diff.
 - `ESCALATE` — task definition is incoherent or impossible as written. Surface to main session with reasoning.
 
-<!-- MSP-only addendum -->
-Additionally verify: the commit message starts with `MSP-<ticket>: `. If it does not, include this in `CHANGES_REQUESTED`.
+<!-- Ticket-prefix addendum -->
+Additionally verify: the commit message starts with `<KEY>: `. If it does not, include this in `CHANGES_REQUESTED`.
 ```
 
 ## Cap summary

@@ -55,7 +55,7 @@ Single table, same ergonomics as pr-review-triage: `AskUserQuestion` at ≤ 4 ch
 1. **Real failures.** Reproduce locally first (confirms it's not CI-environment-specific). Mechanical lint with an obvious one-line fix → `Edit` directly (spinning up debug-loop for an unused import is overkill). Everything substantive → debug-loop with `caller=ci-check-triage` + failure bundle (failing command, output, check name, diff). If a local repro *passes*, it's probably flaky → kick back to the table, don't guess.
 2. **Flaky / infra.** `gh run rerun <run-id> --failed`. Mutates no code. Cap: one automatic re-run. Twice red = real failure, re-classify.
 3. **External blockers.** Surface the link. Can't drive them via `gh`.
-4. **Commit + push.** Single commit, MSP-prefixed if detected, body lists each fix. Plain push — the new commit re-triggers checks. Never force.
+4. **Commit + push.** Single commit, ticket-prefixed if a key is detected, body lists each fix. Plain push — the new commit re-triggers checks. Never force.
 
 ## G. Report
 
@@ -65,7 +65,7 @@ Summarize fixed / re-ran / surfaced, with the commit SHA and (from debug-loop) t
 
 - **Called by:** user directly; finish-branch (auto, on red checks, `caller=finish-branch` + `PR_NUMBER`).
 - **Calls:** debug-loop (`caller=ci-check-triage` + failure bundle) for real, non-trivial failures. debug-loop's caller-guard prevents loop-back. Does not call verify-before-done directly — debug-loop runs verify at the end of its own loop.
-- **Cycle guard:** standard `caller=` convention (composition-skills `decisions.md`).
+- **Cycle guard:** standard `caller=` convention.
 - **Sibling absent:** debug-loop missing → surface failing command + log, stop before committing. finish-branch missing → standalone, offer to watch the re-run.
 - **Relationship to the watch loop:** this skill is one-shot per invocation. It fixes/pushes/re-runs and returns. The *loop* (re-check after push, decide clean-or-not) lives in finish-branch. Keeping the loop in one place (the watcher) avoids two skills both polling the same checks.
 

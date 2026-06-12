@@ -364,11 +364,11 @@ see_also:
 
 Read API surfaces them in the digest's "Related" footer. The skill does NOT auto-traverse them — the user/caller decides whether to read linked briefs. Read-only metadata; no back-edge in the cycle graph.
 
-## MSP Go source rule
+## Internal-package source rule
 
-For ecosystem=`go` briefs in MSP-detected context (triangulated per composition-skills `decisions.md`: remote URL contains `nicusa`/`tylertech`, branch matches `^MSP-\d+/`, or `user.email` ends in `@tylertech.com`), `mcp__msp-go-api-framework__search` is added as a source for libraries whose names match MSP-internal patterns (heuristic: `msp-*`, internal package paths, or user opt-in in the interactive wave).
+When repo `CLAUDE.md` (or `~/.claude/CLAUDE.md`) names an internal-package-search MCP tool and that tool is in the current tool list, it is added as a source for libraries whose names match internal package patterns (heuristic: internal import/package paths, or user opt-in in the interactive wave). The tool name is configured, never hardcoded — this keeps the skill shareable across teams that each run their own internal index (or none).
 
-Generic Go libraries (`gorilla/mux`, `go-redis`) do NOT trigger this source. The MCP exists for in-scope libraries; using it elsewhere is noise.
+Public, well-known libraries (`gorilla/mux`, `go-redis`) do NOT trigger this source. It exists for in-scope internal libraries; using it elsewhere is noise.
 
 ## Cycle walk
 

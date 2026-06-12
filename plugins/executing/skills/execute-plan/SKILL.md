@@ -15,6 +15,24 @@ Not in scope: writing the plan (that's `blueprint`), the final pre-commit gate (
 
 Fire on plan handoff or "execute" phrases. Pass through on surgical asks ("just step N", "I'll do it myself"). Pushy on plan handoff; quiet on anything else.
 
+## Autonomy is granted, never inferred
+
+execute-plan runs **interactive** by default: it asks the mode-selection question (step 5) and pauses at every task boundary (`per-task` checkpoint). It switches to **auto** (skip the mode question, default to subagent-per-task with `on-failure-only` checkpoints, log decisions to `open-questions.md` instead of asking) ONLY when one of these is literally true *at this moment*. Check them; do not recall them:
+
+1. **The user said so this turn** — their message contains "go full auto", "skip the gates", "don't pause", or a literal `mode=auto`.
+2. **The invocation prompt says so** — a calling skill spawned this run with `mode=auto`.
+3. **A pipeline grant exists** — `.claude-plans/<active>/.pipeline.json` is present with `"mode": "auto"`. Confirm with Bash; this is the durable signal an orchestrator like `auto-ship` writes, and the only one that survives a subagent boundary intact.
+
+```bash
+test -f .claude-plans/<active>/.pipeline.json && \
+  grep -q '"mode"[[:space:]]*:[[:space:]]*"auto"' .claude-plans/<active>/.pipeline.json && \
+  echo "GRANT: auto" || echo "GRANT: interactive"
+```
+
+`<active>` is the resolved workspace directory — `WORKSPACE_PATH` if passed, else the parent dir of the resolved `PLAN_PATH` (see "Locate the plan" below), else the active-workspace pick. Resolve it the same way for the probe as for the plan; never re-derive it independently. If the workspace isn't resolvable yet at entry, run this probe right after "Locate the plan" rather than before.
+
+If none hold, you are **interactive** — even if a memory, a prior session, or the user's apparent hurry suggests otherwise. The **implicit pause** on test/lint/verification failure (see Checkpoint policy) is never waived, in either mode — auto means "don't stop to ask permission", not "don't stop when something breaks".
+
 ## Pre-flight
 
 Run these in order before touching code. First failure stops and surfaces to user.
@@ -35,13 +53,13 @@ If either is true, set `inside_worktree=true` and skip the isolated-work suggest
 
 1. **Caller-supplied `PLAN_PATH=<absolute-path>`** in the invocation message. `isolated-work` and any other wrapping skill passes this in. Discovery skipped.
 2. **Explicit user path** typed in chat.
-3. **Active-workspace algorithm** — canonical shared convention; see composition-skills decisions.md. Zero matches → refuse with "no plan.md found; run blueprint first or pass `PLAN_PATH=`".
+3. **Active-workspace algorithm** — canonical shared convention (newest `.claude-plans/<dir>/` by directory mtime). The plan is the **current** versioned file: `ls plan.v*.md | sort -V | tail -1` (blueprint writes `plan.v<N>.md`, never a bare `plan.md`); fall back to a bare `plan.md` only if no versioned file exists. Zero matches → refuse with "no plan found; run blueprint first or pass `PLAN_PATH=`".
 
 Print the resolved path before doing anything else so the user can catch a wrong pick.
 
 ### 3. Load companion artifacts
 
-From the same workspace directory: `spec.md` (**required** — refuse without it), `handoff.md` (**required**), `decisions.md` (optional; only for end-of-plan handoff, not per-task prompts), `progress.json` (optional; if present, this is a resumed run — see § Progress & resume).
+From the same workspace directory: the current spec — `ls spec.v*.md | sort -V | tail -1`, falling back to a bare `spec.md` (**required** — refuse without it), `handoff.md` (**required**), `decisions.md` (optional; only for end-of-plan handoff, not per-task prompts), `progress.json` (optional; if present, this is a resumed run — see § Progress & resume).
 
 ### 4. Freshness check
 
@@ -60,7 +78,9 @@ Outcomes:
 
 ### 5. Mode selection
 
-Ask once via `AskUserQuestion`:
+**Auto grant active?** Skip this question entirely. Default to **subagent-per-task** with an `on-failure-only` checkpoint policy, and log `auto: chose subagent-per-task, on-failure-only checkpoints` to `open-questions.md`. Proceed to step 6.
+
+Otherwise, ask once via `AskUserQuestion`:
 
 > How do you want to execute this plan?
 >
@@ -71,11 +91,11 @@ Default highlight: **subagent-per-task**. The plan carries the heavy reasoning; 
 
 ### 6. Branch check
 
-If on `main` / `master` / `develop`, refuse and ask the user to switch. If the plan's slug starts with `MSP-NNNN`, suggest `git checkout -b MSP-NNNN/<short>`.
+If on `main` / `master` / `develop`, refuse and ask the user to switch. If the plan's slug starts with a ticket key (matching `^[A-Z][A-Z0-9]+-\d+`, e.g. `PROJ-1234`), suggest `git checkout -b PROJ-1234/<short>`.
 
-### 7. MSP repo detection
+### 7. Ticket-convention detection
 
-Triangulated check — see composition-skills decisions.md for the canonical three-signal rule. When MSP-detected, inject into every drafter prompt (Mode 1) and every inline commit step (Mode 2): _All commit messages MUST start with `MSP-<ticket>: ` where `<ticket>` is extracted from the workspace slug._
+A ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. When a ticket key is detected, inject into every drafter prompt (Mode 1) and every inline commit step (Mode 2): _All commit messages MUST start with `<KEY>: ` where `<KEY>` is the ticket key extracted from the workspace slug._ When no ticket key is present, proceed generically with no prefix.
 
 ## Mode 1: Subagent-per-task
 
@@ -101,7 +121,7 @@ One drafter, one reviewer, at most one re-review round per task. Caps are load-b
 
 Fresh `general-purpose` agent per task. Never reads `plan.md` itself — the main session extracts the task text and injects it. Model `sonnet` by default, `opus` on re-dispatch after `BLOCKED`.
 
-Drafter prompt structure: see `references/subagent-prompts.md`. The prompt carries the spec digest, the handoff digest, the verbatim task text, the task's file scope, a working agreement (DONE/NEEDS_CONTEXT/BLOCKED status protocol, no out-of-scope edits, no plan mutation), and the MSP commit-prefix line when applicable.
+Drafter prompt structure: see `references/subagent-prompts.md`. The prompt carries the spec digest, the handoff digest, the verbatim task text, the task's file scope, a working agreement (DONE/NEEDS_CONTEXT/BLOCKED status protocol, no out-of-scope edits, no plan mutation), and the ticket prefix line when applicable.
 
 ### Reviewer
 
@@ -145,11 +165,11 @@ The main session walks the plan top to bottom. For each task:
 3. Execute each step. Run the verification commands the task specifies. Capture output.
 4. On step success: mark the todo done, advance.
 5. On step failure: see § Failure handling.
-6. At task end (all steps passed): commit per the task's commit step (with MSP prefix when MSP-detected), update `progress.json`, and either pause (per checkpoint policy) or continue.
+6. At task end (all steps passed): commit per the task's commit step (with the ticket prefix when a ticket key is detected), update `progress.json`, and either pause (per checkpoint policy) or continue.
 
 ### Checkpoint policy
 
-Default `per-task`. Set via the mode-selection question or by the user saying so explicitly.
+Default `per-task` in interactive mode; `on-failure-only` under an auto grant (see "Autonomy is granted, never inferred"). Set via the mode-selection question or by the user saying so explicitly.
 
 | Policy | Behavior |
 |---|---|
@@ -264,7 +284,7 @@ Default to resume. Git history is the ground truth — `progress.json` is the br
 
 ### Ad-hoc fallback
 
-When no blueprint workspace is active, use the canonical fallback root: `./.claude-results/<YYYY-MM-DD-HHMMSS>/execute-plan/`. See composition-skills decisions.md for the ad-hoc artifact root convention.
+When no blueprint workspace is active, use the canonical fallback root: `./.claude-results/<YYYY-MM-DD-HHMMSS>/execute-plan/`.
 
 ## Isolated-work suggestion
 
@@ -338,7 +358,7 @@ If `verify-before-done` isn't installed, print:
   - `knowledge-capture` at end-of-plan for any task that finished `BLOCKED` or over-budget.
   - `verify-before-done` once at end of plan.
   - `isolated-work` optionally, before execution, when risky signals fire and the worktree-guard returned false.
-- **Sibling-installed check:** canonical two-path probe (see composition-skills decisions.md). Missing → one-line graceful-degradation note, continue.
+- **Sibling-installed check:** canonical two-path probe (`~/.claude/skills/<name>/SKILL.md` OR `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`). Missing → one-line graceful-degradation note, continue.
 - **Reads:** `.claude-plans/<active>/{plan,spec,handoff,decisions}.md` (all read-only), `.claude-plans/<active>/progress.json` (resume; rewritten as execution advances), git history (`git log <plan_sha>..HEAD`, `git show`, etc.).
 - **Writes:** `.claude-plans/<active>/progress.json` (atomic via tmpfile + rename); commits to the current branch (via subagents in Mode 1, directly in Mode 2). Screenshots under `.claude-plans/<active>/screenshots/task-<N>/` are written **only via `ui-validation`** — this skill never writes them directly.
 

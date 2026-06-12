@@ -44,9 +44,9 @@ bash link.sh
 
 `link.sh` globs `plugins/*/skills/*`, prunes stale links pointing back into this repo, and skips any name that already exists as a real directory.
 
-## Plugins (6) → Skills (17)
+## Plugins (7) → Skills (19)
 
-Skills are grouped around a research → planning → executing → verifying → review spine, plus cross-cutting utilities. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto` or phrases like "go full auto", "skip the gates".
+Skills are grouped around a research → planning → executing → verifying → review spine, plus cross-cutting utilities and an orchestration group that drives the spine autonomously. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto`, phrases like "go full auto" / "skip the gates", or a pipeline grant written by an orchestrator (see [Autonomy grant](#autonomy-grant)).
 
 ### `research` — Research & knowledge
 - [`pre-task-research`](plugins/research/skills/pre-task-research/SKILL.md) — optional Phase 0 before blueprint. Parallel research subagents (library briefs, Confluence, JIRA, recent PRs, AWS docs, MS Learn, local knowledge) with hard token budgets. Produces `research.md` that blueprint folds into `handoff.md`.
@@ -55,7 +55,7 @@ Skills are grouped around a research → planning → executing → verifying �
 
 ### `planning` — Planning
 - [`blueprint`](plugins/planning/skills/blueprint/SKILL.md) — discovery questionnaire → parallel-reviewed spec → bite-sized implementation plan, all gitignored under `.claude-plans/`. Phase 1 reads knowledge-capture, offers pre-task-research, runs visual-digest on attached mockups. The entry point for substantive engineering work.
-- [`draft-ticket`](plugins/planning/skills/draft-ticket/SKILL.md) — light discovery → optional verification → high-level bullets → workshop loop → JIRA create, for work the user is scoping but **not** implementing themselves. Produces ONE ticket whose body is detailed enough for another team or LLM to plan and implement from. Interactive only — no auto mode.
+- [`draft-ticket`](plugins/planning/skills/draft-ticket/SKILL.md) — light discovery → optional verification → high-level bullets → workshop loop → tracker-target confirm → create, for work the user is scoping but **not** implementing themselves. Tracker-agnostic: the body is the same whether it lands as a GitHub issue, a JIRA ticket, or elsewhere — resolved at create time, asking when unclear. Produces ONE ticket whose body is detailed enough for another team or LLM to plan and implement from. Interactive only — no auto mode.
 - [`grill-me`](plugins/planning/skills/grill-me/SKILL.md) — relentless one-question-at-a-time interview that stress-tests a plan, design, or proposal. With-docs variants sharpen domain language into `CONTEXT.md` and offer ADRs sparingly. Pokes holes before you commit.
 
 ### `executing` — Executing
@@ -69,7 +69,7 @@ Skills are grouped around a research → planning → executing → verifying �
 - [`visual-digest`](plugins/verifying/skills/visual-digest/SKILL.md) — schema-forced screenshot/mockup analyzer. Returns structured YAML (regions, elements, hierarchy, flows) instead of prose, with blank-canvas detection FIRST and independent-then-diff compare mode. Stops "looks good" vibes on incomplete UI.
 
 ### `review` — Code review lifecycle
-- [`finish-branch`](plugins/review/skills/finish-branch/SKILL.md) — clean-state gates → triangulated MSP detection → PR title + 5-section body from spec/handoff/decisions → `gh pr create --draft`. Always opens a draft, then watches CI checks and bot reviewers settle, dispatches red checks to `ci-check-triage` and comments to `pr-review-triage`, and promotes to ready (pinging human reviewers) only once it's clean. Refuses to PR from main; `--force-with-lease` only.
+- [`finish-branch`](plugins/review/skills/finish-branch/SKILL.md) — clean-state gates → ticket-convention detection → PR title + 5-section body from spec/handoff/decisions → `gh pr create --draft`. Always opens a draft, then watches CI checks and bot reviewers settle, dispatches red checks to `ci-check-triage` and comments to `pr-review-triage`, and promotes to ready (pinging human reviewers) only once it's clean. Refuses to PR from main; `--force-with-lease` only.
 - [`pr-review-triage`](plugins/review/skills/pr-review-triage/SKILL.md) — pulls PR comments via `gh` (Copilot, CodeRabbit, Codex, humans), grades each against plan/spec/decisions, proposes fix or won't-fix, gets your approval, applies, commits, comments back with the hash, resolves the thread. The post-PR review loop you actually run.
 - [`ci-check-triage`](plugins/review/skills/ci-check-triage/SKILL.md) — the status-check mirror of pr-review-triage: pulls failed checks via `gh`, reads the failing logs, classifies each (real failure / flaky-or-infra / external blocker), hands real failures to `debug-loop` for a root-cause fix, offers a re-run for flaky ones, pushes. Auto-invoked by finish-branch when the watch goes red; biased toward "real failure" so re-running never masks a defect.
 
@@ -78,9 +78,18 @@ Skills are grouped around a research → planning → executing → verifying �
 - [`vscode-preview`](plugins/toolkit/skills/vscode-preview/SKILL.md) — opens markdown rendered preview or diff in VSCode/Cursor at review gates. Uses `code -r` + a keybinding hint.
 - [`caveman`](plugins/toolkit/skills/caveman/SKILL.md) — togglable terse-output register. `/caveman on` for this session, `/caveman persist` to survive new sessions (requires a one-time SessionStart hook install). Code, URLs, paths, and sibling-skill templates preserved verbatim. Default OFF.
 
+### `orchestration` — Fleet-style drivers
+- [`auto-ship`](plugins/orchestration/skills/auto-ship/SKILL.md) — the architect. Takes a work item to a **ready-for-review** PR autonomously: grants autonomy via a `.pipeline.json` written into the workspace, then relays sealed subagents through blueprint → execute-plan → verify-before-done → finish-branch, carrying only artifact paths between phases. Confirms work item + issue target + stop point once up front, then runs to a draft PR promoted to ready — and **never merges**. Halts and surfaces on blocked tasks, red verification, or stuck CI.
+- [`doctrine-audit`](plugins/orchestration/skills/doctrine-audit/SKILL.md) — fans out parallel auditor subagents (architecture / tests / docs / standards), each grounded in the project's doctrine sources (nested CLAUDE.md, lint configs, ADRs, `.claude-knowledge/`). Produces `file:line` violations that each cite the rule they break, dedupes against existing open issues, lists everything for approval, then files one scoped issue per violation. Default interactive — nothing filed before you approve.
+
 ## Composition
 
-Skills compose by name, not by nesting. Cross-skill invocations pass `caller=<skill-name>` to prevent cycles (e.g., debug-loop ↔ ui-validation). Shared conventions (active-workspace resolution, ad-hoc artifact root, sibling-installed detection, MSP repo triangulation, TodoWrite as the in-session progress tool) are pinned across all skills.
+Skills compose by name, not by nesting. Cross-skill invocations pass `caller=<skill-name>` to prevent cycles (e.g., debug-loop ↔ ui-validation). Shared conventions (active-workspace resolution, ad-hoc artifact root, sibling-installed detection, ticket-convention detection, TodoWrite as the in-session progress tool) are pinned across all skills.
+
+<a name="autonomy-grant"></a>
+### Autonomy grant — `.pipeline.json`
+
+Every interactive-by-default skill resolves auto-vs-interactive through one rule: **autonomy is granted, never inferred.** A skill goes auto only when it can point to a source — the user said so *this turn*, the invocation prompt carries `mode=auto`, or a `.pipeline.json` grant exists in the active workspace with `"mode": "auto"`. Memory, prior sessions, and "the user seemed to want speed" are explicitly *not* grants. When `auto-ship` orchestrates a run, it writes that `.pipeline.json` into the workspace before spawning any phase; `blueprint`, `execute-plan`, and `finish-branch` each read it with a Bash probe and go auto *because the file is on disk*. This is what lets the same skill be safe as a bare `/blueprint` (interactive) and autonomous inside a pipeline — without it ever guessing which it should be. Safety gates (dirty tree, PR-from-main, failing verification) block in both modes; auto only waives *permission* prompts, never *protection*.
 
 Workspace artifacts (handoff, spec, plan, decisions, screenshots, verify logs, progress.json, **open-questions.md**) live under `.claude-plans/<YYYY-MM-DD>-<slug>/`. Always gitignored, never committed. `open-questions.md` is the running log of deferred decisions (auto mode) or things the user wants to revisit (interactive mode) — surfaced at end of run and read by Phase 1 of any continuation workspace.
 

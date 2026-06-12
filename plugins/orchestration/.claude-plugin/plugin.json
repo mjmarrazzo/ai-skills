@@ -1,0 +1,8 @@
+{
+  "name": "orchestration",
+  "version": "0.1.0",
+  "description": "Orchestration — auto-ship, doctrine-audit. Fleet-style skills that drive the rest of the spine: one takes a work item to a ready-for-review PR autonomously, the other sweeps the codebase against your doctrine and files scoped issues.",
+  "author": {
+    "name": "mjmarrazzo"
+  }
+}

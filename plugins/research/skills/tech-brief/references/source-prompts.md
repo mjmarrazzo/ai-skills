@@ -205,21 +205,21 @@ Run only when `ecosystem == dotnet`. Uses `mcp__claude_ai_Microsoft_Learn__micro
 
 Same skip rules as AWS docs MCP.
 
-### 7. Atlassian / Confluence (internal MSP libraries)
+### 7. Atlassian / Confluence (internal/in-house libraries)
 
-Run only when MSP-detected (triangulated check from composition-skills decisions.md) AND the library name matches internal patterns OR the user opts in. Uses `mcp__claude_ai_Atlassian__search`.
+Run only when a ticket key is detected (from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention) AND the library name matches internal patterns OR the user opts in. Uses `mcp__claude_ai_Atlassian__search`.
 
 **Subagent prompt:**
 
-> You are researching the internal MSP library `<library>` for inclusion in a tech brief.
+> You are researching an internal/in-house library `<library>` for inclusion in a tech brief.
 >
-> 1. Call `mcp__claude_ai_Atlassian__search` with `query: "<library>"` and `cloudId: "nicusa.atlassian.net"`.
+> 1. Call `mcp__claude_ai_Atlassian__search` with `query: "<library>"` and `cloudId: "example.atlassian.net"`.
 > 2. For the top 2 Confluence page results, fetch via `mcp__claude_ai_Atlassian__fetch`.
 > 3. Return at most 4 records, each formatted EXACTLY as:
 >
 >    `- **<title>** — <url> — <one-line takeaway under 25 words>`
 >
-> Cover: the library's purpose within MSP (1 record), main owner/team (1 record if discoverable), and known integration points or sharp edges (1-2 records). If Confluence returns nothing, return `none`.
+> Cover: the library's purpose within the org (1 record), main owner/team (1 record if discoverable), and known integration points or sharp edges (1-2 records). If Confluence returns nothing, return `none`.
 >
 > Total output must not exceed 6 lines.
 
@@ -227,23 +227,23 @@ Two failure modes per `pre-task-research` convention:
 - Tool not in tool list → silent skip.
 - Auth error / 401 → surface `Atlassian: authenticate via mcp__claude_ai_Atlassian__authenticate, then re-run with fresh=true`. Skip this source for this run.
 
-### 8. MSP Go API framework MCP (ecosystem=go, MSP-internal libraries)
+### 8. Internal-package-search MCP (in-house/proprietary libraries)
 
-Run only when `ecosystem == go` AND MSP-detected AND the library name matches internal patterns (heuristic: `msp-*`, or user opt-in during the interactive wave). Uses `mcp__msp-go-api-framework__search`.
+Some teams run an MCP server that indexes their internal/proprietary libraries (e.g. a company API framework). This source is **opt-in and configured, never assumed**: it runs only when repo `CLAUDE.md` (or `~/.claude/CLAUDE.md`) names an internal-package-search MCP tool AND that tool is in the current tool list AND the library name matches an internal package pattern (heuristic: internal package/import paths, or user opt-in during the interactive wave). Substitute the configured tool name for `<INTERNAL_PKG_MCP>` below.
 
 **Subagent prompt:**
 
-> You are researching the internal MSP Go library `<library>`.
+> You are researching an internal/in-house library `<library>`.
 >
-> Call `mcp__msp-go-api-framework__search` with the library name. Return at most 5 records, each formatted EXACTLY as:
+> Call `<INTERNAL_PKG_MCP>` with the library name. Return at most 5 records, each formatted EXACTLY as:
 >
 > `- **<title>** — <url> — <one-line takeaway under 25 words>`
 >
-> Cover: the library's role in the MSP API framework (1 record), main types/functions (1-2 records), and integration patterns (1-2 records). If search returns nothing relevant, return `none`.
+> Cover: the library's role in the in-house framework (1 record), main types/functions (1-2 records), and integration patterns (1-2 records). If search returns nothing relevant, return `none`.
 >
 > Total output must not exceed 8 lines.
 
-Generic Go libraries (`gorilla/mux`, `go-redis`) do NOT trigger this source. The MCP is for in-scope MSP libraries only.
+Public, well-known libraries (`gorilla/mux`, `go-redis`) do NOT trigger this source. It's for in-scope internal libraries only, and only when an internal-package-search MCP is configured.
 
 ## Validation and assembly
 
@@ -272,6 +272,6 @@ The parent NEVER re-summarizes a subagent's output. "Let me synthesize what I fo
 | AWS docs MCP | silent skip | surface | skip section | n/a |
 | MS Learn MCP | silent skip | surface | skip section | n/a |
 | Atlassian | silent skip | surface | skip section | n/a |
-| MSP Go MCP | silent skip | surface | skip section | n/a |
+| Internal Go MCP | silent skip | surface | skip section | n/a |
 
 "Refuse the brief" means surface to the user (interactive mode) or `open-questions.md` (auto mode) with the message: `"insufficient sources for an honest brief; install the library locally and provide a manual TL;DR via interactive prompt"`. The skill does NOT produce a hallucinated brief from training data.

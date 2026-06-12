@@ -51,7 +51,7 @@ Prefer ruff over flake8 when both present.
 | Gradle build with ktlint plugin | Lint | `./gradlew ktlintCheck` |
 | Gradle build with detekt | Static analysis | `./gradlew detekt` |
 
-For MSP repos: if `AWS_PROFILE` / `AWS_REGION` are unset before running integration-flavored test tasks, print a one-line reminder before proceeding.
+For repos that declare cloud-credential env vars in their CLAUDE.md (e.g., `AWS_PROFILE` / `AWS_REGION`): if they're unset before running integration-flavored test tasks, print a one-line reminder before proceeding.
 
 ## Multi-language / monorepo orchestration
 

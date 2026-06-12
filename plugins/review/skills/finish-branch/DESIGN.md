@@ -104,11 +104,14 @@ If base has commits the branch doesn't have: surface it.
 Do not rebase without explicit user confirmation. Do not rebase silently. Rebasing changes history
 and may require force-push, both of which are user decisions.
 
-## Branch convention enforcement
+## Ticket-convention detection
 
 Detection order:
 
-1. Parse `git remote get-url origin`. If the URL contains `nicusa` or `tylertech`: **MSP project**.
+1. A ticket key is in play when the current branch carries a prefix matching `^[A-Z][A-Z0-9]+-\d+`
+   (e.g. `PROJ-1234`), when the active workspace slug carries that prefix, or when the repo's
+   `CLAUDE.md` declares a branch/commit convention. Any of these means a ticket key is detected;
+   extract the key for title formatting and ticket-link generation.
 2. Otherwise: sample merged PRs via `gh pr list --state merged --limit 20 --json headRefName`. If
    ≥ 60% share a prefix pattern (`PROJ-\d+/`), infer that pattern. If no pattern emerges: generic
    (no ticket enforcement, only the `main`/`master` hard block).
@@ -119,27 +122,27 @@ Cannot open a PR from 'main'. Switch to a feature branch first.
 ```
 No override. No confirmation prompt. This is not a "are you sure?" situation.
 
-### MSP repo — branch is correctly prefixed (`MSP-XXXX/short-description`)
-Proceed. Extract the ticket key (`MSP-7032`) for title formatting and JIRA link generation.
+### Repo with a ticket convention — branch is correctly prefixed (`<KEY>-XXXX/short-description`)
+Proceed. Extract the ticket key (e.g. `PROJ-1234`) for title formatting and ticket-link generation.
 
-### MSP repo — branch is missing the prefix (e.g. `add-feature`)
+### Ticket-convention repo — branch is missing the prefix (e.g. `add-feature`)
 Stop and offer:
-> Branch 'add-feature' doesn't follow the MSP convention (MSP-XXXX/short-description).
+> Branch 'add-feature' doesn't follow the ticket convention (<KEY>-XXXX/short-description).
 > Options:
->   (a) Rename the branch to MSP-XXXX/add-feature — I'll git branch -m + git push --force-with-lease
+>   (a) Rename the branch to <KEY>-XXXX/add-feature — I'll git branch -m + git push --force-with-lease
 >       with your confirmation. Tell me the ticket number.
 >   (b) Proceed without renaming — PR will be created without ticket prefix.
 
-If the user gives a ticket number, rename: `git branch -m MSP-7032/add-feature`, then push with
+If the user gives a ticket number, rename: `git branch -m PROJ-1234/add-feature`, then push with
 `--force-with-lease` (see Force-push policy). Re-run pre-flight checks from step 4 after rename.
 After the push succeeds, offer to delete the old remote ref (`git push origin --delete add-feature`)
 and check whether a PR was open on the old branch name — leaving an orphan remote branch open is
 the kind of thing that bites later.
 
-### Non-MSP repo with a detected prefix pattern
+### Repo without a declared convention but with a detected prefix pattern
 Apply the detected convention the same way. Missing prefix → same offer (rename or proceed).
 
-### Non-MSP repo, no detectable pattern
+### Repo with no detectable pattern
 Skip ticket enforcement. Only enforce the hard block on `main`/`master`.
 
 ## PR title generation
@@ -149,17 +152,16 @@ Skip ticket enforcement. Only enforce the hard block on `main`/`master`.
 2. `handoff.md` → `**Goal (one sentence):**` line
 3. Fallback: `git log --oneline -1` (last commit message)
 
-**Format by project:**
-- MSP: `MSP-XXXX: <action verb> <object>`
-- Non-MSP with ticket: `PROJ-XXXX: <action verb> <object>`
-- Generic: `<action verb> <object>` (sentence-case, imperative)
+**Format by ticket key:**
+- With a ticket key: `<KEY>-XXXX: <action verb> <object>`
+- Without one: `<action verb> <object>` (sentence-case, imperative)
 
 **Length enforcement:**
 Truncate the title to 70 characters with an ellipsis if the source goal runs long. Embed the full
 first sentence from the spec/handoff goal at the top of the PR body's Summary section so nothing
 is lost.
 
-Example: `MSP-7032: Add Datadog Orchestrion build-time APM instrumenta…` → truncated; the body
+Example: `PROJ-1234: Add Datadog Orchestrion build-time APM instrumenta…` → truncated; the body
 opens with the full sentence.
 
 **Show the user the generated title before running `gh pr create` and wait for a thumbs-up or edit.**
@@ -171,8 +173,8 @@ The blueprint workspace files are gitignored and not accessible to PR reviewers.
 from them must be embedded inline — no "see `.claude-plans/...`" references in the PR body.
 
 **Workspace lookup:**
-Parse ticket key from branch name (e.g. `MSP-7032` from `MSP-7032/add-orchestrion`). Glob
-`.claude-plans/*-MSP-7032-*/`. If multiple matches, use the most recent date prefix. If no match:
+Parse ticket key from branch name (e.g. `PROJ-1234` from `PROJ-1234/add-orchestrion`). Glob
+`.claude-plans/*-PROJ-1234-*/`. If multiple matches, use the most recent date prefix. If no match:
 generate body from git log alone, with a one-line note: "_No blueprint workspace found — summary
 generated from commits._"
 
@@ -210,10 +212,10 @@ Omit section if spec has no Non-goals.>
 <If decisions.md has > 3 entries, note: "_N additional decisions logged in .claude-plans workspace._">
 <If decisions.md is absent, omit section.>
 
-JIRA: https://nicusa.atlassian.net/browse/<MSP-XXXX>
+JIRA: https://example.atlassian.net/browse/<KEY>-XXXX
 ```
 
-**Rendered example** (MSP-7032/add-orchestrion with a full workspace):
+**Rendered example** (PROJ-1234/add-orchestrion with a full workspace):
 
 ```markdown
 ## Summary
@@ -245,7 +247,7 @@ init(), which removes the need for any `import _ "gopkg.in/DataDog/dd-trace-go.v
 - **Build-time injection** — safer than init() hooks; no runtime panic if dd-agent unreachable
 - **Keep dd-trace-go as a direct dep** — Orchestrion still needs the type definitions at compile time
 
-JIRA: https://nicusa.atlassian.net/browse/MSP-7032
+JIRA: https://example.atlassian.net/browse/PROJ-1234
 ```
 
 Note on JIRA linking: `Fixes`/`Closes` GitHub keywords only close GitHub issues, not JIRA tickets.
@@ -272,7 +274,7 @@ Stop. Don't capture tokens silently.
 
 **Wrong account / org:**
 Print the active account (`gh api user --jq .login`) and the repo org so the user can verify:
-> Active gh account: mattm — is this the account that should own the PR for nicusa/msp-payments?
+> Active gh account: mattm — is this the account that should own the PR for acme/payments?
 Proceed only if the user confirms.
 
 If any check fails: surface the exact fix command, explain what's missing, stop. Do not attempt to
@@ -372,7 +374,7 @@ operates on feature branches by design, but the hard block in the branch-convent
 this physically impossible anyway.
 
 For any force-with-lease push, print the exact command before running it and wait for confirmation:
-> About to run: `git push --force-with-lease origin MSP-7032/add-orchestrion`
+> About to run: `git push --force-with-lease origin PROJ-1234/add-orchestrion`
 > This will rewrite the remote branch. OK? (y/N)
 
 ## Anti-patterns
@@ -444,9 +446,9 @@ missing, then proceed per the user's explicit confirmation.
    The boundary is real. But if dogfooding shows the transition is always immediate and the
    double-invocation is friction, revisiting the merge is reasonable.
 
-3. **Convention detection for non-MSP, non-tylertech repos.** The `gh pr list` heuristic (≥ 60%
+3. **Convention detection for repos without a declared convention.** The `gh pr list` heuristic (≥ 60%
    prefix) needs a real threshold check. Too aggressive → noisy; too loose → convention is never
-   applied. Revisit after one or two non-MSP uses.
+   applied. Revisit after one or two uses against repos with no declared convention.
 
 4. **decisions.md top-3 selection.** Currently "top 3" means the three most recent entries. Should
    it be the three with the most reviewer conflict? Or the three that affected scope most? Punted

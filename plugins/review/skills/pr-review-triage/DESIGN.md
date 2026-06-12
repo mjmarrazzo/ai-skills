@@ -102,7 +102,7 @@ Confidence tagging: each verdict gets a confidence tag (`high` / `medium` / `low
 
 ## E. Plan-context loading
 
-Use the canonical active-workspace resolution algorithm (decisions.md):
+Use the canonical active-workspace resolution algorithm:
 1. If `WORKSPACE_PATH` passed by caller, use it.
 2. Enumerate `.claude-plans/*/`, filter to dirs containing `plan.md` or `spec.md`.
 3. One match → use. Multiple → prefer slug matching current branch's ticket key, tiebreak by `plan.md` mtime.
@@ -170,12 +170,12 @@ After approval, in order:
 
 1. **Apply fixes.** One verdict at a time. Use Edit on the file(s). Track applied / failed via TodoWrite.
 2. **Verify if available.** If `verify-before-done` is installed, hand off with `caller=pr-review-triage` once all fixes applied. If any verify check fails, hand off to `debug-loop` with `caller=pr-review-triage` and the failure bundle.
-3. **Commit.** Default: single commit, message `MSP-XXXX: address PR review feedback` (or `Address PR review feedback` for non-MSP repos), body listing each fix as `- <file>:<line>: <one-line>`. Offer per-fix commits at approval time if the user wants finer history; default to single because that's what humans do.
+3. **Commit.** Default: single commit, message `<KEY>-XXXX: address PR review feedback` when a ticket key is detected (or `Address PR review feedback` for repos without a ticket convention), body listing each fix as `- <file>:<line>: <one-line>`. Offer per-fix commits at approval time if the user wants finer history; default to single because that's what humans do.
 4. **Push.** `git push origin <branch>` — no force, no rebase. New commits append to the branch as fresh history; that's how review-feedback rounds work.
 
 If the user rejected the verify gate or it isn't installed: commit and push anyway, but note in the post-resolve summary that verify wasn't run.
 
-MSP detection (same triangulation as other skills): remote URL contains `nicusa`/`tylertech`, branch matches `^MSP-\d+/`, or `git config user.email` ends `@tylertech.com`. Any one match = MSP, prefix the commit.
+Ticket-convention detection (same as other skills): a ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. A match means a ticket key is in play, so prefix the commit with that key.
 
 ## J. Comment-back and resolve
 
@@ -199,7 +199,7 @@ Outdated comments (`position: null` or `isOutdated: true`): never auto-act. Surf
 
 ## K. Composition
 
-- **Caller flag:** when invoking siblings (verify-before-done, debug-loop, blueprint), pass `caller=pr-review-triage` as a one-line context parameter. The cycle-prevention convention is in decisions.md.
+- **Caller flag:** when invoking siblings (verify-before-done, debug-loop, blueprint), pass `caller=pr-review-triage` as a one-line context parameter. This is the cycle-prevention convention.
 - **Upstream from finish-branch (2026-06 update):** the one-directional "suggestion only" stance is superseded. finish-branch now opens every PR as a draft and runs a watch-and-promote loop; when the watch finds unresolved review comments it **auto-invokes** pr-review-triage with `caller=finish-branch` + `PR_NUMBER`, then re-polls after the triage push to decide whether to promote. The coupling is real but bounded: it's one-directional (finish-branch → pr-review-triage; this skill never calls finish-branch back), the approval gate still fires on every invocation, and finish-branch's 3-round cap stops the loop. Symmetric to how finish-branch dispatches failed checks to `ci-check-triage`.
 - **Escalation to blueprint:** when one or more comments are graded `escalate`, the post-resolve summary tells the user: "Comment #N is design-level — recommend running `blueprint` with the constraint: <one-line constraint extracted from the comment>." Do not auto-invoke blueprint; the user chooses.
 - **Failure to debug-loop:** if applying a fix produces a verify failure, hand off to debug-loop with `caller=pr-review-triage` and a failure bundle (file, error output, the comment that prompted the fix). debug-loop's anti-cycle guard means it won't loop back here.

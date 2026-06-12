@@ -95,7 +95,7 @@ Expected: PASS
 
 ```
 git add <files>
-git commit -m "MSP-XXXX: <message>"
+git commit -m "PROJ-XXXX: <message>"
 ```
 ````
 

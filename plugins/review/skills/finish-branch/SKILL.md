@@ -16,9 +16,29 @@ Use `TodoWrite` to track the pre-flight checks as they run, then the watch-and-p
 ## Active-workspace resolution
 
 1. If `WORKSPACE_PATH` is passed as a context parameter, use it — no discovery.
-2. Enumerate `.claude-plans/*/` in repo root (or cwd), filter to dirs containing `plan.md` or `spec.md`.
-3. If one match, use it. If multiple, prefer the slug containing the current branch's ticket key; break ties by mtime of `plan.md`.
+2. Enumerate `.claude-plans/*/` in repo root (or cwd), filter to dirs containing a plan or spec artifact. Blueprint writes **versioned** files (`plan.v<N>.md`, `spec.v<N>.md`) — never a bare `plan.md`/`spec.md` — so match `plan.v*.md` OR `plan.md` (and likewise spec). The **current** plan/spec is the highest N (`ls plan.v*.md | sort -V | tail -1`); fall back to a bare `plan.md` only if no versioned file exists.
+3. If one match, use it. If multiple, prefer the slug containing the current branch's ticket key; break ties by mtime of the current (highest-N) plan file.
 4. If zero matches: ad-hoc mode — generate PR body from git log alone, note "_No blueprint workspace found — summary generated from commits._"
+
+## Autonomy is granted, never inferred
+
+finish-branch runs **interactive** by default: it confirms the generated PR title before `gh pr create`, runs the knowledge-capture reflection prompt, and surfaces choices to the user. It switches to **auto** (skip those prompts, log to `open-questions.md` instead) ONLY when one of these is literally true *at this moment*. Check them; do not recall them:
+
+1. **The user said so this turn** — "go full auto", "skip the gates", "don't ask, just ship it", or a literal `mode=auto`.
+2. **The invocation prompt says so** — a calling skill spawned this run with `mode=auto`.
+3. **A pipeline grant exists** — `.claude-plans/<active>/.pipeline.json` is present with `"mode": "auto"`. Confirm with Bash; it's the durable orchestrator signal that survives a subagent boundary.
+
+```bash
+test -f .claude-plans/<active>/.pipeline.json && \
+  grep -q '"mode"[[:space:]]*:[[:space:]]*"auto"' .claude-plans/<active>/.pipeline.json && \
+  echo "GRANT: auto" || echo "GRANT: interactive"
+```
+
+If none hold, you are **interactive** — a memory or the user's mood is not a grant.
+
+**Auto never waives a safety gate.** The pre-flight gates below (dirty tree, verify.json freshness, PR-from-main hard block) block in *both* modes — auto means "don't stop to ask permission for the things you'd otherwise ask about", not "skip the checks that protect the branch". The one human-in-the-loop checkpoint that auto *does* skip is the PR-title confirmation; under a grant, use the generated title and note it in `open-questions.md`.
+
+**Stop point under a grant.** If `.pipeline.json` carries `"stop_at": "ready-for-review"` (the `auto-ship` default), finish-branch's normal terminus — promote the draft to ready and ping human reviewers — *is* the stop. Do not merge; merging is always the human's call.
 
 ## Pre-flight gates
 
@@ -70,10 +90,6 @@ Note any deferred captures from `open-questions.md` and surface count: "3 deferr
 
 ## Branch convention enforcement
 
-### MSP detection
-
-Triangulated check — see composition-skills `decisions.md` § "MSP detection: triangulate, don't substring".
-
 ### Hard block: PR from main or master
 
 ```
@@ -82,36 +98,39 @@ Cannot open a PR from 'main'. Switch to a feature branch first.
 
 No override. No confirmation prompt.
 
-### MSP repo — branch correctly prefixed (`MSP-XXXX/short-description`)
+### Ticket-convention detection
 
-Proceed. Extract ticket key (e.g. `MSP-7032`) for title formatting and JIRA link generation.
+This repo's branch convention is **discovered, not assumed**. In precedence order:
 
-### MSP repo — branch missing prefix
+1. **Config** — if repo `CLAUDE.md` declares a branch convention (a ticket-key prefix or naming rule), that wins.
+2. **Heuristic** — sample merged PRs: `gh pr list --state merged --limit 20 --json headRefName`. If ≥ 60% share a ticket-key prefix matching `^[A-Z][A-Z0-9]+-\d+/`, the repo uses ticket-prefixed branches — enforce it.
+3. **No signal** — skip ticket enforcement entirely; only the main/master hard block applies.
+
+### Branch correctly prefixed (convention detected)
+
+Proceed. Extract the ticket key (e.g. `PROJ-1234`) for title formatting and tracker-link generation.
+
+### Branch missing the prefix (convention detected)
 
 Stop and offer:
 
-> Branch 'add-feature' doesn't follow the MSP convention (MSP-XXXX/short-description).
+> Branch 'add-feature' doesn't follow this repo's convention (`<KEY>-XXXX/short-description`).
 > Options:
 >   (a) Rename — tell me the ticket number and I'll run `git branch -m` + push with `--force-with-lease`
 >   (b) Proceed without renaming — PR created without ticket prefix
 
 On rename: re-run pre-flight from step 4. After push succeeds, offer to delete the old remote ref and check for an orphaned open PR on the old branch name.
 
-### Non-MSP repo
-
-Sample merged PRs: `gh pr list --state merged --limit 20 --json headRefName`. If ≥ 60% share a prefix pattern (`PROJ-\d+/`), apply that convention identically to MSP enforcement. If no pattern emerges: skip ticket enforcement; only enforce the main/master hard block.
-
 ## PR title generation
 
-Source priority:
+Source priority (everywhere below, `spec.md`/`plan.md` mean the **current** artifact — the highest-N `spec.v*.md`/`plan.v*.md` blueprint wrote, falling back to a bare file only if no versioned one exists):
 1. `spec.md` → `## Goal` section, first sentence
 2. `handoff.md` → `**Goal (one sentence):**` line
 3. Fallback: `git log --oneline -1`
 
 Format:
-- MSP: `MSP-XXXX: <action verb> <object>`
-- Non-MSP with ticket: `PROJ-XXXX: <action verb> <object>`
-- Generic: `<action verb> <object>` (sentence-case, imperative)
+- With detected ticket convention: `<KEY>-XXXX: <action verb> <object>`
+- Generic (no ticket convention): `<action verb> <object>` (sentence-case, imperative)
 
 Truncate to 70 characters with ellipsis if the source runs long; embed the full sentence at the top of the PR body's Summary section.
 
@@ -152,14 +171,16 @@ Omit section entirely if spec has no Architecture section.>
 <If decisions.md has > 3 entries: "_N additional decisions logged in .claude-plans workspace._">
 <If decisions.md absent: omit section.>
 
-JIRA: https://nicusa.atlassian.net/browse/<MSP-XXXX>
+<Tracker link — emit ONLY when the repo has a JIRA site configured (cloudId/site in CLAUDE.md)
+AND the branch ticket key matches a JIRA-style key. Format: `JIRA: <SITE_URL>/browse/<KEY>-XXXX`.
+Omit the line entirely otherwise.>
 ```
 
 Top-3 selection: use the three most recent entries from decisions.md.
 
 Full rendered example: see `references/pr-body-examples.md`.
 
-Note: `Fixes`/`Closes` GitHub keywords close GitHub issues, not JIRA tickets. Use a plain `JIRA:` line. JIRA Smart Commits (triggered by commit messages prefixed `MSP-XXXX:`) handle the JIRA side independently.
+Note: `Fixes`/`Closes` GitHub keywords close GitHub issues, not JIRA tickets. When the repo uses JIRA, emit a plain `JIRA:` line — JIRA Smart Commits (triggered by commit messages prefixed `<KEY>-XXXX:`) handle the JIRA side independently. When the repo uses GitHub issues, prefer `Fixes #<n>` instead.
 
 ## gh CLI requirements
 
@@ -248,7 +269,7 @@ Report the final state: PR URL, that it's ready, checks green, reviewers request
 
 Always print the exact command and wait for confirmation:
 
-> About to run: `git push --force-with-lease origin MSP-7032/add-orchestrion`
+> About to run: `git push --force-with-lease origin PROJ-1234/add-orchestrion`
 > This will rewrite the remote branch. OK? (y/N)
 
 ## Anti-patterns
@@ -267,7 +288,7 @@ Always print the exact command and wait for confirmation:
 ## Composition
 
 - **Callers:** verify-before-done hands off here on success; blueprint Phase 7 on user's "PR it" choice; direct user invocation after any green session.
-- **Reads:** `verify.json`, `progress.json`, `spec.md`, `handoff.md`, `plan.md`, `decisions.md`, `open-questions.md` — all from `<active>/`, all optional; degrades gracefully to git-log body when workspace is absent. `open-questions.md` count is surfaced in the pre-flight summary.
+- **Reads:** `verify.json`, `progress.json`, current `spec.v*.md`, `handoff.md`, current `plan.v*.md`, `decisions.md`, `open-questions.md` — all from `<active>/`, all optional; degrades gracefully to git-log body when workspace is absent. `open-questions.md` count is surfaced in the pre-flight summary.
 - **Writes:** nothing to repo or workspace directly. Side effects: `git push`, `gh pr create --draft`, `gh pr edit`, `gh pr ready`, `gh pr edit --add-reviewer` (at promotion), and `ScheduleWakeup` for the background watch. May invoke `knowledge-capture` (which owns its own writes).
 - **Calls:**
   - `knowledge-capture` once at pre-flight gate #6 (interactive mode only), passing `caller=finish-branch`.
@@ -281,5 +302,5 @@ Always print the exact command and wait for confirmation:
 ## Open questions
 
 - **Top-3 decisions selection:** most recent vs. highest-conflict vs. scope-affecting. Punted to dogfooding (decisions.md deferred #4).
-- **Convention detection threshold:** the 60% heuristic for non-MSP repos needs calibration after real non-MSP use.
+- **Convention detection threshold:** the 60% heuristic for ticket-prefixed repos needs calibration after real use across more repos.
 - **Body refresh on push:** should finish-branch offer to refresh the PR body when new commits are pushed after PR is open? Currently no — explicit invocation only.

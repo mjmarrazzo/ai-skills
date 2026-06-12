@@ -1,6 +1,6 @@
 ---
 name: pre-task-research
-description: Use this skill BEFORE planning when the user says "research before planning", "deep dive on X first", "look it up before we touch this", "what do we already know about Y". Also auto-invoked by `blueprint` Phase 1 for unfamiliar or large work (more than 5 files, new subsystem, cross-cutting concerns) when the user opts in. Fans out parallel subagents across local knowledge, library briefs (sibling-skill), Confluence, JIRA (MSP-detected), recent PRs, AWS docs, and Microsoft Learn; enforces token budgets in-prompt; writes a citation-rich `research.md`. Default is interactive — asks which sources to query before fan-out. Skip only on explicit opt-out ("skip research", "just plan it") or trivial requests.
+description: Use this skill BEFORE planning when the user says "research before planning", "deep dive on X first", "look it up before we touch this", "what do we already know about Y". Also auto-invoked by `blueprint` Phase 1 for unfamiliar or large work (more than 5 files, new subsystem, cross-cutting concerns) when the user opts in. Fans out parallel subagents across local knowledge, library briefs (sibling-skill), Confluence, JIRA (gated on ticket-tracker detection), recent PRs, AWS docs, and Microsoft Learn; enforces token budgets in-prompt; writes a citation-rich `research.md`. Default is interactive — asks which sources to query before fan-out. Skip only on explicit opt-out ("skip research", "just plan it") or trivial requests.
 ---
 
 # Pre-Task Research
@@ -68,15 +68,15 @@ Interactive is the default mode. Auto mode is explicit opt-in. Fire ONE wave via
 
 1. **Source selection** — Options: "All available" / "Local only" / "Local + Confluence" / "Custom". Default highlight: "All available".
 2. **Topic focus** — free-form. Skip if the request is already narrow.
-3. **JIRA scope** (only if MSP-detected AND JIRA selected) — "Current branch ticket + linked issues" / "Whole project".
+3. **JIRA scope** (only if JIRA-gated on AND JIRA selected) — "Current branch ticket + linked issues" / "Whole project".
 
 In auto mode, skip the wave and log to `.claude-plans/<active>/open-questions.md`:
 
 ```markdown
 ## <date> — pre-task-research — source selection
 **Question we'd have asked:** Which sources should I query?
-**What we rolled with:** all available; MSP-gated JIRA = <on|off>
-**Why:** auto mode, triangulated MSP detection = <true|false>
+**What we rolled with:** all available; JIRA-gated = <on|off>
+**Why:** auto mode, JIRA ticket-tracker detection = <true|false>
 **You might want to revisit if:** any source returned `none` or `[truncated]`
 ```
 
@@ -184,26 +184,26 @@ See `references/budget-policy.md` for the full priority table and drop rules.
 | 1 | Local knowledge | NEVER |
 | 2 | Tech briefs (sibling-skill: `tech-brief` with `intent=read_only`) | NEVER |
 | 3 | Confluence | 5th |
-| 4 | JIRA (MSP-gated) | 4th |
+| 4 | JIRA (gated; see below) | 4th |
 | 5 | Recent PRs (or commits) | 3rd |
 | 6 | AWS docs | 2nd |
 | 7 | Microsoft Learn | 1st |
 
 Local knowledge is most tribal and least re-discoverable. Tech briefs are durable, cross-project, curated knowledge about specific deps — losing them would defeat the purpose of maintaining them. Confluence / JIRA carry team-specific context. PRs / commits carry recent change context. AWS / MS Learn are publicly searchable later — losing them in the digest is cheapest.
 
-## MSP detection for JIRA gating
+## JIRA gating (ticket-tracker detection)
 
-Triangulated check from composition-skills decisions.md. JIRA runs by default ONLY when one matches:
+JIRA is a team-specific, optional source — never assumed. It runs by default ONLY when the repo shows a signal it's tracked in JIRA:
 
-1. Remote URL contains `nicusa` or `tylertech` (case-insensitive).
-2. Current branch matches `^MSP-\d+/`.
-3. Git config `user.email` ends in `@tylertech.com`.
+1. Current branch matches a JIRA-style ticket key: `^[A-Z][A-Z0-9]+-\d+` (e.g. `PROJ-1234/...`).
+2. A project key / `cloudId` is configured in repo `CLAUDE.md` or `~/.claude/CLAUDE.md`.
 
-Non-MSP workspaces omit JIRA entirely unless caller explicitly passes `sources` including `jira`, or user opts in during the interactive wave.
+When neither holds, JIRA is omitted entirely unless the caller explicitly passes `sources` including `jira`, or the user opts in during the interactive wave. The Atlassian MCP merely being installed is NOT a signal — many users have it connected for unrelated work.
 
-For MSP-detected runs, JIRA query seeds:
-- Current branch's ticket key (from `MSP-\d+/...`).
+When JIRA does run, query seeds:
+- The branch's ticket key, if the branch matches the pattern above.
 - File paths from the request, best-effort matched to JIRA components/labels; fallback to project-wide recent activity.
+- The project key comes from config or the branch ticket prefix — never hardcoded.
 
 ## Atlassian / Microsoft auth contract
 
@@ -267,7 +267,7 @@ budget:
 | pre-task-research | knowledge-capture (read only) | blueprint (Phase 1 offer), future start-ticket | log error, no-op |
 | | tech-brief (read_only — Priority 2, NEVER dropped) | | |
 
-- **Reads:** `knowledge-capture`'s `.claude-knowledge/` via its read API (with `caller=pre-task-research`); `tech-brief` via sibling-skill invocation with `intent=read_only, caller=pre-task-research`; active workspace for cache check; git state for MSP detection and commit fallback; MCP tool list for source availability.
+- **Reads:** `knowledge-capture`'s `.claude-knowledge/` via its read API (with `caller=pre-task-research`); `tech-brief` via sibling-skill invocation with `intent=read_only, caller=pre-task-research`; active workspace for cache check; git state for JIRA ticket-tracker detection and commit fallback; MCP tool list for source availability.
 - **Writes:** `.claude-plans/<active>/research.md` (or ad-hoc root in pre-workspace mode); appends to `open-questions.md` in auto mode; idempotent `.gitignore` append for `.claude-results/` when ad-hoc.
 - **Never reads:** the contents of pages returned by subagents. The parent only sees structured records.
 
@@ -284,10 +284,10 @@ If a sibling isn't installed, mention once and degrade gracefully — never bloc
 - **Silent-skip on Atlassian auth error.** Surface the actionable message. Silent skip wastes the next fan-out too.
 - **Mid-line truncation to fit budget.** Whole-record drops only. Mid-line truncation breaks URLs and produces garbage citations.
 - **Topic-hashing the cache.** Workspace + file existence is the cache. Topic-hashing miscaches every rephrasing.
-- **Running JIRA on non-MSP workspaces by default.** JIRA is MSP-gated. The gate exists precisely to keep this skill generic.
+- **Running JIRA on workspaces with no tracker signal by default.** JIRA is gated on ticket-tracker detection (branch ticket-key pattern or configured project key). The gate exists precisely to keep this skill generic — the Atlassian MCP being connected is not a signal.
 
 ## Open questions
 
 - Whether commit-fallback should bound by `--since=6.months` (currently unbounded; per-source cap is the limit).
 - Whether AWS-docs and MS-Learn subagents should promote to opus for high-stakes paths (auth, payment, infra). Currently sonnet for all source subagents.
-- Whether `aws-marketplace`, `datadog-mcp`, or `msp-go-api-framework` should be first-class sources. Currently out of scope; surface in `open-questions.md` if user installs them.
+- Whether additional MCP-backed sources (cloud marketplace, observability, internal API frameworks) should be first-class sources. Currently out of scope; surface in `open-questions.md` if the user installs them.

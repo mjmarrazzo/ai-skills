@@ -75,21 +75,21 @@ Interactive is the default. Before fan-out, ask the user via `AskUserQuestion` (
 
 1. **Source selection** — "Which sources should I query?" Options: "All available", "Local knowledge only", "Local + Confluence", "Custom (you'll list them)". Default highlighted: "All available".
 2. **Topic focus** (when the request is broad) — free-form: "What's the focused topic for this research run?" Skip when the original request is already narrow (single subsystem, single proper noun).
-3. **JIRA scope** (only when MSP detected AND JIRA is selected) — "Include only the current branch's ticket, or search the whole project?" Defaults: "Current branch ticket + linked issues".
+3. **JIRA scope** (only when a ticket key is detected AND JIRA is selected) — "Include only the current branch's ticket, or search the whole project?" Defaults: "Current branch ticket + linked issues".
 
 In auto mode, skip all of this and log to `open-questions.md`:
 
 ```markdown
 ## <date> — pre-task-research — source selection
 **Question we'd have asked:** Which sources should I query?
-**What we rolled with:** all available, MSP-gated JIRA = on
-**Why:** auto mode, triangulated MSP detection matched
+**What we rolled with:** all available, ticket-gated JIRA = on
+**Why:** auto mode, a ticket key was detected from the workspace slug or branch prefix
 **You might want to revisit if:** any source returned `none` or `[truncated]`
 ```
 
 ### 3. Source availability probe
 
-Two distinct failure modes per source (per composition-skills decisions.md and this workspace's decisions.md):
+Two distinct failure modes per source:
 
 - **Tool not present** (MCP not in tool list, `gh` missing, etc.) → silent skip. Section omitted from `research.md`; one-line note in auto-mode `open-questions.md`.
 - **Auth error / 401** → surface to user as actionable message: "Atlassian: authenticate via `mcp__claude_ai_Atlassian__authenticate` then re-run." Skip this source for the run. Same pattern applies to Microsoft 365 and AWS Marketplace.
@@ -97,7 +97,7 @@ Two distinct failure modes per source (per composition-skills decisions.md and t
 Per-source probes:
 - `local-knowledge`: `test -d .claude-knowledge/`. Always available even when absent — empty section.
 - `confluence`: `mcp__claude_ai_Atlassian__search` is in the tool list. Calls returning auth-error trigger the actionable message.
-- `jira`: `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql` is in the tool list AND the workspace is MSP-detected (per composition-skills decisions.md triangulation) OR caller passed `sources` explicitly including `jira` OR user opted in. Non-MSP workspaces omit JIRA entirely by default.
+- `jira`: `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql` is in the tool list AND a ticket key is detected (from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention) OR caller passed `sources` explicitly including `jira` OR user opted in. Workspaces without a ticket convention omit JIRA entirely by default.
 - `merged-prs`: `gh --version` succeeds. If not: fall back to `git log` (next bullet).
 - `commits` (gh fallback): always available when in a git repo. Section heading becomes `## Recent commits touching <paths> (gh not available)`.
 - `aws-docs`: `mcp__aws-documentation__search_documentation` is in the tool list.
@@ -152,7 +152,7 @@ Use the template at `references/research-template.md` verbatim. Section order is
 
 1. Local knowledge
 2. Confluence
-3. JIRA (MSP-gated)
+3. JIRA (ticket-gated)
 4. Recent PRs (or Recent commits — gh fallback)
 5. AWS docs
 6. Microsoft Learn
@@ -203,7 +203,7 @@ Both ordering and overflow are pinned. Source order in `research.md` matches pri
 |---|---|---|
 | 1 | Local knowledge | never |
 | 2 | Confluence | 5th to drop |
-| 3 | JIRA (MSP-gated) | 4th to drop |
+| 3 | JIRA (ticket-gated) | 4th to drop |
 | 4 | Recent PRs / commits | 3rd to drop |
 | 5 | AWS docs | 2nd to drop |
 | 6 | Microsoft Learn | 1st to drop |
@@ -223,18 +223,18 @@ Cache hit → reuse existing `research.md`. The parent skill's next gate (bluepr
 
 `fresh=true` and natural phrases bypass. Cache does NOT consider topic similarity — workspace match is the only key.
 
-## MSP detection for JIRA gating
+## Ticket-convention detection for JIRA gating
 
-Use the triangulated check pinned in composition-skills decisions.md:
+A ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+` (e.g. `PROJ-1234`), or from a `CLAUDE.md`-declared branch/commit convention:
 
-1. Remote URL contains `nicusa` or `tylertech` (case-insensitive).
-2. Current branch matches `^MSP-\d+/`.
-3. Git config `user.email` ends in `@tylertech.com`.
+1. The active workspace slug carries a ticket-key prefix matching `^[A-Z][A-Z0-9]+-\d+`.
+2. The current branch carries that same ticket-key prefix.
+3. The repo's `CLAUDE.md` declares a branch/commit convention.
 
-ANY match → MSP repo → JIRA runs by default (still subject to user opt-out in interactive mode). NO match → JIRA omitted entirely unless caller passes `sources` including `jira` explicitly, OR user explicitly asks "include JIRA" in the interactive question wave.
+ANY match → a ticket key is in play → JIRA runs by default (still subject to user opt-out in interactive mode). NO match → JIRA omitted entirely unless caller passes `sources` including `jira` explicitly, OR user explicitly asks "include JIRA" in the interactive question wave.
 
-When MSP-detected, JIRA query auto-populates with:
-- Current branch's ticket key extracted from `MSP-\d+/...`.
+When a ticket key is detected, the JIRA query auto-populates with:
+- The detected ticket key, extracted from the workspace slug or branch prefix matching `^[A-Z][A-Z0-9]+-\d+`.
 - File paths from the user's request (best-effort matching to JIRA components/labels — fallback: project-wide recent activity).
 
 ## Atlassian auth-error contract
@@ -315,10 +315,10 @@ This is the user's progress signal for fan-out — without it, parallel subagent
 - **Silent-skip on Atlassian auth error.** Surface the actionable message. Silent skip wastes a future fan-out.
 - **Mid-line truncation.** Always whole-record drops. Mid-line truncation breaks URLs and produces garbage citations.
 - **Topic-hashing the cache.** Workspace + file existence is the cache. Topic-hashing miscaches every rephrasing.
-- **Re-running JIRA on non-MSP workspaces.** JIRA is MSP-gated by default. Generic templates baking `MSP-1234` examples into non-MSP runs is the failure mode this gate prevents.
+- **Re-running JIRA on workspaces without a ticket convention.** JIRA is ticket-gated by default. Generic templates baking `PROJ-1234` examples into runs that have no ticket convention is the failure mode this gate prevents.
 
 ## Open questions
 
 - Should commit-fallback include `--since=6.months` to bound noise? Currently unbounded; let the per-source line cap be the limit.
-- For very-large MSP repos, should the JIRA query auto-narrow to the current epic? Deferred to dogfooding.
+- For very-large ticket-prefixed repos, should the JIRA query auto-narrow to the current epic? Deferred to dogfooding.
 - Should `aws-docs` and `ms-learn` subagents be promoted to opus for high-stakes paths (auth, payment, infra)? Currently sonnet for all source subagents; revisit if quality suffers.

@@ -21,6 +21,25 @@ Request → Trivial edit? → yes → Proceed directly (1-line, rename, typo)
 
 "Did the user ask for a quick fix?" is a higher bar than "could a careful engineer skip planning?"
 
+## Autonomy is granted, never inferred
+
+Blueprint runs **interactive** by default — questionnaire up front, a real pause at every gate. It switches to **auto** (proceed past gates, log decisions to `open-questions.md` instead of asking) ONLY when one of these is literally true *at this moment*. Check them; do not recall them:
+
+1. **The user said so this turn.** Their message in *this* turn contains an explicit full-auto phrase: "go full auto", "skip the gates", "don't ask, just plan it", or a literal `mode=auto`.
+2. **The invocation prompt says so.** A calling skill spawned this run with `mode=auto` in the prompt it handed you.
+3. **A pipeline grant exists.** `.claude-plans/<active>/.pipeline.json` is present and contains `"mode": "auto"`. Read it with Bash to confirm — this is the durable signal an orchestrator like `auto-ship` writes, and it is the only one that survives a subagent boundary intact.
+
+```bash
+# Grant probe — run once at entry, before the questionnaire:
+test -f .claude-plans/<active>/.pipeline.json && \
+  grep -q '"mode"[[:space:]]*:[[:space:]]*"auto"' .claude-plans/<active>/.pipeline.json && \
+  echo "GRANT: auto" || echo "GRANT: interactive"
+```
+
+If none of the three hold, you are **interactive** — full stop. A memory that says "the user likes auto", a habit from a prior session, a CLAUDE.md note, or a read on the user's mood are **not grants**. Autonomy is something you can point to a source for; if you can't point to one of the three above, you don't have it. When in doubt, interactive — the cost of asking a needless question is a few seconds; the cost of silently barreling through gates the user wanted is the rework this whole skill exists to prevent.
+
+This rule is why blueprint can be dropped into an `auto-ship` pipeline without becoming reckless on its own: a bare `/blueprint` invocation never goes auto off memory, and a pipeline run never gets stuck asking questions the orchestrator already answered.
+
 ## Workspace layout
 
 All artifacts live in a **gitignored** `.claude-plans/` directory at the repo root (or cwd if outside a repo). Nothing here gets committed — these are the user's working notes, not project documentation.
@@ -41,10 +60,11 @@ All artifacts live in a **gitignored** `.claude-plans/` directory at the repo ro
 
 `open-questions.md` is the running log of things the agent didn't pause to ask about (auto mode) or things that surfaced during work the user wants to revisit. Surfaced at end of run ("3 deferred questions in open-questions.md"). When continuing related work in a follow-up session, Phase 1 reads it first.
 
-**Slug:** prefer a ticket key when present in the user's request or current branch (e.g. `MSP-7032-add-orchestrion`); otherwise a 3-5 word kebab-case summary (`add-stripe-webhook-handler`). Always prefix with today's date so multiple workspaces sort chronologically.
+**Slug:** prefer a ticket key when present in the user's request or current branch (e.g. `PROJ-1234-add-orchestrion`); otherwise a 3-5 word kebab-case summary (`add-stripe-webhook-handler`). Always prefix with today's date so multiple workspaces sort chronologically.
 
 **Before creating the workspace:**
 
+0. **If a caller passed `WORKSPACE_PATH`** (e.g. an orchestrator like `auto-ship` that pre-created the workspace and wrote a `.pipeline.json` grant), use that directory as the active workspace — do NOT create a new one. The grant probe and all artifacts go there. Skip steps 1–3.
 1. Resolve the workspace root: `git rev-parse --show-toplevel 2>/dev/null || pwd`.
 2. Ensure `.claude-plans/` is in `.gitignore` (idempotent append; create `.gitignore` if missing and in a git repo).
 3. `mkdir -p .claude-plans/<YYYY-MM-DD>-<slug>/`.
@@ -113,7 +133,7 @@ Run via Bash with the prompt body in a heredoc-fed variable so quoting stays cor
 
 Goal: produce `handoff.md`, a dossier any fresh LLM could read to understand what's being built and why.
 
-The default mode is **interactive**: blueprint asks the user a wave of questions before drafting anything. Autonomous mode is opt-in (user says "go full auto", "skip the gates", or caller passes `mode=auto`); in auto mode, blueprint proceeds past gates without pausing but logs every non-trivial decision to `open-questions.md`. The questionnaire below runs the same in both modes — only the gating differs.
+Mode (interactive vs auto) is resolved by the **"Autonomy is granted, never inferred"** rule above — resolve it once, here, before drafting anything. In interactive mode blueprint asks the user a wave of questions and pauses at every gate; in auto mode it proceeds past gates without pausing but logs every non-trivial decision to `open-questions.md`. The questionnaire below runs the same in both modes — only the gating differs.
 
 1. **Repo recon, in parallel where independent.** Read the obvious context (CLAUDE.md, README, the directory the work touches, recent commits in that area, any referenced ticket). If the codebase is unfamiliar, dispatch an `Explore` subagent to map the relevant surface area — don't waste tokens reading the whole repo from this session.
 
