@@ -54,6 +54,7 @@ Resume caveman after the clear part is done. Don't toggle the mode flag — just
 - Identifiers: function names, class names, variable names, type names.
 - Numbers, units, and version strings.
 - Anything the user quoted in their message.
+- Text reproduced from tool output — grep/search hits, test names and strings, log lines, command output. Never compress it; wrap it in `backticks` (or a fence for multi-line) so it can't be mistaken for narration. Don't reproduce such text as bare prose.
 
 ## Sibling-skill exemption (do not compress)
 Output produced by these skills follows their own templates. Do not compress that output — only narration around it:
