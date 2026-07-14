@@ -116,7 +116,7 @@ Every source prompt in `source-prompts.md` includes these clauses verbatim:
 > Do NOT paraphrase contents. Do NOT add commentary, headers, or trailing summary.
 > If nothing relevant, return the literal string `none`.
 
-The reason this layer exists: post-hoc parent-side truncation breaks URLs and produces garbage. Enforcing bloat at the source of the tokens is cheap and durable. The parent's validation layer is a safety net, not the primary enforcement.
+The reason this layer exists: post-hoc parent-side truncation breaks URLs and produces garbage. Enforcing bloat at the source is cheap and durable. The parent's validation layer is a safety net, not the primary enforcement.
 
 ---
 

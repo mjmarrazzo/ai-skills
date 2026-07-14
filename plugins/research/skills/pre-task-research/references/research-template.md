@@ -160,12 +160,12 @@ Drops are applied lowest-priority-first. Local knowledge is NEVER dropped. The f
 **Full brief:** `~/.claude/data/tech-briefs/js/stripe.md`
 
 ## Confluence
-- **Stripe Integration Runbook** — https://example.atlassian.net/wiki/spaces/ENG/pages/123 — covers retry semantics, IP allowlist, secret rotation
-- **Billing Architecture Decision Log** — https://example.atlassian.net/wiki/spaces/ENG/pages/456 — Stripe chosen over Adyen 2024-08
+- **Stripe Integration Runbook** — https://<your-site>.atlassian.net/wiki/spaces/ENG/pages/123 — covers retry semantics, IP allowlist, secret rotation
+- **Billing Architecture Decision Log** — https://<your-site>.atlassian.net/wiki/spaces/ENG/pages/456 — Stripe chosen over Adyen 2024-08
 
 ## JIRA — related tickets
-- **PROJ-7032** — https://example.atlassian.net/browse/PROJ-7032 — Add Stripe webhook handler: status=In Progress, updated=2026-05-13
-- **PROJ-6810** — https://example.atlassian.net/browse/PROJ-6810 — Stripe webhook 5xx spike: status=Done, updated=2026-04-02
+- **PROJ-7032** — https://<your-site>.atlassian.net/browse/PROJ-7032 — Add Stripe webhook handler: status=In Progress, updated=2026-05-13
+- **PROJ-6810** — https://<your-site>.atlassian.net/browse/PROJ-6810 — Stripe webhook 5xx spike: status=Done, updated=2026-04-02
 
 ## Recent PRs touching services/billing/
 - **#1842** — https://github.com/org/repo/pull/1842 — Add idempotency table for webhook events (merged 2026-04-10)

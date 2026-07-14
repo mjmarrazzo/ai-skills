@@ -1,0 +1,91 @@
+{
+  "skill_name": "toolkit:fdm + research:knowledge-capture (triggering scope)",
+  "eval_type": "triggering-classification",
+  "notes": "Guards the two rescoped descriptions. fdm must fire on explicit FDM signals (name, 'keep the domain pure', hexagonal/ports-and-adapters) and NOT steal generic implementation requests, which belong to blueprint/execute-plan. knowledge-capture must fire on repo-specific engineering knowledge and NOT on personal/global preferences, which belong to Claude's built-in memory ('none' here). gold_with = correct route with the skill installed. acceptable_without = plausible routes when it is absent.",
+  "evals": [
+    {
+      "id": 0, "name": "fdm-decoy-generic-implement",
+      "prompt": "Implement the endpoint for creating a new tenant.",
+      "category": "decoy-not-fdm",
+      "gold_with": "planning:blueprint",
+      "acceptable_without": ["planning:blueprint", "none"]
+    },
+    {
+      "id": 1, "name": "fdm-decoy-build-feature",
+      "prompt": "Build the password-reset feature in this repo.",
+      "category": "decoy-not-fdm",
+      "gold_with": "planning:blueprint",
+      "acceptable_without": ["planning:blueprint", "none"]
+    },
+    {
+      "id": 2, "name": "fdm-keep-domain-pure",
+      "prompt": "Add the discount calculation, and keep the domain pure — no IO in the business rules.",
+      "category": "should-fire-fdm",
+      "gold_with": "toolkit:fdm",
+      "acceptable_without": ["planning:blueprint", "none"]
+    },
+    {
+      "id": 3, "name": "fdm-by-name",
+      "prompt": "Use FDM to shape this new verification module.",
+      "category": "should-fire-fdm",
+      "gold_with": "toolkit:fdm",
+      "acceptable_without": ["none"]
+    },
+    {
+      "id": 4, "name": "fdm-ports-and-adapters",
+      "prompt": "Structure this service with ports and adapters — hexagonal style, push the IO to the edge.",
+      "category": "should-fire-fdm",
+      "gold_with": "toolkit:fdm",
+      "acceptable_without": ["none"]
+    },
+    {
+      "id": 5, "name": "fdm-domain-modeling-phrase",
+      "prompt": "Let's do some functional domain modeling for the order lifecycle before we write the handler.",
+      "category": "should-fire-fdm",
+      "gold_with": "toolkit:fdm",
+      "acceptable_without": ["planning:blueprint", "none"]
+    },
+    {
+      "id": 6, "name": "fdm-decoy-execute-plan-task",
+      "prompt": "Run the next task in the plan — it says 'add the GET /users endpoint'.",
+      "category": "decoy-not-fdm",
+      "gold_with": "executing:execute-plan",
+      "acceptable_without": ["executing:execute-plan"]
+    },
+    {
+      "id": 7, "name": "kc-decoy-personal-preference",
+      "prompt": "Remember I prefer tabs over spaces.",
+      "category": "decoy-not-knowledge-capture",
+      "gold_with": "none",
+      "acceptable_without": ["none"]
+    },
+    {
+      "id": 8, "name": "kc-repo-gotcha",
+      "prompt": "Capture this gotcha about the flaky SQS timeout for this repo so we don't relearn it next session.",
+      "category": "should-fire-knowledge-capture",
+      "gold_with": "research:knowledge-capture",
+      "acceptable_without": ["none"]
+    },
+    {
+      "id": 9, "name": "kc-decoy-global-style",
+      "prompt": "Remember to always answer me tersely from now on.",
+      "category": "decoy-not-knowledge-capture",
+      "gold_with": "none",
+      "acceptable_without": ["none"]
+    },
+    {
+      "id": 10, "name": "kc-lesson-learned",
+      "prompt": "Lesson learned: the gradle daemon hangs after a JDK switch in this repo — note that down for next time.",
+      "category": "should-fire-knowledge-capture",
+      "gold_with": "research:knowledge-capture",
+      "acceptable_without": ["none"]
+    },
+    {
+      "id": 11, "name": "kc-decoy-tech-brief",
+      "prompt": "Research how DynamoDB TTL works and write it up so future projects benefit.",
+      "category": "decoy-not-knowledge-capture",
+      "gold_with": "research:tech-brief",
+      "acceptable_without": ["none"]
+    }
+  ]
+}

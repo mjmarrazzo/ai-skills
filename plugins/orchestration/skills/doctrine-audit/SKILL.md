@@ -53,7 +53,7 @@ Surface what you found: "Doctrine sources: 3 nested CLAUDE.md, eslint config wit
 
 Spawn one subagent per selected domain, in a single turn so they run concurrently. Each auditor:
 
-- Receives: its domain, the scope, the relevant doctrine slice (point it at the specific files/rules for its domain — the architecture auditor reads the layering rules and ADRs; the tests auditor reads coverage/TDD doctrine; etc.), `caller=doctrine-audit`, and a token budget.
+- Receives: its domain, the scope, the relevant doctrine slice (point it at the specific files/rules for its domain — the architecture auditor reads the layering rules and ADRs; the tests auditor reads coverage/TDD doctrine; etc.), `caller=doctrine-audit`, and a line budget for its findings list (lines, not tokens — an LLM can't count tokens, so a line cap is the enforceable unit).
 - Reads its doctrine slice **first**, extracting the concrete rules it will check against.
 - Scans its scope for violations of those rules.
 - Returns ONLY a structured findings list — no prose, no transcript:
@@ -67,7 +67,7 @@ Spawn one subagent per selected domain, in a single turn so they run concurrentl
   suggested_fix: <concrete, scoped fix>
 ```
 
-Auditor hard rules (put these in the subagent prompt): every finding MUST have a `file:line` and a `doctrine_ref`. A candidate with no doctrine_ref goes in a separate `opinions` list, not `findings`. No mega-findings — one violation per entry. Stay within scope. Respect the token budget; if truncating, say what was skipped rather than silently capping.
+Auditor hard rules (put these in the subagent prompt): every finding MUST have a `file:line` and a `doctrine_ref`. A candidate with no doctrine_ref goes in a separate `opinions` list, not `findings`. No mega-findings — one violation per entry. Stay within scope. Respect the line budget; if truncating, say what was skipped rather than silently capping.
 
 ## Phase 3 — Consolidate + dedupe
 
@@ -76,14 +76,16 @@ Auditor hard rules (put these in the subagent prompt): every finding MUST have a
 3. **Dedupe against existing open issues** — query the tracker so the audit never re-files what's already tracked:
    - GitHub: `gh issue list --state open --limit 200 --json number,title,body` (and `--label` if the audit uses a consistent label).
    - JIRA: search open issues in the target project for matching `file:line` / rule references.
-   Match on `file:line` as the **strong key** (the consistent audit label scopes the query); use `doctrine_ref` only to *confirm* a match, never as the primary key — it's free-text prose, so phrasing drift between audits ("root CLAUDE.md §Layering" vs "Layering rule, root CLAUDE.md") would make a strict ref-match miss a real duplicate and re-file it. Normalize the ref (lowercase, strip punctuation) before comparing. When unsure, keep the finding but mark it `possible-duplicate: #<n>` so the human decides.
+   Match on **file + normalized `doctrine_ref`**, with a ±10-line proximity window on the line number (the consistent audit label scopes the query). Exact `file:line` is too brittle a key — line numbers shift across refactors, so yesterday's `order.go:42` is today's `order.go:47` for the same violation. Normalize the ref before comparing (lowercase, strip punctuation) because it's free-text prose and phrasing drifts between audits ("root CLAUDE.md §Layering" vs "Layering rule, root CLAUDE.md"). Same file + same normalized ref + line within ±10 → duplicate. When unsure, keep the finding but mark it `possible-duplicate: #<n>` so the human decides.
 4. Set aside the `opinions` list (no doctrine basis) — reported separately, never auto-filed.
 
 ## Phase 4 — Approval gate (interactive) / file list (auto)
 
+**Max-findings gate (both modes):** if more than ~25 findings survive dedupe, do NOT present (or file) the full list item-by-item. Present a severity-ranked summary instead — counts per domain and severity, plus the top findings — and ask which subset to file ("all high", "top 10", "let me pick", "architecture only"). In auto mode, file only the highest-severity ~25 and log the remainder to `open-questions.md` as deferred. A 300-issue dump is unactionable and buries the drift that matters.
+
 **Interactive:** present the consolidated findings, grouped by domain then severity, each showing `file:line`, the doctrine_ref, the description, and the suggested fix. Show counts ("14 findings: 3 high, 8 medium, 3 low; 2 possible duplicates flagged; 5 opinions set aside"). Let the user approve all / drop specific ones / edit / cancel. **File nothing before approval.**
 
-**Auto (granted):** skip the gate; the deduped findings list IS the file list. Still print it, and log the filed set to `open-questions.md` so the human can review post-hoc.
+**Auto (granted):** skip the gate; the deduped findings list IS the file list (subject to the max-findings gate). Still print it, and log the filed set to `open-questions.md` so the human can review post-hoc.
 
 ## Phase 5 — File scoped issues
 
@@ -104,6 +106,15 @@ One issue per violation — never bundle. Return the list of created issue URLs/
 - The `opinions` list (no doctrine basis) — surfaced for the user to consider promoting into actual doctrine, but not filed.
 - If run with no doctrine found: a clear note that findings were heuristic, not doctrine-grounded.
 
+## Artifact location
+
+doctrine-audit is an ad-hoc sweep, not a plan-workspace skill — its artifacts go under the canonical ad-hoc root: `./.claude-results/<YYYY-MM-DD-HHMMSS>/doctrine-audit/` (gitignored). Written there:
+
+- `findings.md` — the full consolidated findings list (including anything dropped at the gate or deferred by the max-findings gate), so nothing is lost between the summary and the tracker.
+- `open-questions.md` — auto-mode deferred decisions: the filed set, deferred findings beyond the max-findings cap, and any judgment calls made without asking.
+
+If a pipeline grant put the run inside an active `.claude-plans/<active>/` workspace, use that workspace's `open-questions.md` instead for the deferred log.
+
 ## Composition & degradation
 
 - `knowledge-capture` — read as a doctrine source in Phase 1 if installed; skip with a one-line note otherwise.
@@ -112,12 +123,13 @@ One issue per violation — never bundle. Return the list of created issue URLs/
 
 ## Anti-patterns
 
-- **Don't file un-grounded findings.** No `doctrine_ref`, no auto-file. Opinion goes in its own list.
-- **Don't skip the existing-issue dedupe.** Re-filing tracked drift is the fastest way to make the user distrust the audit. Dedupe runs even in auto mode.
-- **Don't over-scope issues.** One violation per issue. A "fix all layering violations" mega-issue is unactionable.
-- **Don't file before the approval gate** in interactive mode. List first, always.
-- **Don't invent doctrine.** If the project has none, say so and offer heuristics explicitly labeled as such — don't pass best-practice opinions off as the project's rules.
-- **Don't read auditor transcripts back into the main thread.** Take the structured findings list only; the fan-out exists to keep each scan out of the orchestrator's context.
+- **Filing un-grounded findings** — no `doctrine_ref`, no auto-file; opinion goes in its own list.
+- **Skipping the existing-issue dedupe** — re-filing tracked drift destroys trust in the audit; dedupe runs even in auto mode.
+- **Over-scoping issues** — one violation per issue; a "fix all layering violations" mega-issue is unactionable.
+- **Filing before the approval gate in interactive mode** — list first, always.
+- **Inventing doctrine** — if the project has none, say so and label any heuristics as such rather than passing opinion off as the project's rules.
+- **Reading auditor transcripts back into the main thread** — take the structured findings list only; the fan-out exists to keep scans out of the orchestrator's context.
+- **Dumping hundreds of issues past the max-findings gate** — over ~25 findings means a severity-ranked summary and a subset decision, not a bulk file.
 
 ## Inputs accepted
 

@@ -36,3 +36,23 @@ init(), which removes the need for any `import _ "gopkg.in/DataDog/dd-trace-go.v
 
 JIRA: https://example.atlassian.net/browse/PROJ-1234
 ```
+
+## Ad-hoc PR — no blueprint workspace, no ticket convention
+
+Repo has no `.claude-plans/` workspace and no ticket-prefixed branches; the body is built from `git log <base>..HEAD` alone. Branch `fix-retry-backoff`, title `Fix exponential backoff in webhook retry`. Sections with no source (Architecture context, Non-goals, Key decisions) are omitted — never padded with invented content. No `JIRA:` line without a ticket key.
+
+```markdown
+## Summary
+
+- Fix webhook retry to use exponential backoff instead of a fixed 1s delay
+- Cap retries at 5 attempts with jitter to avoid thundering-herd on recovery
+- Log the final failure with the delivery ID before dropping the event
+
+_No blueprint workspace found — summary generated from commits._
+
+## Test plan
+
+- [ ] `npm test -- webhook-retry` green locally
+- [ ] Manual: kill the receiver, confirm delays log as ~1s/2s/4s/8s/16s
+- [ ] Confirm dropped-event log line includes the delivery ID
+```

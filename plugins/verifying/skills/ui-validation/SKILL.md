@@ -10,7 +10,7 @@ description: Use this skill whenever UI changes need browser verification — af
 ## Inputs — resolution order
 
 1. **Caller-supplied (highest precedence).** If the calling skill passes `{surfaces, viewports, headless, caller}` as a context parameter, accept it verbatim. Skip inference entirely.
-2. **plan.md surface list.** Blueprint's plan template requests `[URL path] × [viewport(s)] × [check]` triples in the verification task. If present in the active workspace's `plan.md`, use them.
+2. **Plan surface list.** Blueprint's plan template requests `[URL path] × [viewport(s)] × [check]` triples in the verification task. If present in the active workspace's highest-N `plan.v*.md`, use them.
 3. **Inferred from diff.** If no explicit surface list, inspect changed files to derive routes:
    - Next.js / Remix: file-system routes from `app/` or `pages/`
    - React Router: `<Route path=...>` declarations referencing the changed components
@@ -40,7 +40,14 @@ Viewport aliases: `mobile: 375×667`, `tablet: 768×1024`, `desktop: 1280×800`,
 
 ## Active workspace resolution
 
-Use the canonical active-workspace resolution algorithm pinned in `decisions.md`. In brief: check `WORKSPACE_PATH` first; enumerate `.claude-plans/*/` dirs with `plan.md` or `spec.md`; prefer the one whose slug matches the current branch's ticket key; fall back to most-recent by mtime. When no workspace is found, operate in ad-hoc mode (see Screenshot paths below).
+**Active-workspace resolution** (canonical, shared across all sibling skills):
+1. If the caller passes `WORKSPACE_PATH` (explicit absolute path), use it — no discovery.
+2. Otherwise enumerate `.claude-plans/*/` in the repo root (or cwd if not in a git repo).
+3. Filter to directories containing `plan.v*.md` or `spec.v*.md` (blueprint writes only versioned artifacts, never bare `plan.md`/`spec.md`). When a skill needs "the plan" or "the spec", use the highest-N version.
+4. Exactly one match → use it.
+5. Multiple → prefer the one whose slug contains the current branch's ticket key (branch `MSP-7032/foo` → workspace with `MSP-7032` in slug).
+6. Still multiple → most recent by mtime of the newest `plan.v*.md` (fall back to dir mtime).
+7. Zero → ad-hoc mode, no workspace. Ad-hoc artifacts go under `./.claude-results/<YYYY-MM-DD-HHMMSS>/<skill-name>/` (gitignored; see Screenshot paths below).
 
 ## Screenshot paths
 
@@ -75,11 +82,21 @@ Many surfaces require auth. The skill **NEVER writes credentials without user co
 4. Before writing any file: verify it appears in `.gitignore`. If not, append it. If `.gitignore` doesn't exist in a git repo, create one first. Print: `.env.local will be written and is covered by .gitignore`.
 5. After the user pastes values, read them back masked (`TEST_USER_EMAIL=***@***.com`) for confirmation without raw secrets in chat scrollback.
 
+## Server readiness
+
+Browser checks are meaningless against a dead server. Before driving any surface:
+
+1. **Resolve the base URL.** Accept a `BASE_URL` input from the caller if provided. Otherwise infer the dev-server command and port from `package.json` `scripts.dev` / `scripts.start`, the README's run instructions, or `docker-compose.yml` ports — then confirm the base URL with the user before starting anything.
+2. **Probe first.** `curl -s -o /dev/null -w '%{http_code}' <BASE_URL>` — any HTTP response (even 3xx/4xx) means the server is up.
+3. **Start it if not running.** Launch the detected dev-server command in the background. Never guess at a command you couldn't detect — ask.
+4. **Poll until responsive.** Re-probe the base URL every 2s with a bounded timeout (default 60s; framework cold builds may need it). First HTTP response → proceed.
+5. **Timeout → environment failure.** If the server never becomes reachable, stop and surface it to the user as an *environment failure* — server command, log tail, and the URL probed. **Never hand "server unreachable" to debug-loop as a UI bug**; there is no UI to debug.
+
 ## Playwright detection and execution paths
 
 Detection (cheapest first): (1) `@playwright/test` in `package.json` deps; (2) `playwright.config.{ts,js,mjs}` at a common path; (3) neither → fall back to Playwright MCP.
 
-Default mode: **headless**. Pass `headless: false` in the caller-supplied contract or phrase "run headed" to override. When invoked from debug-loop, prefer headed to make failures visible — but this remains an open question (see below).
+Default mode: **headless**. Pass `headless: false` in the caller-supplied contract or phrase "run headed" to override. **Pinned:** when `caller=debug-loop`, run headed — the user is actively debugging and wants to see the browser.
 
 ### Path A — Repo's own Playwright tests cover these surfaces
 
@@ -87,19 +104,20 @@ Run them. `npx playwright test --grep <surface keyword> --reporter=line`. Report
 
 ### Path B — Repo has Playwright config but no tests for these surfaces
 
-Write an ad-hoc spec file at `tests/e2e/_blueprint-scratch/<slug>.spec.ts`. Add that path to `.gitignore` if not already listed. Run it. Do NOT persist the spec permanently unless the user explicitly asks — ad-hoc tests are a side effect of verification, not a delivery artifact.
+Write an ad-hoc spec file at `tests/e2e/_blueprint-scratch/<slug>.spec.ts`. Add that path to `.gitignore` if not already listed. Run it. Do NOT persist the spec permanently unless the user explicitly asks — ad-hoc tests are a side effect of verification, not a delivery artifact. **Cleanup:** delete `tests/e2e/_blueprint-scratch/` after the run completes (pass or fail) — screenshots and the report are the durable artifacts, the scratch spec is not. If the user asked to keep it, move it to a real test path instead.
 
 ### Path C — No Playwright in repo; use Playwright MCP
 
 Lifecycle: `mcp__playwright__browser_navigate` → `mcp__playwright__browser_resize` (viewport) → optionally `mcp__playwright__browser_fill_form` for login → `mcp__playwright__browser_take_screenshot` → `mcp__playwright__browser_evaluate` for assertions → `mcp__playwright__browser_close`.
 
-For diffs in Path C: write a small Node script at `.claude-plans/<active>/scripts/pixel-diff.mjs` (gitignored by virtue of being under `.claude-plans/`) and run:
+For diffs in Path C: write a small Node script at `<workspace>/scripts/pixel-diff.mjs` (under `.claude-plans/<active>/scripts/`, gitignored by virtue of being under `.claude-plans/`; ad-hoc mode uses `./.claude-results/<ts>/ui-validation/scripts/`), install its two dependencies next to it, and run it with `node`:
 
 ```
-npx --yes pixelmatch pngjs node pixel-diff.mjs <baseline> <actual> <out.diff.png>
+npm install --no-save --prefix <workspace>/scripts pixelmatch pngjs
+node <workspace>/scripts/pixel-diff.mjs <baseline> <actual> <out.diff.png>
 ```
 
-If `npx` is unavailable or fails, skip the diff with an advisory and surface both screenshots for human review. Do not block verification on diff computation.
+If npm is unavailable or the install fails, skip the diff with an advisory and surface both screenshots for human review. Do not block verification on diff computation.
 
 Surface to the user after any Path C run that adding Playwright to the repo would make future checks faster and more precise.
 
@@ -110,6 +128,8 @@ When a baseline exists: pixel diff with a 2% default threshold, overridable per 
 When no baseline exists: output screenshots only; note "no baseline — please review manually." Offer to save as baseline only after user confirms it looks correct — always opt-in, never automatic.
 
 Baseline location: prefer repo-conventional dirs (`playwright/__screenshots__/`, `tests/e2e/baselines/`). If none exists, prompt before creating one.
+
+**Structured analysis via visual-digest.** After each screenshot, when a baseline or mockup exists for that surface, invoke `visual-digest` with `caller=ui-validation` (compare mode: baseline/mockup + actual; `mode=auto` — the user was already gated here). Its typed digest and `meta.status` feed the pass/fail decision alongside the pixel diff; `halted_blank`/`halted_error` is a verification failure. If visual-digest is not installed, note it once and rely on the pixel diff alone.
 
 ## Reporting format
 
@@ -129,7 +149,9 @@ ui-validation — <slug>
 
 ## Failure handoff
 
-On any failure:
+**One warm-up retry first.** A cold dev server or slow hydration can fail a surface's first load spuriously. Before classifying a surface as failed: retry it exactly once, after a bounded wait (≤10s). If the retry passes, record the surface as passed with a "passed on warm-up retry" note. If it fails again, it's a real failure — do not retry further (the existing rule stands: debug-loop owns the next step, and repeated retries mask flakiness).
+
+On any (post-retry) failure:
 
 1. Capture browser console output and network errors for the failed surface (`mcp__playwright__browser_console_messages`, `mcp__playwright__browser_network_requests`).
 2. Bundle: failed surface + screenshot diff + console errors + network errors into a concise report.
@@ -141,9 +163,9 @@ On any failure:
 ## Composition
 
 - **Callers:** execute-plan (per-task smoke check, passing `caller=execute-plan` and a narrow `{surfaces}` contract); verify-before-done (end-of-plan sweep, passing `caller=verify-before-done`).
-- **Callees:** debug-loop (on failure, with `caller=ui-validation`). If debug-loop is not installed, surface the failure report to the user directly and note the missing sibling.
-- **Reads:** active workspace's `plan.md` for surface declarations; `.env*` files for credential detection (read-only probe, never secrets); `decisions.md` for the active-workspace algorithm.
-- **Writes:** screenshot tree (see Screenshot paths section); `pixel-diff.mjs` under `.claude-plans/<active>/scripts/`; idempotent `.gitignore` appends for `.claude-results/` and ad-hoc scratch test files.
+- **Callees:** debug-loop (on failure, with `caller=ui-validation`; if not installed, surface the failure report directly and note the missing sibling); visual-digest (after each screenshot when a baseline or mockup exists, with `caller=ui-validation`, `mode=auto`; if not installed, note it once and continue with pixel diff alone).
+- **Reads:** active workspace's highest-N `plan.v*.md` for surface declarations; `.env*` files for credential detection (read-only probe, never secrets); `package.json` / README / `docker-compose.yml` for dev-server detection.
+- **Writes:** screenshot tree (see Screenshot paths section); `pixel-diff.mjs` + its `--no-save` deps under `<workspace>/scripts/`; idempotent `.gitignore` appends for `.claude-results/` and ad-hoc scratch test files; deletes `tests/e2e/_blueprint-scratch/` after the run.
 
 If a referenced sibling skill is not installed, mention it once and degrade gracefully — don't fail the workflow.
 
@@ -155,7 +177,4 @@ If a referenced sibling skill is not installed, mention it once and degrade grac
 - **Silent baseline updates.** A diff failure is the signal — updating baselines is a deliberate human act. Never overwrite a baseline on failure, even to "fix" a trivially cosmetic change.
 - **Auto-installing Playwright.** Surface the install command; let the user run it. NEVER mutate `package.json` or run `npm install` without explicit user confirmation.
 - **Calling debug-loop when already called from debug-loop.** The `caller` parameter exists precisely to prevent this. Always check it before fanning out.
-
-## Open questions
-
-- **Headed vs headless default when invoked from debug-loop.** Currently: headless everywhere. Hypothesis: headed in debug-loop context makes failures more visible for the user watching. Deferred to dogfooding.
+- **Handing "server unreachable" to debug-loop.** A dead dev server is an environment failure for the user, not a UI bug — there is nothing in the browser to root-cause.

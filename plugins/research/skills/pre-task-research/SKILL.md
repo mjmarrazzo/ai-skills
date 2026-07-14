@@ -1,6 +1,6 @@
 ---
 name: pre-task-research
-description: Use this skill BEFORE planning when the user says "research before planning", "deep dive on X first", "look it up before we touch this", "what do we already know about Y". Also auto-invoked by `blueprint` Phase 1 for unfamiliar or large work (more than 5 files, new subsystem, cross-cutting concerns) when the user opts in. Fans out parallel subagents across local knowledge, library briefs (sibling-skill), Confluence, JIRA (gated on ticket-tracker detection), recent PRs, AWS docs, and Microsoft Learn; enforces token budgets in-prompt; writes a citation-rich `research.md`. Default is interactive — asks which sources to query before fan-out. Skip only on explicit opt-out ("skip research", "just plan it") or trivial requests.
+description: Use this skill BEFORE planning when the user says "research before planning", "deep dive on X first", "look it up before we touch this", "what do we already know about Y". Also auto-invoked by `blueprint` Phase 1 for unfamiliar or large work (more than 5 files, new subsystem, cross-cutting concerns) when the user opts in. Fans out parallel subagents across local knowledge, library briefs (sibling-skill), Confluence, JIRA (gated on ticket-tracker detection), recent PRs, AWS docs, and Microsoft Learn; enforces line budgets in-prompt; writes a citation-rich `research.md`. Default is interactive — asks which sources to query before fan-out. Skip only on explicit opt-out ("skip research", "just plan it") or trivial requests.
 ---
 
 # Pre-Task Research
@@ -30,11 +30,18 @@ Skip:
 | `mode` | `interactive` | Per the HITL-default decision. `auto` opt-in via phrase or caller param. |
 | `fresh` | `false` | Bypass cache; force re-run. |
 | `budget` | `{per_source_lines: 15, total_lines: 250, time_seconds: 120}` | Tunable; defaults pinned. |
-| `caller` | (required) | Cycle guard. Self-call no-ops. |
+| `caller` | `user` | Cycle guard. Defaults to `user` when user-invoked; sibling skills pass their own name. Self-call no-ops. |
 
 ## Workspace resolution and output paths
 
-Use the canonical active-workspace resolution algorithm pinned in `.claude-plans/2026-05-14-composition-skills/decisions.md`. In brief: check `WORKSPACE_PATH`; enumerate `.claude-plans/*/` with `plan.md` or `spec.md`; prefer the slug matching the current branch's ticket; fall back to most-recent mtime.
+**Active-workspace resolution** (canonical, shared across all sibling skills):
+1. If the caller passes `WORKSPACE_PATH` (explicit absolute path), use it — no discovery.
+2. Otherwise enumerate `.claude-plans/*/` in the repo root (or cwd if not in a git repo).
+3. Filter to directories containing `plan.v*.md` or `spec.v*.md` (blueprint writes only versioned artifacts, never bare `plan.md`/`spec.md`). When a skill needs "the plan" or "the spec", use the highest-N version.
+4. Exactly one match → use it.
+5. Multiple → prefer the one whose slug contains the current branch's ticket key (branch `MSP-7032/foo` → workspace with `MSP-7032` in slug).
+6. Still multiple → most recent by mtime of the newest `plan.v*.md` (fall back to dir mtime).
+7. Zero → ad-hoc mode, no workspace. Ad-hoc artifacts go under `./.claude-results/<YYYY-MM-DD-HHMMSS>/<skill-name>/` (gitignored).
 
 Output:
 - Workspace mode: `.claude-plans/<active>/research.md`.
@@ -127,7 +134,7 @@ If `knowledge-capture` is not installed: section header still rendered with `_sk
 
 ```yaml
 intent: read_only
-library: <canonical-name>
+name: <canonical-name>
 ecosystem: <detected-ecosystem>
 caller: pre-task-research
 ```
@@ -247,7 +254,7 @@ Cache is implicit (workspace + file existence + age). No topic-hash — same-top
 The full contract a caller may pass:
 
 ```yaml
-caller: <skill-name>       # required, cycle guard
+caller: <skill-name>       # optional, defaults to `user` when user-invoked; cycle guard
 topic: <string>            # optional, defaults to user request
 sources: [<source>, ...]   # optional, defaults to all available
 mode: interactive | auto   # optional, defaults to interactive
@@ -275,16 +282,16 @@ If a sibling isn't installed, mention once and degrade gracefully — never bloc
 
 ## Anti-patterns
 
-- **Full-text dumps.** The whole reason this skill exists. If a subagent returns prose, drop every prose line — empty section beats bloat.
-- **Re-summarizing subagent output in the main session.** The parent validates and concatenates; it does NOT paraphrase. "Let me synthesize what I found" reintroduces every byte the in-prompt budget just saved.
-- **Running on trivial requests.** Cost without value. Trivial guard skips.
-- **Running on the same topic within 24h without `--fresh`.** Cache hit. Force only when sources may have moved (post-merge, post-doc-update).
-- **Skipping the user-question wave in interactive mode to look efficient.** Interactive is the methodology — the wave is load-bearing. Auto mode is opt-in; don't simulate it by skipping the questions.
-- **Early-exit on local-knowledge match.** Never. Local is section #1, external still runs. The "this answers it" check is a vibes-check the LLM will overuse.
-- **Silent-skip on Atlassian auth error.** Surface the actionable message. Silent skip wastes the next fan-out too.
-- **Mid-line truncation to fit budget.** Whole-record drops only. Mid-line truncation breaks URLs and produces garbage citations.
-- **Topic-hashing the cache.** Workspace + file existence is the cache. Topic-hashing miscaches every rephrasing.
-- **Running JIRA on workspaces with no tracker signal by default.** JIRA is gated on ticket-tracker detection (branch ticket-key pattern or configured project key). The gate exists precisely to keep this skill generic — the Atlassian MCP being connected is not a signal.
+- **Full-text dumps** — drop every prose line a subagent returns; an empty section beats bloat.
+- **Re-summarizing subagent output** — the parent validates and concatenates, never paraphrases.
+- **Running on trivial requests** — the triviality guard skips them.
+- **Re-running within 24h without `fresh=true`** — the cache hit stands unless sources moved.
+- **Skipping the interactive question wave** — the wave is load-bearing; auto mode is opt-in, not something to simulate.
+- **Early-exit on local-knowledge match** — local is section #1, but external sources still run.
+- **Silent-skip on Atlassian auth error** — surface the actionable authenticate message.
+- **Mid-line truncation** — whole-record drops only; truncation breaks URLs.
+- **Topic-hashing the cache** — workspace + file existence + age is the cache key, nothing else.
+- **Running JIRA with no tracker signal** — JIRA stays gated on ticket-tracker detection; the Atlassian MCP being connected is not a signal.
 
 ## Open questions
 

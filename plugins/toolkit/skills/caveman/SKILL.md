@@ -69,7 +69,7 @@ Even when caveman is on, the rules suspend compression for security warnings, ir
 
 ## Composition with sibling skills
 
-- **blueprint, execute-plan, verify-before-done, finish-branch, debug-loop, ui-validation, pr-review-triage, knowledge-capture, tech-brief, pre-task-research, visual-digest, vscode-preview, fdm, isolated-work:** their templated output is exempt — emit those templates verbatim. Compress only the narration around them.
+- **blueprint, execute-plan, verify-before-done, finish-branch, debug-loop, ui-validation, pr-review-triage, knowledge-capture, tech-brief, pre-task-research, visual-digest, fdm, isolated-work:** their templated output is exempt — emit those templates verbatim. Compress only the narration around them.
 - Caveman never invokes a sibling. Siblings never invoke caveman.
 
 ## Anti-patterns

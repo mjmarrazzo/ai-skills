@@ -2,18 +2,19 @@
 
 Full prompt structures for the drafter and reviewer subagents in Mode 1 (subagent-per-task). The main session constructs these from the active workspace's artifacts and dispatches via the `Agent` tool with `subagent_type: general-purpose`.
 
-Both subagents are fresh — no shared context with the main session beyond what's injected here. They never read `plan.md` themselves; the main session extracts the task text and injects it. That's deliberate: a drafter that reads the whole plan can drift into neighboring tasks or future complexity, and the reviewer is supposed to check the diff against the task definition, not relitigate architecture.
+Both subagents are fresh — no shared context with the main session beyond what's injected here. They never read the plan themselves; the main session extracts the task text and injects it. That's deliberate: a drafter that reads the whole plan can drift into neighboring tasks or future complexity, and the reviewer is supposed to check the diff against the task definition, not relitigate architecture.
 
 ## Inputs the main session must prepare per task
 
-- **Spec digest** (~500 tokens). Built once at skill init from `spec.md`. Sections kept: goal, contracts/interfaces, data model bullet list, error-handling policy, file map. Prose stripped.
+- **Spec digest** (~500 tokens). Built once at skill init from the current spec (highest-N `spec.v*.md`). Sections kept: goal, contracts/interfaces, data model bullet list, error-handling policy, file map. Prose stripped.
 - **Handoff digest** (~300 tokens). Built once from `handoff.md`. Kept: constraints, open-questions-resolved. Discovery narrative dropped.
-- **Task text**: full verbatim text of the current task block from `plan.md`, including all `- [ ] **Step N: …**` lines, code blocks, and verification commands.
+- **Task text**: full verbatim text of the current task block from the current plan (highest-N `plan.v*.md`), including all `- [ ] **Step N: …**` lines, code blocks, and verification commands.
 - **Task file scope**: the `Files:` subsection of the task, with line numbers refreshed against current HEAD.
+- **Pre-dispatch SHA**: `git rev-parse HEAD` captured immediately before the drafter is dispatched. Defines the task's commit range (`<pre_dispatch_sha>..HEAD`) for the reviewer — including any CHANGES_REQUESTED re-dispatch commits.
 - **Ticket-key flag**: true when a ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. When true, append the commit-prefix line to the drafter prompt and to the reviewer's checklist.
 - **`caller=execute-plan`**: cycle-prevention parameter, passed to any cross-skill invocation the drafter or reviewer ends up triggering downstream. (Drafters and reviewers don't invoke siblings themselves in v1, but the convention applies.)
 
-Digests are rebuilt only if the content hash (sha256) of `spec.md` or `handoff.md` changed since they were built. mtime is not authoritative — re-saves without content change should not bust the cache.
+Digests are rebuilt only if the content hash (sha256) of the current spec or `handoff.md` changed since they were built. mtime is not authoritative — re-saves without content change should not bust the cache.
 
 ## Drafter prompt
 
@@ -30,7 +31,7 @@ You are implementing one task from an approved implementation plan.
 ## Handoff digest
 <handoff digest, prebuilt>
 
-# Task definition (verbatim from plan.md)
+# Task definition (verbatim from the plan)
 
 <full task text — all steps, code blocks, verification commands>
 
@@ -47,7 +48,8 @@ You are implementing one task from an approved implementation plan.
 - If a step is ambiguous and you can't proceed: report `NEEDS_CONTEXT` with the specific question. One round of context augmentation is allowed.
 - If a verification fails after one honest attempt to fix what looks like a clear mistake: report `BLOCKED` with the failing command's full output.
 - Do not improvise outside the task's file scope. Do not add tests the plan didn't specify.
-- Do not modify `plan.md`, `spec.md`, `handoff.md`, or anything under `.claude-plans/`.
+- Comment sparingly. A comment earns its place only when it says something the code can't: a non-obvious *why*, a workaround and its cause, a subtle invariant or gotcha. Do NOT restate what the code already says, narrate each step, add banner/section-divider comments, or leave TODO/placeholder noise. Match the file's existing comment density — if the surrounding code is uncommented, don't introduce comments. Same discipline for styles: no comments explaining self-evident CSS. Aim for code simple enough to read without a running commentary; if a block seems to *need* heavy comments to follow, prefer simplifying the code over annotating it.
+- Do not modify the plan, the spec, `handoff.md`, or anything under `.claude-plans/`.
 
 <!-- Ticket-prefix addendum, injected when a ticket key is detected -->
 - All commit messages MUST start with `<KEY>: ` where `<KEY>` is the ticket key extracted from the workspace slug (e.g. `PROJ-1234-add-orchestrion` → `PROJ-1234`).
@@ -73,7 +75,9 @@ Same drafter prompt, with the specific question's answer appended after the rele
 
 ## Reviewer prompt
 
-Dispatched after the drafter reports `DONE`. Model: `sonnet` by default. Override to `opus` when the task touches any of:
+Dispatched after the drafter reports `DONE` **and** the main session has independently re-run the task's verification command(s) from the plan and captured the real output. The reviewer's verification input is that main-session re-run — never the drafter's self-reported output. If the re-run fails, the reviewer is not dispatched; the failure goes through the normal failure-handling path. The diff input is the task's full commit range, `git diff <pre_dispatch_sha>..HEAD` plus `git log --oneline <pre_dispatch_sha>..HEAD` — not `<sha>~ <sha>` — so multi-commit drafts and re-dispatch commits are all reviewed.
+
+Model: `sonnet` by default. Override to `opus` when the task touches any of:
 
 - A file whose name contains `auth`, `session`, `token`, `crypto`, or `secret` (case-insensitive)
 - Migration files (paths matching `migrations/`, `*.sql`, `schema.prisma`, `alembic/versions/`)
@@ -91,22 +95,22 @@ You are reviewing one commit against the task that produced it.
 
 # What the drafter changed
 
-## Diff stat
-<output of `git show --stat <sha>`>
+## Commits
+<output of `git log --oneline <pre_dispatch_sha>..HEAD`>
 
 ## Diff
-<output of `git diff <sha>~ <sha>`>
+<output of `git diff <pre_dispatch_sha>..HEAD`>
 
-# Verification output
+# Verification output (re-run by the main session, not drafter-reported)
 
-<stdout/stderr from the task's verification commands, as the drafter reported>
+<stdout/stderr from the task's verification commands, as re-run by the main session>
 
 # Your job
 
 Answer two questions:
 
 1. **Spec compliance.** Did the drafter do what the task says? Not less (missing steps, missing files), not more (out-of-scope additions, ad-libbed tests, refactors the task didn't request).
-2. **Diff quality.** Is the diff free of obvious problems? Dead code, unhandled errors that the task didn't acknowledge, broken types, off-by-one in code blocks the task pasted verbatim.
+2. **Diff quality.** Is the diff free of obvious problems? Dead code, unhandled errors that the task didn't acknowledge, broken types, off-by-one in code blocks the task pasted verbatim. Also flag **comment noise**: comments that restate the code, banner/section dividers, step-by-step narration, TODO/placeholder leftovers, or a comment density well above the surrounding file. Request their removal — but leave comments that carry a real *why*, a workaround, or a non-obvious invariant.
 
 Do not propose changes that go beyond the task's scope. If the task says "add endpoint" and lists no tests, do not ask for tests — the plan owns coverage decisions, not you.
 

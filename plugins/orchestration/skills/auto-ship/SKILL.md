@@ -49,11 +49,21 @@ After Phase 0, do not ask again unless a **halt condition** (below) trips. This 
   "stop_at": "ready-for-review",
   "issue_target": "github | jira | none",
   "task_ref": "<issue number/URL or short task description>",
-  "granted_at": "<ISO timestamp — ask the harness or pass through; never fabricate>"
+  "granted_at": "<output of `date -u +%Y-%m-%dT%H:%M:%SZ` via Bash — never fabricate a timestamp>"
 }
 ```
 
 The grant is the load-bearing artifact. Everything downstream keys off it. Write it before spawning any phase subagent.
+
+## Resuming an interrupted run (idempotent re-invocation)
+
+Before creating anything in Phase 1, check whether this pipeline already ran partway. Detection, in order:
+
+1. Resolve the active workspace; if it contains `.pipeline.json` with `"orchestrator": "auto-ship"`, this is a resume candidate.
+2. Inventory the artifacts to find the last completed phase: `spec.v*.md`/`plan.v*.md` present → P1 done; `progress.json` task states → how far P2 got; `verify.json` with `commit_sha == HEAD` and `pass` → P3 done; `gh pr view --json url,isDraft,statusCheckRollup` on the current branch → whether P4 started (draft) or finished (ready).
+3. Confirm with the user before resuming — "found a partial auto-ship run at `<workspace>`, last completed phase `<N>`; resume from `<N+1>`?" — unless the existing grant is still valid (same `task_ref`, same branch, `stop_at` unchanged), in which case resume silently and note the resume in the final report.
+
+Then continue from the first incomplete phase. Never re-run a completed phase from scratch: don't re-plan over an existing plan, don't re-execute `done` tasks (execute-plan's `progress.json` already makes tasks skippable), don't open a second PR when `gh pr view` finds one. Re-verify (P3) is the exception — it's cheap and staleness-prone, so always re-check it on resume.
 
 ## Phase 2 — Relay through the spine
 
@@ -75,7 +85,7 @@ Ensure a feature branch exists; never work on `main`/`master`/`develop`. If the 
 
 Spawn a subagent:
 
-> You are the execution stage of an auto-ship pipeline. Workspace: `<abs>/.claude-plans/<active>/` with a `mode=auto` grant in `.pipeline.json`. Invoke `execute-plan` with `caller=auto-ship`, `mode=auto`, `PLAN_PATH=<plan_path>`. It will run subagent-per-task with on-failure-only checkpoints, hand failures to `debug-loop`, and call `verify-before-done` at the end. When done return ONLY: `tasks_total`, `tasks_done`, `tasks_blocked`, `verify_result` (pass/fail/absent), and a one-line `summary` plus any blocked-task notes.
+> You are the execution stage of an auto-ship pipeline. Workspace: `<abs>/.claude-plans/<active>/` with a `mode=auto` grant in `.pipeline.json`. Invoke `execute-plan` with `caller=auto-ship`, `mode=auto`, `PLAN_PATH=<plan_path>`. It will run subagent-per-task with on-failure-only checkpoints, hand failures to `debug-loop`, and call `verify-before-done` at the end. If a ticket key was detected (Phase 1 step 2), prefix every commit message with it (`KEY-123: <message>`) per execute-plan's own ticket-convention detection. When done return ONLY: `tasks_total`, `tasks_done`, `tasks_blocked`, `verify_result` (pass/fail/absent), and a one-line `summary` plus any blocked-task notes.
 
 ### P3 · Verify (gate)
 
@@ -111,18 +121,18 @@ At a halt: report exactly where the pipeline stopped, the workspace path, and wh
 
 Required: `blueprint`, `execute-plan`, `finish-branch`. Strongly recommended: `verify-before-done` (the P3 gate), `debug-loop` (failure recovery), `ci-check-triage` + `pr-review-triage` (the finish-branch watch). Optional: `pre-task-research`, `knowledge-capture`, `isolated-work` — used by the phases themselves when present.
 
-Probe each via file existence (`~/.claude/skills/<name>/SKILL.md` or `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`). If a **required** skill is missing, halt at Phase 1 with: "auto-ship needs `<name>` installed (plugin `<group>`) to run the pipeline." If a **recommended** skill is missing, proceed but note the reduced coverage in the final report (e.g. "no verify-before-done — opened the PR without an independent verification gate").
+Probe each via file existence (`~/.claude/skills/<name>/SKILL.md` or `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`). The probe is best-effort — install layouts vary — so if it misses, attempt the skill invocation anyway and treat a routing failure ("skill not found") as not-installed; don't declare a sibling missing on the glob alone. If a **required** skill is missing, halt at Phase 1 with: "auto-ship needs `<name>` installed (plugin `<group>`) to run the pipeline." If a **recommended** skill is missing, proceed but note the reduced coverage in the final report (e.g. "no verify-before-done — opened the PR without an independent verification gate").
 
 Every spawned subagent carries `caller=auto-ship`; no phase skill calls back into auto-ship, so there's no cycle.
 
 ## Anti-patterns
 
-- **Don't merge.** Ever, on this version. Ready-for-review is the terminus.
-- **Don't infer the grant — write it.** The whole composability story depends on `.pipeline.json` existing on disk before the phases run. Don't rely on telling subagents "you're in auto" in prose alone; the file is the durable signal.
-- **Don't read subagent transcripts back into the architect.** Take the structured status and the artifact paths. Pulling a phase's full output into the main thread defeats the lean-context relay.
-- **Don't skip Phase 0 to look fast.** The three setup questions are the user's one chance to steer; the issue target especially is project-specific and unguessable.
-- **Don't barrel through a halt condition.** A blocked task or red verification is a stop, not a thing to paper over. Surface it.
-- **Don't re-ask per gate after Phase 0.** That's the opposite failure — it turns the autonomous pipeline back into a babysitting session. Log judgment calls to `open-questions.md` and keep moving.
+- **Merging** — never, on this version; ready-for-review is the terminus.
+- **Inferring the grant instead of writing it** — `.pipeline.json` on disk before any phase runs is the durable signal, not "you're in auto" in prose.
+- **Reading subagent transcripts back into the architect** — take the structured status and artifact paths only; anything more defeats the lean-context relay.
+- **Skipping Phase 0 to look fast** — the setup questions are the user's one chance to steer, and the issue target is unguessable.
+- **Barreling through a halt condition** — a blocked task or red verification is a stop to surface, not paper over.
+- **Re-asking per gate after Phase 0** — log judgment calls to `open-questions.md` and keep moving; per-gate prompts defeat the autonomy grant.
 
 ## Inputs accepted
 

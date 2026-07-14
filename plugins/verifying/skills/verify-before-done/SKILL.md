@@ -19,13 +19,24 @@ Skip silently when: no diff against branch base; diff is docs-only (`.md`, `.txt
 
 ## Active-workspace resolution
 
-Resolve the active workspace via the shared algorithm: if the caller passes `WORKSPACE_PATH`, use it; otherwise find the newest `.claude-plans/*/` directory containing `plan.md` or `spec.md`, tie-broken by branch ticket key (e.g., `PROJ-1234` in slug). If no workspace is found, run in ad-hoc mode — artifacts go to `./.claude-results/<YYYY-MM-DD-HHMMSS>/verify-before-done/`. Ensure `.claude-results/` is in `.gitignore` (idempotent, one-time append).
+**Active-workspace resolution** (canonical, shared across all sibling skills):
+1. If the caller passes `WORKSPACE_PATH` (explicit absolute path), use it — no discovery.
+2. Otherwise enumerate `.claude-plans/*/` in the repo root (or cwd if not in a git repo).
+3. Filter to directories containing `plan.v*.md` or `spec.v*.md` (blueprint writes only versioned artifacts, never bare `plan.md`/`spec.md`). When a skill needs "the plan" or "the spec", use the highest-N version.
+4. Exactly one match → use it.
+5. Multiple → prefer the one whose slug contains the current branch's ticket key (branch `MSP-7032/foo` → workspace with `MSP-7032` in slug).
+6. Still multiple → most recent by mtime of the newest `plan.v*.md` (fall back to dir mtime).
+7. Zero → ad-hoc mode, no workspace. Ad-hoc artifacts go under `./.claude-results/<YYYY-MM-DD-HHMMSS>/<skill-name>/` (gitignored).
+
+Ensure `.claude-results/` is in `.gitignore` before the first ad-hoc write (idempotent, one-time append).
 
 Use `TodoWrite` to track check progress in-session.
 
 ## Tooling detection
 
-Full per-stack detection tables (TS/JS, Python, Go, Rust, JVM/Kotlin, monorepo orchestrators): see `references/tool-detection.md`.
+Full per-stack detection tables (TS/JS, Python, Go, Rust, JVM/Kotlin, monorepo orchestrators): see `references/tool-detection.md`. In brief: detection runs once before any check, inspecting the workspace root and each package touched by the diff; manifest `scripts` are ground truth, direct tool invocations are the fallback; repo-level orchestrators (nx/turbo/lerna "affected" mode) win over per-package detection.
+
+**Checks unavailable.** When detection finds no tool for a check class in a package (no lint config, no typechecker, no test runner), report that class as `skipped: not configured` — in the output table and in verify.json. Never report green for a check class that couldn't run.
 
 ## Order of checks
 
@@ -35,26 +46,28 @@ Full per-stack detection tables (TS/JS, Python, Go, Rust, JVM/Kotlin, monorepo o
 - **Lint** before typecheck: syntactic errors block type inference; cascading errors obscure the root cause.
 - **Typecheck** before tests: a test passing against a type-unsafe call is not meaningful.
 - **Tests**: most expensive; only after static checks are clean.
-- **Plan verifications**: integration-flavored; always run if `plan.md` has explicit verification steps.
+- **Plan verifications**: integration-flavored; always run if the highest-N `plan.v*.md` has explicit verification steps.
 - **ui-validation**: slowest; run only when frontend files appear in the diff (`.tsx`, `.jsx`, `.vue`, `.svelte`, `.css`, `.scss`, HTML templates).
 
 Abort on first failure class within each package. If lint exits non-zero, do not proceed to typecheck — downstream checks on a broken lint are noise, not signal.
 
-`verify --tests-first` skips straight to tests (useful mid-TDD cycle). `verify --full` forces the complete suite regardless of diff scope.
+**User-phrase overrides** (stated once here — later sections refer back to these; there are no CLI flags): "tests first" skips straight to tests (useful mid-TDD cycle); "run the full suite" forces the complete suite regardless of diff scope; "fix the formatting" and "autofix lint" opt into write mode (see Auto-fix policy).
 
 ## Auto-fix policy
 
 **Report-only by default.** Formatters run in `--check` mode — Prettier, black, rustfmt, gofmt, ktlint. Output lists files that would change; no file is modified. This preserves a clean working tree, which is required by finish-branch's clean-tree gate.
 
-Opt-in to write mode via explicit user phrase: "fix the formatting" or `--autofix`. In write mode, re-run the formatter, print the diff stat, then continue to lint.
+Opt-in to write mode via the "fix the formatting" phrase. In write mode, re-run the formatter, print the diff stat, then continue to lint.
 
 ```
-Format changes required (report-only — run with --autofix to apply):
+Format changes required (report-only — say "fix the formatting" to apply):
   src/auth.ts        (+2/-2 whitespace)
   tests/auth.test.ts (+1/-1 trailing newline)
 ```
 
-**Linters with `--fix` — never automatic.** `eslint --fix`, `ruff --fix`, `clippy --fix` can change program behavior. Default is report and stop. Opt-in via `verify --autofix-lint`; when set, print the full diff and confirm with the user before continuing.
+**Advisory semantics.** Format misses (and any other check run in report-only mode) are advisories: they show in the table marked `(advisory)` and land in verify.json as `"status": "advisory"` — they do NOT flip verify.json `result` to `"fail"`. Only a check that ran and exited non-zero fails the run.
+
+**Linters with `--fix` — never automatic.** `eslint --fix`, `ruff --fix`, `clippy --fix` can change program behavior. Default is report and stop. Opt-in via the "autofix lint" phrase; when set, print the full diff and confirm with the user before continuing.
 
 **Imports and unused vars — never auto-remove.** Too many legitimate patterns look like dead code mid-refactor.
 
@@ -65,9 +78,11 @@ Default: changed-file matching + plan verifications. Full suite is opt-in.
 1. For each modified source file, run co-located tests (`foo.test.ts`, `foo_test.go`, `test_foo.py`, etc.).
 2. If no co-located test exists, run all tests in the same directory.
 3. If changed files span more than one package boundary, or the diff touches a file in `utils/`, `lib/`, or `common/` (shared-module heuristic), promote to full suite and print the reason.
-4. `verify --full` forces the complete suite.
+4. "Run the full suite" forces the complete suite.
 
 Target: under 60 seconds on a typical task-sized diff. A verify that takes 8 minutes gets skipped; one that takes 30 seconds gets run every time.
+
+**60-second overflow.** When the genuinely relevant subset exceeds the target (large affected package, shared-module promotion), don't silently drop scope and don't silently blow the budget: say so up front, run the most task-relevant subset that fits, and record what was skipped in verify.json (a `skipped_scope` note on the tests check). The user can then say "run the full suite".
 
 ## Polyglot monorepo handling
 
@@ -75,7 +90,7 @@ When no orchestrator is present and multiple independent package manifests exist
 
 ## Plan verifications
 
-`plan.md` tasks include explicit verification steps:
+Tasks in the highest-N `plan.v*.md` include explicit verification steps:
 ```
 Run: pytest tests/foo/test_bar.py::test_x -v
 Expected: PASS
@@ -83,7 +98,7 @@ Expected: PASS
 
 Re-run every plan verification on every invocation. Do not trust that execute-plan ran them per task — the final gate confirms the whole set still holds after all tasks complete. Run in listed order, after the test suite. A failing verification is treated as a test failure and handed off to debug-loop.
 
-If `plan.md` is absent or has no verification steps, skip this phase silently.
+If no `plan.v*.md` exists or the plan has no verification steps, skip this phase silently.
 
 ## Output format
 
@@ -95,10 +110,11 @@ verify-before-done — <slug>
 ✓ typecheck       tsc --noEmit       0 errors               6.1s
 ✓ tests           vitest run         14/14 passed           4.9s
   ↳ relevant: src/auth.ts, src/auth.test.ts
+- typecheck[api]  (none)             skipped: not configured   —
 ✓ plan:verify     pytest test_x -v   PASSED                 1.2s
 ✓ ui              ui-validation      2/2 surfaces ok        8.4s
 
-6 checks passed — 24.6s total
+6 checks passed, 1 skipped — 24.6s total
 Ready. Logs: .claude-plans/<dir>/verify/<timestamp>/
 ```
 
@@ -116,19 +132,23 @@ Write `.claude-plans/<active>/verify.json` at end of every run — pass or fail.
   "commit_sha": "abc1234...",
   "result": "pass",
   "checks": [
+    {"name": "format", "status": "advisory", "duration_ms": 812, "log": "verify/<ts>/00-format.log"},
     {"name": "lint", "status": "pass", "duration_ms": 1234, "log": "verify/<ts>/01-lint.log"},
-    {"name": "typecheck", "status": "pass", "duration_ms": 4567, "log": "verify/<ts>/02-typecheck.log"}
+    {"name": "typecheck", "status": "skipped", "reason": "not configured", "duration_ms": 0},
+    {"name": "tests", "status": "pass", "duration_ms": 4901, "skipped_scope": "apps/api tests skipped — over 60s budget", "log": "verify/<ts>/03-tests.log"}
   ],
   "artifacts_dir": "verify/<ts>/"
 }
 ```
+
+Check `status` semantics: `pass` (ran, exit 0), `fail` (ran, non-zero — flips `result` to `"fail"`), `advisory` (report-only miss, e.g. format; never flips `result`), `skipped` (tool not configured, or scope trimmed for budget — `reason`/`skipped_scope` says why; never flips `result`, but always recorded so finish-branch can see what never ran).
 
 ## Failure handling
 
 | Failure class | First action | Handoff |
 |---|---|---|
 | Format | Report file list as advisory, continue | None |
-| Lint — whitespace / import order | Report, suggest `--autofix-lint` | User decides |
+| Lint — whitespace / import order | Report, suggest "autofix lint" | User decides |
 | Lint — semantic (unused-vars, unsafe equality) | Report file:line + rule name | "lint error in `src/auth.ts:42` — fix or suppress?" |
 | Typecheck | Report file:line:col + message | debug-loop: typecheck failure + log path |
 | Test failure | Report failing test name + assertion (first only) | debug-loop: test name + assertion message |
@@ -153,19 +173,20 @@ The call graph is: `execute-plan → verify-before-done → [debug-loop | finish
 
 ## Anti-patterns
 
-- **"Tests passed last run."** The previous run was against a different state. Always fresh.
-- **Dumping full logs into chat.** First error + log path. 10KB of test output buries the signal.
-- **Auto-fixing lint without confirming.** A fix that removes an import can break a re-export chain. Diff before anything is modified.
-- **Running full suite on a 2-line diff.** Relevant-test strategy exists for this. Full suite is opt-in.
-- **Continuing past a failure.** Lint fails → stop. Fix the blocker first. Downstream checks on a broken lint are noise.
-- **Writing verify.json only on success.** Always write it — pass or fail. finish-branch reads it unconditionally.
+- **"Tests passed last run."** — the previous run was a different state; always run fresh.
+- **Dumping full logs into chat** — first error + log path only.
+- **Auto-fixing lint without confirming** — show the diff before anything is modified.
+- **Running full suite on a 2-line diff** — use the relevant-test strategy; full suite is opt-in.
+- **Continuing past a failure** — stop at the first failing class; downstream checks on a broken lint are noise.
+- **Writing verify.json only on success** — always write it, pass or fail; finish-branch reads it unconditionally.
+- **Reporting green for a check that never ran** — a missing tool is `skipped: not configured`, never a pass.
 
 ## Composition
 
 - **Callers:** execute-plan (end of plan); finish-branch (pre-PR gate); direct user invocation.
 - **Calls:** ui-validation (frontend diff, pass `caller=verify-before-done`); debug-loop (any non-format failure, pass `caller=verify-before-done`).
-- **Reads:** `plan.md` verification steps; language config files for tooling detection.
-- **Writes:** `verify.json`; check logs to `verify/<timestamp>/`; reports format changes as advisory (never modifies files by default). Does not write to `plan.md`, `spec.md`, `handoff.md`.
+- **Reads:** verification steps from the highest-N `plan.v*.md`; language config files for tooling detection.
+- **Writes:** `verify.json`; check logs to `verify/<timestamp>/`; reports format changes as advisory (never modifies files by default). Does not write to plan/spec versions or `handoff.md`.
 
 Loose coupling: if ui-validation is not installed, skip the UI check and note it once. If debug-loop is not installed, print the handoff payload and stop.
 

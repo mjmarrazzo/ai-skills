@@ -44,7 +44,7 @@ bash link.sh
 
 `link.sh` globs `plugins/*/skills/*`, prunes stale links pointing back into this repo, and skips any name that already exists as a real directory.
 
-## Plugins (7) → Skills (19)
+## Plugins (7) → Skills (18)
 
 Skills are grouped around a research → planning → executing → verifying → review spine, plus cross-cutting utilities and an orchestration group that drives the spine autonomously. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto`, phrases like "go full auto" / "skip the gates", or a pipeline grant written by an orchestrator (see [Autonomy grant](#autonomy-grant)).
 
@@ -74,8 +74,7 @@ Skills are grouped around a research → planning → executing → verifying �
 - [`ci-check-triage`](plugins/review/skills/ci-check-triage/SKILL.md) — the status-check mirror of pr-review-triage: pulls failed checks via `gh`, reads the failing logs, classifies each (real failure / flaky-or-infra / external blocker), hands real failures to `debug-loop` for a root-cause fix, offers a re-run for flaky ones, pushes. Auto-invoked by finish-branch when the watch goes red; biased toward "real failure" so re-running never masks a defect.
 
 ### `toolkit` — Cross-cutting utilities
-- [`fdm`](plugins/toolkit/skills/fdm/SKILL.md) — applies Functional Domain Modeling discipline to feature work: pushes I/O to the edge, keeps domain functions pure, three-file (handler / domain / repository) decomposition, mock-free domain tests. References cover backend stacks (Go, Java/Spring, TypeScript/Node, Python/FastAPI) and frontend stacks (React, Vue, Svelte).
-- [`vscode-preview`](plugins/toolkit/skills/vscode-preview/SKILL.md) — opens markdown rendered preview or diff in VSCode/Cursor at review gates. Uses `code -r` + a keybinding hint.
+- [`fdm`](plugins/toolkit/skills/fdm/SKILL.md) — applies Functional Domain Modeling discipline when explicitly invoked or when the repo's doctrine adopts FDM (generic "implement X" requests stay with blueprint/execute-plan): pushes I/O to the edge, keeps domain functions pure, three-file (handler / domain / repository) decomposition, mock-free domain tests. References cover backend stacks (Go, Java/Spring, TypeScript/Node, Python/FastAPI) and frontend stacks (React, Vue, Svelte).
 - [`caveman`](plugins/toolkit/skills/caveman/SKILL.md) — togglable terse-output register. `/caveman on` for this session, `/caveman persist` to survive new sessions (requires a one-time SessionStart hook install). Code, URLs, paths, and sibling-skill templates preserved verbatim. Default OFF.
 
 ### `orchestration` — Fleet-style drivers

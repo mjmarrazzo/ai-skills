@@ -4,7 +4,7 @@ Grading rubric, edge cases, and resolve policy. SKILL.md carries the operational
 
 ## Grading rubric
 
-Each comment is graded against: (1) the diff hunk it points to, (2) the active workspace's `spec.md` / `plan.md` / `decisions.md`, (3) repo conventions (lint config, CONTRIBUTING.md, style guides). Pick one verdict:
+Each comment is graded against: (1) the diff hunk it points to, (2) the active workspace's current spec/plan (highest-N `spec.v*.md` / `plan.v*.md`) and `decisions.md`, (3) repo conventions (lint config, CONTRIBUTING.md, style guides). Pick one verdict:
 
 | Verdict | When |
 |---|---|
@@ -42,9 +42,8 @@ Every verdict gets: `high` (clear signal), `medium` (judgment call), `low` (coul
 
 ## Bot detection
 
-Tag each comment as `bot` when:
-- Login ends in `[bot]` (e.g. `coderabbitai[bot]`), OR
-- Login matches known bots: `copilot-pull-request-reviewer`, `coderabbitai`, `greptile-app`, `sourcery-ai`, `codex-bot`, OR
-- GraphQL `author.__typename == "Bot"`.
+Tag each comment as `bot` when, in this order:
+- GraphQL `author.__typename == "Bot"` — the authoritative signal; check it first.
+- Fallbacks (when typename is unavailable, e.g. REST-only conversation comments): login ends in `[bot]` (e.g. `coderabbitai[bot]`), or login matches known bots: `copilot-pull-request-reviewer`, `coderabbitai`, `greptile-app`, `sourcery-ai`, `codex-bot`.
 
 The bot/human tag affects the resolve policy above, NOT the grading rubric — comments are graded on merit regardless of source.

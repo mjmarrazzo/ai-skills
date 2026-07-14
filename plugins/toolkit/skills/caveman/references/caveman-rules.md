@@ -69,7 +69,6 @@ Output produced by these skills follows their own templates. Do not compress tha
 - tech-brief (brief markdown)
 - pre-task-research (research.md content)
 - visual-digest (YAML digests)
-- vscode-preview (path output)
 - fdm (domain-modeling templates)
 - isolated-work (worktree setup output)
 

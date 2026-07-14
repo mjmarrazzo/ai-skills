@@ -12,26 +12,38 @@ Both reviewers receive the same inputs:
 ## Why two reviewers, and why these two
 
 - **Sonnet subagent** (via `Agent` tool, `subagent_type: general-purpose`, `model: sonnet`): fresh perspective, no context contamination from this session. Catches things opus missed because it drafted the spec and is anchored on it. Cheap and fast.
-- **Codex MCP** (via `mcp__codex__codex`): a different model family — different training, different failure modes, different blind spots. The point isn't "two opinions are better than one" — it's that **independent failure modes are better than redundant ones**. If both reviewers flag the same thing, that's a strong signal. If they disagree, that's where the interesting reconciliation happens, and the conflict goes in `decisions.md`.
+- **Codex MCP** (via `mcp__codex__codex`), when available: a different model family — different training, different failure modes, different blind spots. The point isn't "two opinions are better than one" — it's that **independent failure modes are better than redundant ones**. If both reviewers flag the same thing, that's a strong signal. If they disagree, that's where the interesting reconciliation happens, and the conflict goes in `decisions.md`.
 
   Pin the codex reviewer to `gpt-5.4` at `high` reasoning via per-call override (see Dispatch below) — cross-family independence at a fraction of the `gpt-5.5`/`xhigh` cost. The override only affects this call; it does not touch the user's global `~/.codex/config.toml` default.
 
-If only one reviewer is warranted (medium complexity), use the sonnet subagent. The codex round-trip costs more and is best reserved for genuinely high-stakes specs.
+- **LM Studio MCP** (via `mcp__llm-studio__ask`), when codex is gated off: a local model, also cross-family from sonnet. Weaker than codex on deep code-grounded analysis — it's a smaller model on local hardware — but it's free, private, and gives real second-opinion independence when the paid remote reviewer isn't available. Treat its findings as lower-confidence than codex's; still union them, but weight `decisions.md` reconciliation accordingly.
 
-## Dispatch — parallel, same message
+If only one reviewer is warranted (medium complexity), use the sonnet subagent. The codex/LM Studio round-trip is best reserved for genuinely high-stakes specs.
 
-**Usage gate — check first.** Before dispatching codex, run `test -f ~/.claude/state/blueprint-codex.off`. If the flag exists, the paid codex reviewer is gated off: skip it entirely and run only the sonnet subagent, even on a complex spec. Tell the user codex was skipped due to the usage gate and that deleting the flag re-enables it. Only proceed with the dual dispatch below when the flag is absent.
+## Dispatch
 
-When running both, send the `Agent` tool call and the `mcp__codex__codex` call **in the same message**. The reviewers run concurrently, which is the whole point.
+**Usage gate — check first.** Before dispatching codex, run `test -f ~/.claude/state/blueprint-codex.off`.
 
-On the `mcp__codex__codex` call, set the cheaper model and reasoning effort explicitly so it does not inherit the user's frontier default:
+- **Flag absent** → codex is available. Send the `Agent` tool call and the `mcp__codex__codex` call **in the same message** — both are remote, so they run concurrently, which is the whole point. Set model and reasoning effort explicitly so codex does not inherit the user's frontier default:
 
-```
-model: "gpt-5.4"
-config: { model_reasoning_effort: "high" }
-sandbox: "read-only"
-prompt: <the codex reviewer prompt below>
-```
+  ```
+  model: "gpt-5.4"
+  config: { model_reasoning_effort: "high" }
+  sandbox: "read-only"
+  prompt: <the codex reviewer prompt below>
+  ```
+
+- **Flag present** → codex is gated off. Substitute LM Studio for codex, but dispatch it **sequentially, in its own message** — not alongside the sonnet Agent call. LM Studio runs local inference on the user's machine; running it concurrently with anything else local risks resource contention (this has been flagged as a hard constraint, not a style preference). Order doesn't matter — LM Studio first then sonnet, or vice versa — as long as they're two separate messages. Tell the user codex was skipped due to the usage gate and LM Studio stood in; deleting the flag re-enables codex.
+
+  Before the first call in a session, verify the server is up: `mcp__llm-studio__model_list`. Then call:
+
+  ```
+  mcp__llm-studio__ask
+  model: "qwen3.6-27b-mlx"   # or whatever model_list shows loaded — don't hardcode past what's actually loaded
+  reasoning: "high"
+  system: <none needed — folded into the prompt below>
+  prompt: <the LM Studio reviewer prompt below>
+  ```
 
 ## Reviewer prompt — sonnet subagent
 
@@ -102,6 +114,45 @@ Cover, in this order:
   on-call engineer see? Is it enough?
 
 Cap your output at 800 words. If the spec is solid, say so — don't pad.
+```
+
+## Reviewer prompt — LM Studio MCP
+
+Unlike codex, `mcp__llm-studio__ask` has no filesystem access — it only sees what's in the `prompt` string. Before dispatching, **read `spec.v<N>.md` and `handoff.md` yourself and inline their full contents into the prompt** (below the instructions, clearly delimited). If the spec references specific source files for existing-code claims, read the relevant excerpts and inline those too — don't pass paths and expect the model to fetch them.
+
+Local models run smaller and with less context than codex/sonnet — keep the ask tight and skip anything that needs broad repo exploration:
+
+```
+Review this engineering spec for a codebase change. You cannot read any files beyond what's
+pasted below — do not reference files by path, only comment on what's actually shown to you.
+
+Your job is to find specific, actionable problems. Not style commentary, not "consider also
+X" speculation. For each concern:
+
+1. State the concern in one sentence.
+2. Quote the spec text that's the problem.
+3. State what the spec should say instead, concretely.
+
+Cover, in this order:
+- Architectural soundness: does the proposed design actually solve the stated goal?
+- Contract / interface correctness: do the proposed contracts make sense given the excerpted
+  existing code below (if any)?
+- Failure modes and edge cases: what cases does the spec not cover? Retry semantics, partial
+  failures, concurrent calls, empty / oversized inputs, auth edge cases.
+- Data integrity: if persisted state is touched, is the migration / backfill strategy safe
+  under concurrent writes?
+- Observability: when this is in production at 3am, what does the on-call engineer see?
+
+Cap your output at 500 words. If the spec is solid, say so — don't pad.
+
+--- HANDOFF (context, constraints) ---
+<full contents of handoff.md>
+
+--- SPEC ---
+<full contents of spec.v<N>.md>
+
+--- RELEVANT EXISTING CODE (if the spec references it) ---
+<inlined excerpts, file:line headers, only what's needed>
 ```
 
 ## Reconciliation (orchestrator's job, opus session)

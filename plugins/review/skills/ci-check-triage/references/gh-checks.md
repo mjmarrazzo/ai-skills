@@ -24,7 +24,15 @@ Triage acts on `fail` and `cancel`. Ignore `pass` and `skipping`. `pending` mean
 
 ## Resolve the run id for a failed Actions check
 
-The `link` field on a check points at the run. To get the numeric run id for log/rerun commands:
+**Primary: parse the check's `link` field.** For Actions checks it embeds the run id directly — `https://github.com/OWNER/REPO/actions/runs/<run-id>/job/<job-id>`:
+
+```bash
+run_id=$(echo "$link" | sed -n 's#.*/actions/runs/\([0-9]*\)/.*#\1#p')
+```
+
+This is exact — no ambiguity when a workflow ran multiple times or two workflows share a name.
+
+**Fallback: match by workflow name + head sha** (only when the link doesn't contain `/actions/runs/<id>/`):
 
 ```bash
 # List recent runs for the branch; match by workflow name + head sha

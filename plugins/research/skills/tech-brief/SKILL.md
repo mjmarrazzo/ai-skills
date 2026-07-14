@@ -43,9 +43,9 @@ Briefs live at:
 
 ```
 ~/.claude/data/tech-briefs/
-├── README.md           # auto-regenerated index (atomic tmpfile + rename); grouped by kind then ecosystem
+├── README.md           # auto-regenerated index (best-effort tmpfile + rename); grouped by kind then ecosystem
 ├── .schema.json        # schema_version + kind enum + ecosystem enum + stale thresholds
-├── .audit.log          # append-only write log; rotates at 10 MiB
+├── .audit.log          # append-only write log; best-effort rotation around 10 MiB
 └── <ecosystem>/
     └── <name>.md       # one brief per tech item; kind discriminates behavior
 ```
@@ -148,7 +148,7 @@ In interactive mode, surface progress via `TodoWrite`:
 [ ] Write brief + regen README + audit log row
 ```
 
-In auto mode the same steps run without the surface — but failure to find any of (homepage / README / changelog) refuses the write rather than hallucinating.
+In auto mode the same steps run without the surface — but failure to find any of (homepage / README / changelog) refuses the write rather than hallucinating. The refusal is load-bearing: the skill's entire value is provenance, and a brief synthesized from training data is a confident lie. Refuse with `"insufficient sources for an honest brief; install the library locally and provide a manual TL;DR via interactive prompt"`.
 
 ## Composition
 
@@ -160,7 +160,7 @@ In auto mode the same steps run without the surface — but failure to find any 
 | | user direct | all 5 intents |
 | Cycle guard | `caller=tech-brief` | log error, no-op |
 
-Cycle posture (walked in `DESIGN.md`):
+Cycle posture:
 - `blueprint → tech-brief (read_only) → knowledge-capture (read_only)` — safe.
 - `pre-task-research → tech-brief (read_only)` — read-only never invokes pre-task-research.
 - `tech-brief → tech-brief` — no-op cycle guard.
@@ -182,29 +182,24 @@ Subsequent writes skip steps 2 and 3.
 ## References
 
 - `references/brief-schema.md` — frontmatter + body section grammar, line budgets, 200-line cap rule, 3 worked examples.
-- `references/source-prompts.md` — per-source subagent prompts, structured-record format, token budgets, drop order.
+- `references/source-prompts.md` — per-source subagent prompts, structured-record format, line budgets, drop order.
 - `references/api-contract.md` — the 5 intents in full: input payload, validation, output, refusal cases.
 - `references/schema.json` — literal initial `.schema.json` shipped on first write.
 
 ## Anti-patterns
 
-- **Don't rewrite existing briefs.** Append-only history; edit-only body for material deltas. Full rewrite is the failure mode this skill exists to prevent. `research_new + clobber=true` exists as the explicit escape hatch (requires `reason`).
-- **Don't paraphrase upstream docs.** The brief is a *mental model* + *gotchas*. URLs handle the depth. Prose paraphrase is bloat.
-
-  > Example: a brief that copies React's hooks rules verbatim is a tutorial. Brief should say "follow the Rules of Hooks" + the link, not restate them.
-
-- **Don't auto-trigger silently.** Default is interactive — every research run starts with the 2-question wave. Auto mode logs every inference to `open-questions.md`; it does NOT bypass user gating of the methodology.
-- **Don't write per-repo briefs.** Per-repo is `knowledge-capture`'s namespace (`.claude-knowledge/`). This skill is global (`~/.claude/data/tech-briefs/`).
-- **Don't bloat the brief past the per-kind body line cap.** Caps: library=200, service=280, platform=220, tool=180. Enforced at write time. Overflow truncates References → Common patterns → Mental model in order; if still over, the skill refuses the write and surfaces the assembled body to the user or `open-questions.md`.
-- **Don't trust "latest" without naming it.** `version_last_seen` is required on every write. The string "latest" gets resolved to a semver via WebFetch at write time and the resolved value is written.
-- **Don't run on every blueprint Phase 1.** Phase 1 READS existing briefs and OFFERS research (ONE batched prompt) for un-briefed libraries. Mass-briefing every dep in a project is bloat.
-- **Tutorial-creep.** Don't grow the brief into a tutorial. Briefs are mental-model documents; tutorials live upstream.
-- **Code-listing-creep.** Pattern snippets are illustrative, not copy-paste libraries. ≤15 lines per snippet; no full examples.
-
-  > Example: a "common pattern" entry showing a 60-line React component is wrong. The brief shows the 8-line shape that captures the idea; the user clicks through for the full code.
-
-- **Paraphrase-creep.** Don't paraphrase the upstream docs section-by-section. Link them.
-- **No-op refresh bumping `updated`.** If `refresh_existing` finds zero body diffs and zero new version-history rows, do NOT bump `updated` — the file is unchanged.
-- **Conflation with knowledge-capture.** Tech-brief is tech-scoped (cross-project, any kind). knowledge-capture is repo-scoped (per-project). A gotcha specific to "this repo's use of React" is knowledge-capture. A React gotcha that affects every project is tech-brief.
-- **Auto-traversing `see_also` links.** Read-only metadata. The user/caller decides whether to read linked briefs; the skill does not chain.
-- **Cross-machine sync assumption.** `~/.claude/data/tech-briefs/` is local. Out of scope for v1. If the user moves machines, they copy or symlink the dir themselves.
+- **Rewriting existing briefs** — append-only history, edit-only body; `research_new + clobber=true` (with `reason`) is the only escape hatch.
+- **Paraphrasing upstream docs** — the brief is mental model + gotchas; link the depth, don't restate it.
+- **Auto-triggering silently** — interactive default with the 2-question wave; auto mode logs every inference to `open-questions.md`.
+- **Per-repo briefs** — repo-scoped knowledge is `knowledge-capture`'s namespace; this skill is global.
+- **Bloating past the per-kind cap** (library=200, service=280, platform=220, tool=180) — truncate References → Common patterns → Mental model, then refuse and surface the body.
+- **Trusting "latest" without naming it** — resolve to a concrete semver at write time; never persist the string "latest".
+- **Briefing every dep on blueprint Phase 1** — Phase 1 reads existing briefs and makes ONE batched offer for un-briefed tech.
+- **Tutorial-creep** — briefs are mental-model documents; tutorials live upstream.
+- **Code-listing-creep** — snippets are illustrative shapes, ≤15 lines, never full examples.
+- **Paraphrase-creep** — don't restate upstream docs section-by-section; link them.
+- **No-op refresh bumping `updated`** — zero body diff + zero new version row = unchanged file.
+- **Conflation with knowledge-capture** — "this repo's use of React" is knowledge-capture; a React gotcha that affects every project is tech-brief.
+- **Auto-traversing `see_also` links** — read-only metadata; the caller decides whether to read linked briefs.
+- **Cross-machine sync assumptions** — briefs are local-machine state; users copy or symlink the dir themselves.
+- **Hallucinated briefs when sources fail** — if homepage + README + changelog all fail, REFUSE the brief; never synthesize one from training data.

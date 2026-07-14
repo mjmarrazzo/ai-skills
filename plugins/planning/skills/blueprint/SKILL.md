@@ -1,6 +1,6 @@
 ---
 name: blueprint
-description: Use this skill whenever the user requests substantive engineering work — a new feature, a refactor that touches multiple files, an integration, an architectural change, a migration, or anything multi-step or ambiguous. Drives a short discovery questionnaire, then orchestrates parallel-reviewed spec and implementation-plan documents in a gitignored `.claude-plans/` workspace, with a handoff dossier and decision record so the user can gatekeep before any code is written. Skip only if the user explicitly opts out ("just do it", "quick fix", "no plan needed") or the task is a single trivial edit (one-line change, rename, typo).
+description: Use this skill whenever the user requests substantive engineering work — a new feature, a refactor that touches multiple files, an integration, an architectural change, a migration, or anything multi-step or ambiguous. Drives a short discovery questionnaire, then orchestrates parallel-reviewed spec and implementation-plan documents in a gitignored `.claude-plans/` workspace, with a handoff dossier and decision record so the user can gatekeep before any code is written. Hand off instead of running: when the user is scoping work they will NOT implement themselves ("another team will pull this in", "write up a ticket for X"), route to `draft-ticket` — blueprint is for work this session will go on to build. Skip only if the user explicitly opts out ("just do it", "quick fix", "no plan needed") or the task is a single trivial edit (one-line change, rename, typo).
 ---
 
 # Blueprint
@@ -56,7 +56,7 @@ All artifacts live in a **gitignored** `.claude-plans/` directory at the repo ro
     └── open-questions.md   # deferred questions / decisions auto-mode rolled with — user reviews after
 ```
 
-**Versioning convention:** spec and plan are *always* written as numbered files — never a bare `spec.md` or `plan.md`. The **current** version is the highest N (`ls spec.v*.md | sort -V | tail -1`). Reviewers, the user, and `vscode-preview` always operate on that highest-numbered file. `handoff.md`, `decisions.md`, and `open-questions.md` are append-only artifacts and stay unnumbered.
+**Versioning convention:** spec and plan are *always* written as numbered files — never a bare `spec.md` or `plan.md`. The **current** version is the highest N (`ls spec.v*.md | sort -V | tail -1`). Reviewers and the user always operate on that highest-numbered file. `handoff.md`, `decisions.md`, and `open-questions.md` are append-only artifacts and stay unnumbered.
 
 `open-questions.md` is the running log of things the agent didn't pause to ask about (auto mode) or things that surfaced during work the user wants to revisit. Surfaced at end of run ("3 deferred questions in open-questions.md"). When continuing related work in a follow-up session, Phase 1 reads it first.
 
@@ -116,18 +116,7 @@ The resume prompt for each phase is defined in that phase's section below.
 
 ### Auto-copy to clipboard (best effort)
 
-Right after printing each gate (including the Phase 7 execution prompt), pipe the resume prompt to the platform clipboard so the user doesn't have to triple-click:
-
-```bash
-# macOS
-command -v pbcopy >/dev/null && printf '%s' "$RESUME_PROMPT" | pbcopy
-# Linux (Wayland)
-command -v wl-copy >/dev/null && printf '%s' "$RESUME_PROMPT" | wl-copy
-# Linux (X11)
-command -v xclip   >/dev/null && printf '%s' "$RESUME_PROMPT" | xclip -selection clipboard
-```
-
-Run via Bash with the prompt body in a heredoc-fed variable so quoting stays correct. After the copy attempt, append one line to the chat: `(copied to clipboard via pbcopy)` on success, or `(no clipboard tool found — copy from the block above)` if all three commands are missing. Don't prompt for permission; don't fall back to a destructive option. If the Bash call fails for any reason, just print the fallback line — don't retry, don't escalate.
+After printing each gate (including the Phase 7 execution prompt), best-effort pipe the resume prompt to the clipboard via whichever of `pbcopy` / `wl-copy` / `xclip` exists, then note success (`(copied to clipboard)`) or absence (`(no clipboard tool found — copy from the block above)`). Never block on this, never retry — any failure just gets the fallback line.
 
 ### Phase 1 — Discovery (this session)
 
@@ -189,11 +178,17 @@ Complexity signals: files touched, new modules, cross-cutting concerns (auth, bi
 |---|---|
 | **Trivial** (single subsystem, additive, well-understood) | None — skip to phase 4. |
 | **Medium** (multi-file, single subsystem) | One: `general-purpose` Agent with `model: sonnet`. |
-| **Complex** (cross-cutting, new subsystem, architectural, irreversible) | Two in parallel: codex MCP (`mcp__codex__codex`, pinned to `gpt-5.4` at `high` reasoning — see reviewer-prompts.md) AND `general-purpose` Agent with `model: sonnet`. |
+| **Complex** (cross-cutting, new subsystem, architectural, irreversible) | Two, sourced per the usage gate below: codex MCP (`mcp__codex__codex`) AND `general-purpose` Agent with `model: sonnet`, dispatched **in parallel** when codex is available — OR LM Studio (`mcp__llm-studio__ask`, local) AND the sonnet Agent, dispatched **sequentially** when codex is gated off. Reviewer model/effort pins live in `references/reviewer-prompts.md`. |
 
-**Usage gate (check before any codex dispatch):** if `~/.claude/state/blueprint-codex.off` exists, the paid codex reviewer is gated off. On a Complex spec, skip codex and run the sonnet reviewer alone (i.e. treat it as Medium for reviewer purposes); note in the spec-gate message that codex review was skipped due to the usage gate. To re-enable, delete the file. Check with `test -f ~/.claude/state/blueprint-codex.off`.
+**Usage gate (check before any codex dispatch):** if `~/.claude/state/blueprint-codex.off` exists, the paid codex reviewer is gated off. On a Complex spec, substitute the local LM Studio reviewer for codex instead of dropping to a single reviewer — note in the spec-gate message that codex was skipped for the usage gate and LM Studio stood in. To re-enable codex, delete the file. Check with `test -f ~/.claude/state/blueprint-codex.off`.
+
+LM Studio runs on the user's local machine (limited RAM) — never dispatch it in the same message as the sonnet Agent call or any other concurrent local inference. Run it first (or last), then the sonnet Agent, one at a time. This is unlike the codex path, which is remote and safe to parallelize with sonnet.
+
+Before the first LM Studio dispatch in a session, confirm the server is reachable: `mcp__llm-studio__model_list`. If it errors or returns no loaded model, treat it as a reviewer failure (see policy below) rather than retrying blind.
 
 Full reviewer prompts: `references/reviewer-prompts.md`. They review the same `spec.v<N>.md` (the current highest-numbered spec) independently — don't show them each other's feedback.
+
+**Reviewer failure policy:** if the active second reviewer (codex or LM Studio, whichever the gate selected) errors or times out, proceed with the sonnet review alone and note the failure at the spec gate. If the sonnet reviewer Agent fails, retry it once; if it fails again, proceed unreviewed and flag that clearly at the spec gate — the user decides whether an unreviewed spec is acceptable.
 
 Reconcile: take the union of valid concerns, drop anything contradicting the user's stated constraints, apply changes to the current `spec.v<N>.md` in place (Phase 3 reconcile is part of producing the *current* version — it does not bump N). Log reviewer conflicts in `decisions.md`.
 
@@ -203,9 +198,7 @@ Tell the user (substituting the actual current N — i.e. the highest-numbered `
 
 > Spec ready at `.claude-plans/<dir>/spec.v<N>.md`. Handoff dossier at `handoff.md`. Reviewer notes folded in; decisions logged at `decisions.md`. Please review the spec and tell me if anything needs to change before I draft the implementation plan.
 
-If a `vscode-preview` (or similar) sibling skill is installed, offer to open the spec in markdown preview. Otherwise just point at the path.
-
-**After the user approves the spec** (no pushback path — pushback writes `spec.v<N+1>.md` and re-runs this gate), emit the Phase 4 context-clear gate per the format in "Context-clear gates" above. Phase name `Phase 4 — Spec gate`; next phase `Phase 5 — Plan draft`; artifact `spec.v<N>.md`. Phase 3 reviewer traces (codex + sonnet) live in this session's context and are dead weight to plan drafting — recommend clearing unless the spec landed without reviewers (trivial complexity).
+**After the user approves the spec** (no pushback path — pushback writes `spec.v<N+1>.md` and re-runs this gate), emit the Phase 4 context-clear gate per the format in "Context-clear gates" above. Phase name `Phase 4 — Spec gate`; next phase `Phase 5 — Plan draft`; artifact `spec.v<N>.md`. Phase 3 reviewer traces (codex or LM Studio, plus sonnet) live in this session's context and are dead weight to plan drafting — recommend clearing unless the spec landed without reviewers (trivial complexity).
 
 Resume-prompt body for this gate:
 
@@ -227,6 +220,8 @@ UI-only, codegen, migration). After drafting, emit the Phase 6 plan gate.
 ```
 
 **On pushback:** do NOT copy the current spec to a snapshot — the current version already lives at `spec.v<N>.md`. Write a fresh `spec.v<N+1>.md` incorporating the user's feedback, leaving `spec.v<N>.md` untouched as the prior version. Present `spec.v<N+1>.md` (the new current). Reviewing the diff between versions is how the user sees what changed — diff arg order is `<spec.v<N>.md> <spec.v<N+1>.md>` (older → newer). Re-run Phase 3 review only if the pushback was substantive (new constraint, scope change). Cosmetic edits don't warrant a full re-review.
+
+**Pushback round cap (spec and plan gates):** after 3 revisions at the same gate (e.g. `spec.v4.md` from repeated pushback), don't just write another version — suggest stepping back: a synchronous conversation, or rethinking the scope. Repeated rewrites at one gate usually mean the disagreement is upstream of the document.
 
 ### Phase 5 — Draft the implementation plan (this session)
 
@@ -296,15 +291,14 @@ Blueprint stands alone and composes loosely with siblings — it never embeds th
 - **`pre-task-research`:** Phase 1 offers it interactively (or auto-runs on heuristic hit). Output `research.md` folds into `handoff.md`.
 - **`visual-digest`:** Phase 1 runs it on any attached mockup; output YAML lands in `<workspace>/visual-digests/`.
 - **`ui-validation`:** when the current `spec.v<N>.md` touches frontend rendering, the current `plan.v<N>.md` should include a verification task naming surfaces, viewports, and credential setup. Don't bake Playwright into this skill.
-- **`vscode-preview`:** at any user-review gate, offer to open the current `spec.v<N>.md` / `plan.v<N>.md`, or diff it against the prior `v<N-1>` version. Otherwise just print the path.
 - **Execution:** at Phase 7, defer to `execute-plan` or `isolated-work` — never reimplement.
 
 ## Anti-patterns
 
-- **Don't draft the spec in chat before writing the file.** Write directly to `spec.v<N>.md`. The chat is for orientation and gates, not for prose the user has to re-read in two places.
-- **Don't skip Phase 1 because the request "seems clear".** A 60-second questionnaire catches more rework than it costs. Ambiguity hides in obvious-looking requests.
-- **Don't run both reviewers on a trivial spec to look thorough.** Token cost is real and reviewer fatigue (you reading two reviews that both say "lgtm") trains you to ignore them when they matter.
-- **Don't commit the workspace.** `.claude-plans/` is the user's working surface. The whole point of this skill is they hated planning docs in git.
-- **Don't promote yourself past a gate.** When you write "Plan ready, please review", actually wait. The skill is human-in-the-loop by design.
-- **Don't skip the context-clear gate even when it feels unnecessary.** Print it at end of Phase 1, end of Phase 4, end of Phase 6. The artifact-first design is the *point* — the user can't choose to clear if you don't offer.
-- **Don't put implementation before its test in the plan.** TDD ordering is mandatory in `references/plan-template.md`. If you find yourself drafting a task where Step 1 is code, stop and re-order — failing test first, then code, then green run. The only exemptions are declared in the task header (config, UI styling, codegen, migration).
+- **Don't draft the spec in chat before writing the file.** Write directly to `spec.v<N>.md`; chat is for orientation and gates.
+- **Don't skip Phase 1 because the request "seems clear".** A 60-second questionnaire catches more rework than it costs.
+- **Don't run both reviewers on a trivial spec to look thorough.** Match reviewer count to the complexity matrix.
+- **Don't commit the workspace.** `.claude-plans/` is the user's working surface, never project documentation.
+- **Don't promote yourself past a gate.** "Please review" means actually wait; the skill is human-in-the-loop by design.
+- **Don't skip the context-clear gate even when it feels unnecessary.** Print it at end of Phases 1, 4, and 6.
+- **Don't put implementation before its test in the plan.** Failing test first, then code, then green run; the only exemptions are declared in the task header (config, UI styling, codegen, migration).

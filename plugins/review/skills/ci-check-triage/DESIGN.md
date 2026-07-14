@@ -42,9 +42,9 @@ A check name doesn't classify itself — the log does. `gh run view <run-id> --l
 
 ## D. Classification
 
-Four verdicts: real failure / flaky-or-infra / external blocker / stale. Each gets a confidence tag. The load-bearing judgment is real-vs-flaky, and the bias is deliberately **toward "real."** A confident "flaky" that's actually an intermittent bug masks a defect — the worst outcome. So when a test failure could be either, it's graded `real failure, low confidence`, which flags it for explicit review rather than silently re-running. Re-running is the last resort, not the reflex.
+Verdicts: real failure / flaky-or-infra / coverage-or-quality-gate / external blocker / cancelled (stale if superseded, else flaky) / stale. Each gets a confidence tag. The load-bearing judgment is real-vs-flaky, and the bias is deliberately **toward "real."** A confident "flaky" that's actually an intermittent bug masks a defect — the worst outcome. So when a test failure could be either, it's graded `real failure, low confidence`, which flags it for explicit review rather than silently re-running. Re-running is the last resort, not the reflex.
 
-Workspace context (`plan.md`/`spec.md`) helps judge whether a failing test covers in-scope behavior. Same active-workspace resolution as the sibling skills; ad-hoc mode lowers confidence a notch.
+Workspace context (the current highest-N `plan.v*.md`/`spec.v*.md`) helps judge whether a failing test covers in-scope behavior. Same active-workspace resolution as the sibling skills; ad-hoc mode lowers confidence a notch.
 
 ## E. Approval gate
 
@@ -84,4 +84,4 @@ Summarize fixed / re-ran / surfaced, with the commit SHA and (from debug-loop) t
 1. **Re-run cap** — one, then surface. Some integration suites are genuinely 2-flaky. Could expose `max_reruns`. Dogfood first.
 2. **Required vs optional checks** — currently triages all failed checks. Could scope to required (merge-blocking) only. Punt.
 3. **Non-Actions CI providers** — only Actions logs are pullable via `gh`. Others are external blockers. Add provider-specific fetch later if needed.
-4. **Coverage / quality gates** — a failing threshold needs *new tests*, closer to scope-expansion than a bug fix. debug-loop may bounce it. Watch the pattern.
+4. ~~**Coverage / quality gates**~~ — resolved: now a dedicated `coverage / quality gate` verdict; surfaced with the shortfall and a blueprint suggestion, never handed to debug-loop.

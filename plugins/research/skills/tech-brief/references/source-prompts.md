@@ -14,7 +14,7 @@ For **`kind: platform`**: dispatch official docs (WebFetch on homepage) → rece
 
 For **`kind: tool`**: dispatch Repo README (WebFetch) → CHANGELOG / GitHub releases → Homepage → knowledge-capture (never dropped). Similar to `kind: library` but CHANGELOG and GitHub releases are higher priority than the homepage.
 
-Token budgets are unchanged (600/source, 2400 total). Drop order when total exceeds budget:
+Budgets are unchanged (each prompt's in-prompt line cap per source; ~80 lines total). Drop order when total exceeds budget:
 
 ```
 ms-learn → aws-docs → confluence → general-mcp → changelog → repo-readme → knowledge-capture (NEVER) → homepage (NEVER)
@@ -24,11 +24,11 @@ For `kind: service, ecosystem: aws-service`, `aws-docs` is elevated to NEVER-dro
 
 ## Budget
 
-- **Per source:** 600 tokens (subagent output cap).
-- **Total:** 2400 tokens across all sources.
+- **Per source:** the line cap stated in each source prompt below (6–24 lines, per source).
+- **Total:** ~80 lines across all sources.
 - **Subagent timeout:** 90 seconds wall-clock per source.
 
-Budgets are enforced **in-prompt** (each subagent system prompt states the cap), NOT post-hoc. Parent validates per-record format and drops any line that doesn't match. The parent does NOT re-summarize.
+Budgets are counted in **lines**, not tokens — an LLM can't count tokens, so the in-prompt line caps are the real enforcement. Budgets are enforced **in-prompt** (each subagent system prompt states the cap), NOT post-hoc. Parent validates per-record format and drops any line that doesn't match. The parent does NOT re-summarize.
 
 ## Output formats (pinned)
 
@@ -54,7 +54,7 @@ If a subagent has nothing relevant, it returns the literal string `none` (one li
 
 ## Drop order on total overflow
 
-When total > 2400 tokens, whole-source drops in order from lowest to highest priority:
+When the total exceeds the ~80-line budget, whole-source drops in order from lowest to highest priority:
 
 ```
 ms-learn → aws-docs → confluence → general-mcp → changelog → repo-readme → knowledge-capture (NEVER) → homepage (NEVER)
@@ -213,7 +213,7 @@ Run only when a ticket key is detected (from the workspace slug or a branch pref
 
 > You are researching an internal/in-house library `<library>` for inclusion in a tech brief.
 >
-> 1. Call `mcp__claude_ai_Atlassian__search` with `query: "<library>"` and `cloudId: "example.atlassian.net"`.
+> 1. Resolve the cloudId via `mcp__claude_ai_Atlassian__getAccessibleAtlassianResources` first (or use the value the parent supplied from `CLAUDE.md` config), then call `mcp__claude_ai_Atlassian__search` with `query: "<library>"` and that `cloudId`.
 > 2. For the top 2 Confluence page results, fetch via `mcp__claude_ai_Atlassian__fetch`.
 > 3. Return at most 4 records, each formatted EXACTLY as:
 >
@@ -272,6 +272,6 @@ The parent NEVER re-summarizes a subagent's output. "Let me synthesize what I fo
 | AWS docs MCP | silent skip | surface | skip section | n/a |
 | MS Learn MCP | silent skip | surface | skip section | n/a |
 | Atlassian | silent skip | surface | skip section | n/a |
-| Internal Go MCP | silent skip | surface | skip section | n/a |
+| Internal-package-search MCP | silent skip | surface | skip section | n/a |
 
 "Refuse the brief" means surface to the user (interactive mode) or `open-questions.md` (auto mode) with the message: `"insufficient sources for an honest brief; install the library locally and provide a manual TL;DR via interactive prompt"`. The skill does NOT produce a hallucinated brief from training data.

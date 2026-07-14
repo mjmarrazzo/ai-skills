@@ -1,6 +1,6 @@
 ---
 name: isolated-work
-description: Use this skill whenever the user says "sandbox this", "do this in a worktree", "isolated execution", "isolate this change", or whenever execute-plan signals a risky-plan (files changed > 10, root-config or lockfile touched, migrations present, CI/CD config modified, or a task is flagged irreversible). Creates a git worktree so the main checkout stays untouched throughout execution. Skip only when the user explicitly opts out ("just run it", "no worktree", "skip isolation", "I'll merge later").
+description: Use this skill whenever the user says "sandbox this", "do this in a worktree", "isolated execution", "isolate this change", "don't touch my checkout", or when invoked by execute-plan with caller=execute-plan on a risky plan (the risky-signal table lives in the body). Creates a git worktree so the main checkout stays untouched throughout execution. Skip only when the user explicitly opts out ("just run it", "no worktree", "skip isolation", "I'll merge later").
 ---
 
 # isolated-work
@@ -11,7 +11,7 @@ Run the wrapped operation in a git worktree. Main checkout untouched.
 
 ## When to trigger
 
-Default is to suggest this before any `execute-plan` invocation that meets **one or more** of the following. User must explicitly opt out.
+Default is to suggest this before any `execute-plan` invocation that meets **one or more** of the following. User must explicitly opt out. This table is the canonical risky-signal list — `execute-plan` points here rather than carrying its own copy.
 
 | Signal | Why it matters |
 |---|---|
@@ -20,7 +20,12 @@ Default is to suggest this before any `execute-plan` invocation that meets **one
 | Lockfile touched: `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`, `Cargo.lock`, `poetry.lock` | Lockfile churn is easy to commit accidentally and hard to trace |
 | Migration files present: `db/migrations/`, `prisma/migrations/`, `alembic/versions/`, `flyway/`, `liquibase/`, `*.migration.{ts,js,sql}` | Migrations are often irreversible; the branch should be reviewed before it lands on main |
 | CI/CD config touched: `.github/workflows/`, `.gitlab-ci.yml`, `Jenkinsfile`, `.circleci/` | A bad CI change blocks everyone; always worth the 10 seconds to isolate |
+| Auth/security paths: `auth/`, `security/`, `middleware/`, or paths matching `*permission*` / `*authz*` | High blast radius; mistakes here warrant a clean reference checkout |
+| Architectural verbs in the plan's `**Goal:**` line: `rename`, `extract`, `consolidate`, `rewrite`, `migrate`, `deprecate` | Structural changes ripple beyond the named files |
+| Deletion-heavy: more `Delete:` than `Create:` entries in the plan's file map | Deletions are the hardest edits to recover from a dirty checkout |
 | Plan contains a task flagged "revert is hard" or "irreversible" | Explicit signal from the planner |
+
+After matching, surface the specific signal in the suggestion (e.g. "This plan touches 18 files including `package.json` at repo root").
 
 **Mention but don't push** (user opts in explicitly):
 - Plan touches 3–10 files with no root-config or lockfile changes
@@ -31,18 +36,18 @@ Default is to suggest this before any `execute-plan` invocation that meets **one
 
 ## Plan path resolution
 
-Resolve the plan path **before** entering the worktree. `EnterWorktree` clears CWD-dependent caches, including the `.claude-plans/` directory context. After entry, the worktree has no `.claude-plans/` (gitignored, never committed).
+Resolve the plan path **before** entering the worktree. Expect that `EnterWorktree` clears CWD-dependent state, including the `.claude-plans/` directory context. After entry, the worktree has no `.claude-plans/` (gitignored, never committed).
 
 ```bash
 ORIGINAL_ROOT=$(git rev-parse --show-toplevel)
-PLAN_PATH="$ORIGINAL_ROOT/.claude-plans/<active-dir>/plan.md"
+PLAN_PATH="$ORIGINAL_ROOT/.claude-plans/<active-dir>/$(ls "$ORIGINAL_ROOT/.claude-plans/<active-dir>" | grep '^plan\.v.*\.md$' | sort -V | tail -1)"
 ```
 
-Pass `PLAN_PATH` explicitly when invoking execute-plan. Do not rely on execute-plan discovering `plan.md` via cwd inference inside the worktree — that resolves to the worktree root, which has nothing.
+Pass `PLAN_PATH` explicitly when invoking execute-plan. Do not rely on execute-plan discovering the plan via cwd inference inside the worktree — that resolves to the worktree root, which has nothing.
 
 ## Path A — Native tools (preferred)
 
-When `EnterWorktree` / `ExitWorktree` are available, always use them. The harness manages the worktree under `.claude/worktrees/<name>/`, handles gitignore, and switches the session CWD.
+When `EnterWorktree` / `ExitWorktree` are available, always use them. If they appear as deferred tools, load them via `ToolSearch` (`select:EnterWorktree,ExitWorktree`) before calling. The harness manages the worktree under `.claude/worktrees/<name>/`, handles gitignore, and switches the session CWD.
 
 ```
 EnterWorktree(name: "<slug>")          # new worktree
@@ -66,7 +71,7 @@ git worktree add "../${repo}-${slug}" -b "${branch_name}" "origin/${base}"
 
 ## Branch creation
 
-**Branch naming — repos with a ticket convention:** A ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. When detected, use `<KEY>/<slug>`; the ticket key comes from the active workspace slug (e.g., `.claude-plans/2026-05-14-PROJ-1234-add-feature/` → key `PROJ-1234`). Otherwise use `<slug>` or whatever the user provides. Path A passes the slug as `name` to `EnterWorktree`; the harness creates the branch. Path B always branches from `origin/<default>`, never HEAD.
+**Branch naming — repos with a ticket convention:** A ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. When detected, use `<KEY>/<slug>`; the ticket key comes from the active workspace slug (e.g., `.claude-plans/2026-05-14-PROJ-1234-add-feature/` → key `PROJ-1234`). Otherwise use `<slug>` or whatever the user provides. Path A passes the slug as `name` to `EnterWorktree`; the harness creates the branch — expect that the harness may not apply the ticket-prefix convention automatically, so verify after entry with `git branch --show-current`. Path B always branches from `origin/<default>`, never HEAD.
 
 **Existing branch:** `git worktree add <path> <existing-branch>` (no `-b`) or `EnterWorktree(path: <existing-worktree-path>)` when the user says "continue work in `PROJ-1234/my-feature`".
 
@@ -125,8 +130,9 @@ To clean up:  ExitWorktree(action: "remove")      (Path A)
 
 User says "scrap this", "forget it", "clean this up", or equivalent.
 
-1. Confirm: "This will permanently delete the worktree at `<path>` and branch `<branch-name>`. Any uncommitted work will be lost. Confirm?"
-2. On confirmation:
+1. Run `git status --short` in the worktree and show the output, so "uncommitted work will be lost" is concrete rather than hypothetical.
+2. Confirm: "This will permanently delete the worktree at `<path>` and branch `<branch-name>`. The uncommitted changes listed above will be lost. Confirm?"
+3. On confirmation:
    - **Path A:** `ExitWorktree(action: "remove", discard_changes: true)`
    - **Path B:** `git worktree remove --force <path>` — then ask separately: "Also delete branch `<branch-name>`? (y/N)"
 
@@ -170,27 +176,20 @@ Do not auto-clean. The user may have parked work there intentionally. Path A wor
 
 ## Anti-patterns
 
-- **Using `git worktree add` when `EnterWorktree` is available.** Bypassing the harness creates state it cannot manage. Always check for Path A first — this is the #1 mistake from prior art.
-- **Two execute-plan sessions against the same `.claude-plans/<dir>` workspace.** HARD constraint: undefined behavior. `progress.json` races are not handled and locking adds complexity without solving them. One execute-plan session per workspace. If a second session is needed, use a different workspace slug.
-- **Worktree-as-a-fork.** This skill wraps a single bounded execution. Long-lived parallel development worktrees belong to the user's direct git workflow, not here.
-- **Forgetting `plan.md` lives in the original checkout.** `.claude-plans/` is empty in the worktree. Resolve `PLAN_PATH` before entering; passing the wrong path to execute-plan is a silent failure.
-- **Symlinking `node_modules` / `target` / `.venv` across worktrees.** See CI / build artifacts. The 30 seconds saved is not worth the bug class introduced.
-- **Copying artifacts out of the worktree by hand.** If you're `cp`ing lockfiles or build outputs back to the main checkout, the plan needed a different structure. Exit is merge or PR, not manual copy.
-- **Auto-removing the worktree on failure.** The worktree is the debugging surface. Keep it. Only remove after explicit abandon with user confirmation.
-- **Branch deletion without a second confirmation.** Branches are cheap. Always require a second explicit confirmation for branch deletion, separate from worktree removal.
+- **Using `git worktree add` when `EnterWorktree` is available.** Always check for Path A first; bypassing the harness creates state it cannot manage.
+- **Two execute-plan sessions against the same `.claude-plans/<dir>` workspace.** HARD constraint — `progress.json` races are unhandled; a second session needs a different workspace slug.
+- **Worktree-as-a-fork.** This skill wraps a single bounded execution; long-lived parallel worktrees belong to the user's direct git workflow.
+- **Forgetting the plan lives in the original checkout.** `.claude-plans/` is empty in the worktree; resolve `PLAN_PATH` before entering.
+- **Symlinking `node_modules` / `target` / `.venv` across worktrees.** Run a fresh install instead (see CI / build artifacts).
+- **Copying artifacts out of the worktree by hand.** Exit is merge or PR, not manual copy.
+- **Auto-removing the worktree on failure.** The worktree is the debugging surface; only remove after explicit abandon with user confirmation.
+- **Branch deletion without a second confirmation.** Always confirm branch deletion separately from worktree removal.
 
 ## Composition
 
 - **Callers:** execute-plan (on risky-plan signals), or the user directly ("sandbox this", "do this in a worktree").
 - **Wraps:** execute-plan primarily; any invasive operation (large refactor, schema migration) can use this as a wrapper.
 - **Calls:** finish-branch on success (reads spec/handoff/decisions from original checkout); debug-loop on failure (optional hand-off).
-- **Reads:** `plan.md` from the original checkout's `.claude-plans/<active-dir>/` — resolved before entering the worktree.
+- **Reads:** the current plan (highest-N `plan.v*.md`) from the original checkout's `.claude-plans/<active-dir>/` — resolved before entering the worktree.
 - **Writes:** nothing to the original checkout during execution. On Path B, may append to `.gitignore` (one-line user confirmation) if using a project-local worktree path.
 - **Sibling fallback:** if a sibling is absent, mention it once and proceed. Surface `gh pr create` if `finish-branch` is missing; surface failure and stop if `debug-loop` is missing. Installed check: `~/.claude/skills/<name>/SKILL.md` OR `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`.
-
-## Open questions
-
-1. **Path A branch naming.** `EnterWorktree(name: "<slug>")` passes the slug to the harness. Does the harness automatically apply the `<KEY>-XXXX/` convention, or does the skill need to rename the branch post-creation? Until confirmed via dogfooding, document as a constraint: "Path A branch names may not carry the ticket prefix automatically; verify after entry with `git branch --show-current`."
-2. **`.claude-plans/` created inside the worktree.** If the user runs blueprint inside the worktree, the new workspace ends up unreachable after `ExitWorktree`. Treat as a user-error constraint for now; consider a warning on entry in a later version.
-3. **Baseline test run.** Should isolated-work run baseline tests after setup (prior-art pattern) or delegate to execute-plan's first task? Current lean: delegate — execute-plan has per-task context about what "passing" means.
-4. **`ExitWorktree` on Path A failure mid-execution.** If execute-plan fails partway and the user abandons, `discard_changes: true` will drop uncommitted changes. Should the skill list uncommitted files before confirming? Current lean: one confirmation is sufficient given the explicit user trigger.

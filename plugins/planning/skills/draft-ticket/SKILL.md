@@ -1,11 +1,13 @@
 ---
 name: draft-ticket
-description: Use this skill whenever the user wants to scope and create a single ticket or issue whose body is detailed enough for another team or another LLM to plan and implement from — triggers include "draft a ticket", "draft an issue", "build a ticket", "scope a ticket", "write up a ticket for X", "ticket for this work", "file an issue for", "make a ticket", "workshop a ticket", "let's nail down requirements", "another team will pull this in", or any prompt where the user is explicitly scoping work they will hand off rather than implement themselves. Drives a light discovery → optional verification → high-level bullets → full draft → workshop loop → tracker-target confirm → create flow. The destination tracker (GitHub issues, JIRA, or other) is resolved at create time, asking the user when it's unclear. Interactive only — no auto mode. One ticket per invocation; for "I'll implement this myself" use blueprint. Skip when the user says "blueprint this" / "plan this" (heavier workflow desired), "just create the ticket with X" with all details supplied AND explicitly opts out of workshop (one-shot create), or is mid-implementation and merely tracking already-decided work.
+description: Use this skill whenever the user wants to scope and create a single ticket or issue whose body is detailed enough for another team or another LLM to plan and implement from. Triggers include "draft a ticket", "draft an issue", "build a ticket", "scope a ticket", "write up a ticket for X", "ticket for this work", "file an issue for", "make a ticket", "workshop a ticket", "let's nail down requirements", "another team will pull this in", or any prompt where the user is explicitly scoping work they will hand off rather than implement themselves. Skip when the user says "blueprint this" / "plan this" (heavier workflow desired), or supplies all details AND explicitly opts out of workshop ("just create the ticket with X" — one-shot create), or is mid-implementation and merely tracking already-decided work. For "I'll implement this myself", use blueprint instead. One ticket per invocation; interactive only, no auto mode. Flow: light discovery → optional verification → high-level bullets → full draft → workshop loop → tracker-target confirm (GitHub, JIRA, or other — resolved at create time) → create.
 ---
 
 # Draft Ticket
 
-A workshop flow that produces ONE ticket whose body is detailed enough for a downstream LLM (or another team) to run `blueprint` against without re-interrogating the requester. The destination tracker is resolved late — the body is tracker-agnostic, and only Phase 7 decides whether it lands as a GitHub issue, a JIRA ticket, or somewhere else. Interactive only — every gate is a real human gate.
+A workshop flow that produces ONE ticket that scopes a **feature or bug** clearly enough for a downstream LLM (or another team) to pick up without re-interrogating the requester. The ticket states the problem and desired outcome, locks any decisions already accepted, and points at the relevant code — it does **not** design the fix. That's the implementer's job: whoever pulls the ticket in runs `blueprint` (or equivalent) and decides what's best to change. The destination tracker is resolved late — the body is tracker-agnostic, and only Phase 7 decides whether it lands as a GitHub issue, a JIRA ticket, or somewhere else. Interactive only — every gate is a real human gate.
+
+**Keep it tight.** A ticket is a problem statement plus pointers, not an implementation plan. Include: what's wanted or broken and why, decisions already accepted, behavior-level acceptance criteria, and file refs to where the work lands. Leave out: step-by-step implementation, middleware/function-level "swap X for Y" prescriptions, solution design the implementer should own. When in doubt, describe the *outcome*, not the *how*.
 
 **Announce at start:** "Using draft-ticket to scope, workshop, and create this ticket."
 
@@ -82,7 +84,7 @@ If yes:
 
 Findings fold into the "Background" section of the eventual ticket body, with the exact command run + redacted result.
 
-Secrets/credential redaction: if a verification result contains a value matching `(?i)(key|token|secret|password|bearer)`, replace with `<redacted>` in the ticket body.
+Secrets/credential redaction: in the ticket body, replace with `<redacted>` the *value* assigned to any name matching `(?i)(key|token|secret|password|bearer)` (header value, env var value, JSON field value), plus anything that looks like an opaque credential (long base64/hex strings) even without a matching name. Do not redact the matching word itself in prose — "the token is sent in the Authorization header" stays readable.
 
 ### Phase 4 — High-level bullet draft
 
@@ -105,7 +107,7 @@ One fenced markdown block in chat, following `references/ticket-template.md`. Th
 
 1. **Summary** — 1–3 sentences.
 2. **Background** — includes verified findings if Phase 3 ran.
-3. **Scope** — affected services / files with absolute or repo-relative paths.
+3. **Scope** — affected services / files with absolute or repo-relative paths, as *pointers to where the work lands* — not a prescription of what to change there.
 4. **Out of scope** — skip if empty.
 5. **Acceptance criteria** — numbered, behavior-level, independently verifiable.
 6. **Asks for consideration** *(non-blocking)*.
@@ -115,6 +117,7 @@ Rules:
 - No "TBD" or "N/A". Skip the section instead.
 - Absolute paths and `file:line` refs when describing existing code.
 - Skip bullets that just restate things that aren't changing — they muddy the read.
+- Scope the problem, not the solution. State the outcome and the accepted decisions; don't prescribe the implementation. If you catch yourself writing "swap X for Y", "add function Z", or step-by-step how-to, cut it — the implementer decides that.
 - Plain markdown; no HTML.
 
 ### Phase 6 — Workshop loop
@@ -127,6 +130,8 @@ On feedback → regenerate the FULL ticket block with edits applied. Do NOT show
 User signals approval with: "looks good", "approve", "ship it", "send it", or equivalent.
 
 Stall protection: after 5 rounds, prompt "Want to ship this version, or take a break?" — on break, print final body, exit.
+
+Interrupt recovery: every round prints the full draft, so scrollback is the recovery path; if a round is interrupted or the user loses the thread, offer to reprint the latest draft.
 
 ### Phase 7 — Tracker target confirmation
 
@@ -144,7 +149,7 @@ The body is done; now decide where it lands. **Resolve the tracker before preloa
 
 Once the destination is known, preload only that tracker's tools:
 - **GitHub:** `gh` is a CLI — no schema preload needed.
-- **JIRA:** preload via `ToolSearch` query `select:mcp__claude_ai_Atlassian__createJiraIssue,mcp__claude_ai_Atlassian__getVisibleJiraProjects,mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql,mcp__claude_ai_Atlassian__getTransitionsForJiraIssue,mcp__claude_ai_Atlassian__transitionJiraIssue,mcp__claude_ai_Atlassian__getJiraProjectIssueTypesMetadata,mcp__claude_ai_Atlassian__getAccessibleAtlassianResources`. Skip if already loaded.
+- **JIRA:** load the Atlassian MCP tools via `ToolSearch`. The needed capabilities: create issue (`createJiraIssue`), list projects (`getVisibleJiraProjects`), JQL search (`searchJiraIssuesUsingJql`), transitions (`getTransitionsForJiraIssue`, `transitionJiraIssue`), issue-type metadata (`getJiraProjectIssueTypesMetadata`), and cloud resources (`getAccessibleAtlassianResources`). The MCP server prefix varies by install, so if an exact `select:` query misses, fall back to keyword search (e.g. "jira create issue", "jira transitions"). Skip if already loaded.
 
 **GitHub branch — resolve fields:**
 
@@ -160,8 +165,8 @@ Final confirmation (single `AskUserQuestion`): show `{repo, title, labels}`. Opt
 
 | Field | How |
 |---|---|
-| **`cloudId`** | `CLAUDE.md` → `~/.claude/CLAUDE.md` → `mcp__claude_ai_Atlassian__getAccessibleAtlassianResources`. Every Atlassian call needs it; missing `cloudId` is the most common failure. |
-| **Project key** | explicit user override → `CLAUDE.md` config → ask via `mcp__claude_ai_Atlassian__getVisibleJiraProjects`. No hardcoded default — if nothing's configured, ask. |
+| **`cloudId`** | `CLAUDE.md` → `~/.claude/CLAUDE.md` → `getAccessibleAtlassianResources`. Every Atlassian call needs it; missing `cloudId` is the most common failure. |
+| **Project key** | explicit user override → `CLAUDE.md` config → ask via `getVisibleJiraProjects`. No hardcoded default — if nothing's configured, ask. |
 | **Issue type** | explicit override → inferred (bug-language → Bug, "spike"/"investigate" → Task, default → Story) |
 | **Component** | explicit override (validated against project metadata) → discovered via JQL on recent tickets in the affected area → `AskUserQuestion` with top 1–3 candidates + "other" |
 | **Initial status** | explicit override → project default; transition only if a non-default status was named |
@@ -183,7 +188,7 @@ Final confirmation (single `AskUserQuestion`): show `{cloudId, project, issueTyp
 - Return the issue URL.
 
 **JIRA:**
-- `mcp__claude_ai_Atlassian__createJiraIssue` with `cloudId` + confirmed fields. Description = workshopped markdown body verbatim.
+- `createJiraIssue` with `cloudId` + confirmed fields. Description = workshopped markdown body verbatim.
 - If a non-default initial status was requested: `getTransitionsForJiraIssue` → `transitionJiraIssue` (both take `cloudId`).
 - Return ticket key + URL.
 
@@ -216,18 +221,15 @@ Sibling install probe: file existence at `~/.claude/skills/<name>/SKILL.md` or `
 
 ## Anti-patterns
 
-- **Don't pick a tracker before Phase 7.** The body is the same regardless; committing early (and preloading the wrong tooling) is the contamination this skill is built to avoid.
-- **Don't assume JIRA.** There is no default tracker. Resolve it from explicit request → config → repo signal → ask.
-- **Don't open `.claude-plans/` workspaces, write `handoff.md`, or `spec.v*.md`.** That's `blueprint` territory.
-- **Don't write the ticket body to a file unless the user explicitly says yes.** Print to chat; the tracker is the source of truth.
-- **Don't auto-create tasks via TaskCreate for the workshop itself.** Tasks are for execution work, not for chat flows.
-- **Don't dump the full ticket as the first deliverable.** High-level bullets first, full draft second.
-- **Don't add an auto mode.** Interactive is the methodology; auto defeats the point.
-- **Don't run verification by default.** Phase 3 is conditional. If neither condition holds, skip it; don't ask "want me to verify anything?" as a default prompt.
+- **Don't pick a tracker before Phase 7.** Committing early (and preloading the wrong tooling) is the contamination this skill is built to avoid.
+- **Don't assume JIRA.** Resolve the tracker from explicit request → config → repo signal → ask.
+- **Don't register workshop rounds as `TodoWrite` todos.** Todos are for execution work, not chat flows.
+- **Don't write the implementation plan.** Scope the feature/bug and lock accepted decisions; file refs are pointers, not instructions — no step-by-step how-to or function-level prescriptions.
+- **Don't add an auto mode.** Interactive is the methodology.
 - **Don't ask the user to paste credentials.** If the repo has no secret-store pattern, suppress the verification offer entirely.
-- **Don't ship a ticket with "TBD" rows.** Either pull it out of the user or move it to "Asks for consideration".
+- **Don't ship a ticket with "TBD" rows.** Pull it out of the user or move it to "Asks for consideration".
 - **Don't split one request into multiple tickets or an epic.** One ticket per invocation.
-- **Don't call any Atlassian MCP tool without `cloudId`.** Every call requires it; resolve it in the Phase 7 JIRA branch.
+- **Don't call any Atlassian MCP tool without `cloudId`.** Resolve it in the Phase 7 JIRA branch.
 
 ## Inputs accepted
 

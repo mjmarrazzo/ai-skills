@@ -1,6 +1,6 @@
-# workflow — the 4-step process
+# workflow — the digest process
 
-The mechanics behind `visual-digest`'s load-bearing rule: the schema steers attention through these four steps, always in this order. Each step has a `TodoWrite` entry; the digest is invalid if a step is skipped or reordered.
+The mechanics behind `visual-digest`'s load-bearing rule: the schema steers attention through four steps, always in this order (plus the cross-frame delta for variant sets, and validation last). Each step has a `TodoWrite` entry; the digest is invalid if a step is skipped or reordered.
 
 ---
 
@@ -113,16 +113,22 @@ The field-tested payoff of this skill showed up here: forcing a full `elements` 
 
 ---
 
+## Final step — validate
+
+After every digest file is written (per-image digests, compare digest, variant-set digests), run:
+
+```
+python3 scripts/validate-digest.py <digest.yml>
+```
+
+It enforces the schema invariants pinned in `digest-schema.md` (status/field gating, `parent_region` and `contents` cross-refs, bbox rules, required meta fields) and exits nonzero with per-violation messages. Fix and re-run until clean; a digest that fails validation is not reported to the caller.
+
+---
+
 ## Anti-patterns specific to the workflow
 
-- **Returning prose instead of filling the schema.** The most damaging misuse. A free-text description ("This screenshot shows a checkout page with a payment form and an order summary on the right") is exactly what the skill exists to prevent. Fill every required schema field; the schema IS the digest.
-- **Side-by-side compare instead of independent-then-diff.** Compare mode runs steps 1-4 INDEPENDENTLY for each image. Looking at both images at once is where vibes win. See `comparison.md` for the mechanics.
-- **Trusting a blank canvas.** Step 1 is non-negotiable. A halt is a useful signal, not a failure of the skill.
-- **Ratcheting `confidence` down on every mid-flow screenshot.** Coverage misses attach an `open_question`; they don't move `confidence`. False positives in a "this might be wrong" channel are corrosive — users learn to ignore the field.
-- **Skipping the regions pass and going straight to elements.** Without regions-first, the elements list reflects salience, not structure. Diffs against future digests become noise.
-- **Filling `bbox_pct` with low-confidence guesses.** Omit when uncertain. Padding to seem thorough is exactly the failure mode the schema is designed to prevent.
-- **Filling `bbox_pct` at all in describe mode / on a mockup.** Coordinates eyeballed off a downscaled mock are theater — directionally ok, useless for pixel work, and a tax on attention. Default-omit; bbox is for full-res live screenshots and `exact` compare only.
-- **Listing every element with `bbox_pct` of the same value** (e.g. `[0.0, 0.0, 100.0, 100.0]`). Sign that the model gave up and copied a placeholder; reviewers will catch it.
-- **Inventing `flow_step` when the caller didn't provide it.** Step counting requires context the model doesn't have. If the caller didn't pass it, the coverage check uses the full floor.
-- **Delta-only digesting the siblings in a variant set.** Tempting for token savings; fatal to the mechanism. Each frame gets a full independent digest — the cross-frame delta is computed from those, not from a skim.
-- **Treating a complete digest as a correctness check.** The digest proves you *looked* at every region; it does not prove you read them right. Correctness is a separate, downstream verification.
+Canonical list lives in SKILL.md. Workflow-specific additions:
+
+- **Skipping the regions pass and going straight to elements** — without regions-first the elements list reflects salience, not structure, and future diffs become noise.
+- **Listing every element with the same `bbox_pct`** (e.g. `[0.0, 0.0, 100.0, 100.0]`) — placeholder padding; reviewers will catch it.
+- **Inventing `flow_step` when the caller didn't provide it** — step counting requires context the model doesn't have; use the full floor instead.

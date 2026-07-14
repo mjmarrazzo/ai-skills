@@ -50,6 +50,31 @@ YAML between two `---` markers. Required fields are enforced at write time; the 
 | `see_also` | no | list[string] | `[js/react-router, js/react-query]` | `<ecosystem>/<library>` form; surfaced in digest "Related" footer; NOT auto-traversed |
 | `schema_version` | yes | int | `2` | matches `.schema.json` schema_version; must be ≤ the schema_version in `.schema.json` |
 
+## Canonical name per ecosystem
+
+The canonical identifier is **the package-manager install name verbatim, lowercased, kebab-cased**:
+
+| Ecosystem | Source of canonical name | Example |
+|---|---|---|
+| `js`, `ts` | npm package name; `@scope/pkg` → `/` becomes `__` | `@aws-sdk/client-s3` → `aws-sdk__client-s3` |
+| `python` | pip package name | `boto3`, `fastapi` |
+| `go` | last segment of `go.mod` module path | `github.com/gin-gonic/gin` → `gin` |
+| `java`, `kotlin` | maven `artifactId` | `spring-boot-starter-web`, `kotlinx-coroutines-core` |
+| `rust` | crates.io name | `tokio`, `serde` |
+| `dotnet` | NuGet package id | `microsoft-extensions-logging` |
+| `ruby` | gem name | `rails`, `sidekiq` |
+| `php` | composer package name (without vendor) | `laravel`, `symfony` |
+| `swift` | SwiftPM package name | `alamofire` |
+| `aws`, `gcp`, `azure` | service code or SDK name | `boto3`, `google-cloud-storage`, `azure-identity` |
+| `gradle`, `maven` | plugin id / artifactId | `kotlin-multiplatform` |
+| `npm` | bin name (package primarily a CLI via npm) | `prettier`, `eslint` |
+| `cli` | binary name | `kubectl`, `terraform` |
+| `db` | engine name | `postgres`, `redis` |
+| `infra` | tool / platform | `terraform`, `pulumi`, `kubernetes` |
+| `general` | escape hatch — agent picks best-fit name | `cron`, `git-lfs` |
+
+The `aliases:` frontmatter field lists other names the tech goes by. On every read and every `research_new`, the skill probes both the canonical name AND the aliases of all existing briefs in the ecosystem dir before declaring "no brief found" — without aliases, `react-router` and `react-router-dom` would fork the same library into two briefs.
+
 ## Body section ordering and line budgets
 
 Per-kind body line caps (excluding frontmatter): `library`=200, `service`=280, `platform`=220, `tool`=180. Section budgets are advisory targets. If a section is empty, it emits `_none yet_` and counts as 1 line. Service-only sections are OMITTED (not emitted) for non-service kinds.
@@ -461,7 +486,7 @@ The library `request` (Node HTTP client) is deprecated and abandoned. User invok
 
 ```yaml
 intent: archive
-library: request
+name: request
 ecosystem: js
 caller: user-direct
 reason: "deprecated 2020; replaced by node-fetch/undici/axios"

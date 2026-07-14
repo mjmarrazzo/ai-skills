@@ -31,26 +31,11 @@ Use `TodoWrite` to track:
 
 ### 1. Locate the PR
 
-Resolution order:
-1. Caller passes `PR_NUMBER` or `PR_URL` — use verbatim.
-2. User's message contains a PR number or URL — extract.
-3. Default: `gh pr view --json url,number,state,headRefName,baseRefName`.
-
-If no PR open on current branch:
-
-> No open PR found on branch `<name>`. Push the branch and open the PR first (or pass the PR number).
-
-Stop.
-
-If PR state is `MERGED` or `CLOSED`:
-
-> PR #`<num>` is `<state>`. Triaging review feedback on a closed PR is unusual — confirm you want to proceed.
-
-Wait for confirmation before continuing.
+Resolution order (identical in ci-check-triage): caller-passed `PR_NUMBER`/`PR_URL` verbatim → number/URL in the user's message → `gh pr view --json url,number,state,headRefName,baseRefName`. No open PR on the branch → "No open PR found on branch `<name>`. Push the branch and open the PR first (or pass the PR number)." and stop. PR `MERGED`/`CLOSED` → unusual; confirm before proceeding.
 
 ### 2. Verify gh availability
 
-Run `which gh && gh auth status` before any API call. On failure surface the fix (install / `gh auth login`) and stop. Never fall back to raw `curl` against the GitHub API — auth handling diverges and credentials leak.
+`which gh && gh auth status` before any API call; on failure surface the fix (install / `gh auth login`) and stop. Never fall back to raw `curl` — auth handling diverges and credentials leak.
 
 ### 3. Fetch comments
 
@@ -67,7 +52,11 @@ gh api "repos/$OWNER/$REPO/issues/$NUM/comments" --paginate
 gh api graphql -f query='...'  # see references/graphql-queries.md
 ```
 
+The GraphQL query is **cursor-paginated at both levels**: check `pageInfo.hasNextPage`/`endCursor` on `reviewThreads` and on each thread's nested `comments`, and re-query with `after:` until both are exhausted (see `references/graphql-queries.md § Pagination`). A large PR silently truncated at 100 threads means missed comments.
+
 Merge results into a single list with: `id`, `databaseId`, `threadId` (inline only), `author.login`, `author.type` (Bot|User), `path`, `line`, `originalLine`, `body`, `diffHunk`, `url`, `isResolved`, `isOutdated` (inline only).
+
+**Merge/dedup key:** REST and GraphQL return the same inline comments; merge on comment `databaseId`. GraphQL is authoritative for `isResolved` and the thread `id` (REST has neither); REST is the source for conversation comments (no thread structure in GraphQL).
 
 Filter to `isResolved == false`. If after filtering the list is empty:
 
@@ -88,11 +77,11 @@ Comments with `position: null` (REST) or `isOutdated: true` (GraphQL) are stale 
 Apply the canonical active-workspace resolution algorithm:
 
 1. If `WORKSPACE_PATH` passed as a context parameter, use it.
-2. Enumerate `.claude-plans/*/`, filter to dirs containing `plan.md` or `spec.md`.
-3. One match → use. Multiple → prefer slug containing the current branch's ticket key; tiebreak by `plan.md` mtime.
+2. Enumerate `.claude-plans/*/`, filter to dirs containing `plan.v*.md` or `spec.v*.md` (blueprint writes only versioned artifacts, never bare `plan.md`/`spec.md`; "the plan"/"the spec" below means the highest-N version).
+3. One match → use. Multiple → prefer slug containing the current branch's ticket key; tiebreak by mtime of the newest `plan.v*.md`.
 4. Zero matches → ad-hoc mode.
 
-When workspace present, load (each optional, degrade on absence): `handoff.md`, `spec.md`, `plan.md`, `decisions.md`.
+When workspace present, load (each optional, degrade on absence): `handoff.md`, the current spec (`spec.v*.md`, highest N), the current plan (`plan.v*.md`, highest N), `decisions.md`.
 
 In ad-hoc mode, surface this in the table header:
 
@@ -163,12 +152,19 @@ Workspace: .claude-plans/2026-05-14-PROJ-1234-orchestrion/
 Stale (line moved, not auto-actioned):
   S1 | copilot[bot]    | (removed) :77   | review manually  | -      | -
 
+Reply drafts (answer verdicts — shown in full so you can edit before anything is posted):
+  #6 → alice, mapper.go:150: "The cached client is skipped here because the mapper
+       runs before auth context exists — see the guard on line 141."
+
 Choose:
   (a) Approve all
   (b) Approve subset (comma-separated numbers): e.g. 1,3,5
   (c) Override a verdict: "override 4: won't-fix: out of scope"
-  (d) Skip — I'll handle manually
+  (d) Edit a reply: "reply 6: <new text>"
+  (e) Skip — I'll handle manually
 ```
+
+Every `answer` verdict's full drafted reply text appears beneath the table (numbered to match) — the user must see and be able to edit reply wording before it's posted to a human. The same applies to won't-fix rationales going to human-authored threads: print the exact reply text, not a summary.
 
 When verdict count is ≤ 4: use `AskUserQuestion` with one question per verdict (`fix`/`won't-fix`/`skip`).
 
@@ -179,6 +175,24 @@ When verdict count is > 4: inline table above + free-form confirmation. `AskUser
 > Applying `<N>` fixes, posting `<M>` won't-fix replies, replying to `<K>` questions. Proceed?
 
 Wait for `y` / "yes" / "go" / "do it". Anything else: re-prompt or stop.
+
+## Auto mode (granted, never inferred)
+
+Same rule as finish-branch: auto only when the user said so **this turn**, the invocation carries `mode=auto`, or a pipeline grant exists in the active workspace. Probe with Bash:
+
+```bash
+test -f .claude-plans/<active>/.pipeline.json && \
+  grep -q '"mode"[[:space:]]*:[[:space:]]*"auto"' .claude-plans/<active>/.pipeline.json && \
+  echo "GRANT: auto" || echo "GRANT: interactive"
+```
+
+Under a grant:
+- Auto-apply **only `fix` verdicts with high confidence**; commit and reply with the fix SHA; resolve bot threads per the resolve policy.
+- `won't-fix`, `answer`, and low/medium-confidence verdicts are **not** auto-actioned — log them to the workspace `open-questions.md` and leave the threads open.
+- Never resolve human threads and never post `answer` replies to humans in auto mode.
+- Log every auto decision to `open-questions.md`.
+
+Safety gates (dirty tree, push rejection, unappliable fixes) still block in auto mode — auto waives permission prompts, never protection.
 
 ## Execution
 
@@ -198,23 +212,11 @@ Sibling-installed check (cycle-prevention convention). If installed: hand off wi
 
 If not installed: continue, note in summary.
 
-### 3. Commit
+### 3. Commit + push
 
-**Ticket-convention detection:** a ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. A match means a ticket key is in play; extract that key for the commit prefix.
+Ticket key detected (same rule as ci-check-triage) from the workspace slug, a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or a `CLAUDE.md` convention. Single commit by default (per-fix commits offered at approval): `<KEY>-XXXX: address PR review feedback` with a ticket key, `Address PR review feedback` without; body lists `- <file>:<line>: <summary>` per fix.
 
-**Commit policy:** single commit by default — clean review history. Per-fix commits offered at approval time.
-
-Default message:
-- With a ticket key: `<KEY>-XXXX: address PR review feedback`
-- Without one: `Address PR review feedback`
-
-Body lists one line per applied fix: `- <file>:<line>: <summary>`.
-
-### 4. Push
-
-`git push origin <branch>`. Plain push, no force, no rebase. New commits append to the branch; that's the audit trail for the review round.
-
-If the push is rejected (someone pushed to the remote branch since): surface, do not force. Tell the user to pull and re-run.
+`git push origin <branch>` — plain push, never force, never rebase; new commits are the review round's audit trail. Rejected push (remote moved): surface, don't force, tell the user to pull and re-run.
 
 ## Comment-back and resolve threads
 
@@ -260,58 +262,22 @@ If verify wasn't run, swap that last line for `Verify: not run (verify-before-do
 
 - **Called by:** the user directly; `finish-branch` automatically during its watch-and-promote phase when a draft PR has unresolved review comments (passing `caller=finish-branch` + `PR_NUMBER`). When invoked this way, run normally — the approval gate still applies (finish-branch auto-*enters* triage but never bypasses the gate). Do not call finish-branch back; it drives the loop via its own wake-ups.
 - **Calls:** `verify-before-done` (after fixes) with `caller=pr-review-triage`; `debug-loop` (on verify failure) with `caller=pr-review-triage` + failure bundle. `blueprint` is **never auto-invoked** — escalations are text recommendations only.
-- **Reads:** `handoff.md`, `spec.md`, `plan.md`, `decisions.md` (all optional); PR diff + thread state via `gh`.
+- **Reads:** `handoff.md`, current `spec.v*.md`, current `plan.v*.md`, `decisions.md` (all optional); PR diff + thread state via `gh`.
 - **Writes:** code edits (per approved fix); git commit(s); GitHub replies + thread resolves via `gh api`.
 - **Caller flag:** pass `caller=pr-review-triage` to all sibling invocations (cycle-prevention convention).
 - **Sibling absent:** verify-before-done → commit without verify, note in summary. debug-loop → surface failure and stop. blueprint → escalations still emitted as text.
 
 ## Anti-patterns
 
-These are the failure modes specifically for this skill.
-
-**Applying every bot comment uncritically**
-> Example: Copilot suggests 12 changes; skill applies all 12 and commits.
-> The whole point of this skill is grading. A skill that fixes everything Copilot says is a regression — the user already filters mentally; we make the filter explicit and reviewable.
-> Correct: every comment gets a verdict with a rationale; the user approves the table.
-
-**Won't-fix without rationale**
-> Example: Posting "Won't fix." with no explanation on a thread.
-> Rude to humans, unhelpful in the bot's review log. Every won't-fix has the §Won't-fix rationale format applied.
-> Correct: post the categorized rationale with reference to decisions/spec/diff.
-
-**Auto-resolving human threads**
-> Example: Alice left a comment; skill applies a fix and resolves her thread.
-> Reviewers expect to resolve their own threads — closing on their behalf signals "I decided this is done" and skips their re-review.
-> Correct: reply with the fix SHA; leave the thread open for Alice.
-
-**Force-pushing over review-feedback commits**
-> Example: Squash and force-push to consolidate the original work with the review fixes.
-> The reviewer's history of "here's what I asked for, here's what got fixed" is the audit trail. Force-push erases it.
-> Correct: append commits. Squashing happens at merge time, on GitHub, not from this skill.
-
-**Acting on stale comments**
-> Example: Comment points to line 77 but the file's been edited and line 77 is now blank. Skill guesses where the comment "would have applied" and fixes a different line.
-> The anchor is gone. Any guess is unverifiable. Surface and stop on this one.
-> Correct: stale comments go in the "Stale (line moved)" subtable for manual user direction.
-
-**Treating questions as fix requests**
-> Example: Reviewer asks "Why isn't this using the cached client?" — skill changes the code to use the cached client.
-> Questions are not requests. Auto-fixing produces non-sequitur replies and may make a change the reviewer didn't actually want.
-> Correct: grade as `answer`; draft a reply; touch no code.
-
-**Sycophantic replies**
-> Example: "Great catch! Thanks for spotting this!" as the reply body.
-> Trains the reviewer to expect noise; degrades the signal of substantive replies. Bots especially don't need to be thanked.
-> Correct: reply with content — what was changed, where it's committed. Or for won't-fix, the rationale. That's it.
-
-**Triggering on a PR with no unresolved threads**
-> Example: User says "handle the PR comments" — skill happily fetches an empty list and starts grading nothing.
-> Surface "No unresolved review threads" and stop. Don't manufacture work.
-
-**Verdicts without confidence tags**
-> Example: All 12 comments graded with no confidence indicator.
-> The user can't tell which verdicts are slam-dunks vs judgment calls. The whole approval gate becomes "trust the skill or read every diff."
-> Correct: every verdict tagged `high`/`medium`/`low`; `low`-confidence ones get flagged for explicit user review even on batch approval.
+- **Applying every bot comment uncritically** — every comment gets a graded verdict with rationale; the user approves the table.
+- **Won't-fix without rationale** — every won't-fix posts the categorized rationale referencing decisions/spec/diff.
+- **Auto-resolving human threads** — reply with the fix SHA and leave the thread open; reviewers resolve their own.
+- **Force-pushing over review-feedback commits** — append commits; squashing happens at merge time on GitHub, not here.
+- **Acting on stale comments** — the anchor line is gone; put them in the "Stale (line moved)" subtable for manual direction.
+- **Treating questions as fix requests** — grade as `answer`, draft a reply, touch no code.
+- **Sycophantic replies** — reply with content (what changed, where committed, or the rationale); no "Great catch!".
+- **Triggering on a PR with no unresolved threads** — say "No unresolved review threads" and stop; don't manufacture work.
+- **Verdicts without confidence tags** — tag every verdict `high`/`medium`/`low`; flag `low` for explicit review even on batch approve.
 
 ## Open questions
 

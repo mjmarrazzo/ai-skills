@@ -1,13 +1,13 @@
 ---
 name: execute-plan
-description: Use this skill whenever the user wants to execute, implement, or run through a `plan.md` produced by `blueprint` — phrases like "execute the plan", "implement plan.md", "run the implementation", "work through the plan", "go ahead and build it", or any blueprint Phase 7 handoff that picks execute-now or subagent-driven execution. Walks the plan task by task in either a subagent-per-task or inline-batch mode, handing off to `debug-loop` on failure, `ui-validation` on frontend touches, and `verify-before-done` at the end. Skip only if the user explicitly says "just do step N" / "skim and pick", asks to do it by hand, or the plan has one trivial task.
+description: Use this skill whenever the user wants to execute, implement, or run through an implementation plan produced by `blueprint` — phrases like "execute the plan", "implement plan.md", "run the implementation", "work through the plan", "go ahead and build it", or any blueprint Phase 7 handoff that picks execute-now or subagent-driven execution. Walks the plan task by task in either a subagent-per-task or inline-batch mode, handing off to `debug-loop` on failure, `ui-validation` on frontend touches, and `verify-before-done` at the end. Skip only if the user explicitly says "just do step N" / "skim and pick", asks to do it by hand, or the plan has one trivial task.
 ---
 
 # Execute-plan
 
-Turn an approved `plan.md` into committed code — task by task — without losing context, drifting from the spec, or thrashing on failures. The user picks one of two execution modes at start: **subagent-per-task** for high-stakes work, or **inline batch** for self-contained changes where velocity beats isolation.
+Turn an approved plan (`plan.v<N>.md`) into committed code — task by task — without losing context, drifting from the spec, or thrashing on failures. The user picks one of two execution modes at start: **subagent-per-task** for high-stakes work, or **inline batch** for self-contained changes where velocity beats isolation.
 
-**Announce at start:** "Using execute-plan to work through plan.md task by task."
+**Announce at start:** "Using execute-plan to work through the plan task by task."
 
 Not in scope: writing the plan (that's `blueprint`), the final pre-commit gate (`verify-before-done`), or PR creation (`finish-branch`). This is the middle stretch — from "plan approved" to "ready for the wrap-up gate".
 
@@ -63,18 +63,20 @@ From the same workspace directory: the current spec — `ls spec.v*.md | sort -V
 
 ### 4. Freshness check
 
-`progress.json.plan_sha` is the reference point (written on first run; blueprint does not stamp a SHA into `plan.md`). On a fresh run, treat HEAD as the plan SHA. For each file under `## Files`, run:
+`progress.json.plan_sha` is the reference point (written on first run; blueprint does not stamp a SHA into the plan). On a resumed run, for each file under `## Files`, run:
 
 ```bash
 git log <plan_sha>..HEAD --format=%H -- <path>
 # NOT `git log -1` — that returns last-touch regardless of time and silently passes drifted plans
 ```
 
+**On a fresh run there is no prior SHA to diff against** — recording HEAD as `plan_sha` says nothing about whether the plan still matches the code. Instead, spot-check the plan against reality: pick 2–3 of the plan's pasted code blocks or cited `file:line` targets and compare them (`grep`/`sed -n` the cited ranges) against current file content. Mismatches get a warning listing the stale citations before starting; treat widespread mismatch as material drift.
+
 Outcomes:
 
-- **Clean** (HEAD == plan SHA, no files moved): proceed.
+- **Clean** (no drift detected / spot-checks match): proceed.
 - **Minor drift** (HEAD moved but none of the plan's target files changed): one-line warning, proceed.
-- **Material drift** (any plan-target file changed): stop. List the changed files. Ask the user to accept-and-continue, refresh the plan via blueprint, or cancel. Don't auto-proceed — the plan's code blocks may now apply at wrong line numbers.
+- **Material drift** (any plan-target file changed, or fresh-run spot-checks mismatch broadly): stop. List the changed files. Ask the user to accept-and-continue, refresh the plan via blueprint, or cancel. Don't auto-proceed — the plan's code blocks may now apply at wrong line numbers.
 
 ### 5. Mode selection
 
@@ -103,8 +105,10 @@ A ticket key is detected from the workspace slug or a branch prefix matching `^[
 
 ```dot
 digraph task_lifecycle {
-    "Drafter dispatched" -> "Drafter reports status";
-    "Drafter reports status" -> "Reviewer dispatched" [label="DONE"];
+    "Record pre-dispatch SHA" -> "Drafter dispatched" -> "Drafter reports status";
+    "Drafter reports status" -> "Main session re-runs verification" [label="DONE"];
+    "Main session re-runs verification" -> "Reviewer dispatched" [label="pass"];
+    "Main session re-runs verification" -> "Invoke debug-loop" [label="fail"];
     "Drafter reports status" -> "Augment context, re-dispatch" [label="NEEDS_CONTEXT"];
     "Drafter reports status" -> "Invoke debug-loop" [label="BLOCKED"];
     "Reviewer dispatched" -> "Decision";
@@ -119,13 +123,19 @@ One drafter, one reviewer, at most one re-review round per task. Caps are load-b
 
 ### Drafter
 
-Fresh `general-purpose` agent per task. Never reads `plan.md` itself — the main session extracts the task text and injects it. Model `sonnet` by default, `opus` on re-dispatch after `BLOCKED`.
+Fresh `general-purpose` agent per task. Never reads the plan itself — the main session extracts the task text and injects it. Model `sonnet` by default, `opus` on re-dispatch after `BLOCKED`.
 
-Drafter prompt structure: see `references/subagent-prompts.md`. The prompt carries the spec digest, the handoff digest, the verbatim task text, the task's file scope, a working agreement (DONE/NEEDS_CONTEXT/BLOCKED status protocol, no out-of-scope edits, no plan mutation), and the ticket prefix line when applicable.
+Drafter prompt structure: see `references/subagent-prompts.md`. The prompt carries the spec digest, the handoff digest, the verbatim task text, the task's file scope, a working agreement (DONE/NEEDS_CONTEXT/BLOCKED status protocol, no out-of-scope edits, no plan mutation, comment discipline — comment only the non-obvious, match surrounding density), and the ticket prefix line when applicable.
+
+**Record the branch SHA before every dispatch** (`git rev-parse HEAD` → `pre_dispatch_sha`). The task's commit range is `<pre_dispatch_sha>..HEAD` — this covers multi-commit drafts and CHANGES_REQUESTED re-dispatch commits, which `<sha>~ <sha>` would miss.
+
+### Independent verification (after `DONE`, before the reviewer)
+
+Drafter self-reports are not trusted. When the drafter reports `DONE`, the main session re-runs the task's verification command(s) from the plan itself and captures the real output. Pass → dispatch the reviewer with that output. Fail → treat as a step failure (see § Failure handling); the drafter's claimed success is noted but irrelevant. The reviewer never sees drafter-self-reported verification output.
 
 ### Reviewer
 
-Separate fresh agent per task. Receives the task text, `git show --stat <sha>`, `git diff <sha>~ <sha>`, and the drafter's verification output. Does **not** receive the spec or handoff digests — that would invite relitigating architecture instead of checking the diff against the task definition.
+Separate fresh agent per task. Receives the task text, `git log --oneline <pre_dispatch_sha>..HEAD`, `git diff <pre_dispatch_sha>..HEAD` (the task's full commit range, including any re-dispatch commits), and the verification output the **main session** captured by re-running the plan's verification commands. Does **not** receive the spec or handoff digests — that would invite relitigating architecture instead of checking the diff against the task definition.
 
 Outputs `ACCEPT`, `CHANGES_REQUESTED` (with line-cited concrete fixes), or `ESCALATE`. Full prompt: `references/subagent-prompts.md`.
 
@@ -167,23 +177,23 @@ The main session walks the plan top to bottom. For each task:
 5. On step failure: see § Failure handling.
 6. At task end (all steps passed): commit per the task's commit step (with the ticket prefix when a ticket key is detected), update `progress.json`, and either pause (per checkpoint policy) or continue.
 
-### Checkpoint policy
+## Checkpoint policy (shared — applies to both modes)
 
-Default `per-task` in interactive mode; `on-failure-only` under an auto grant (see "Autonomy is granted, never inferred"). Set via the mode-selection question or by the user saying so explicitly.
+Checkpoints fire at task boundaries in **both** modes: after reviewer `ACCEPT` in Mode 1, after the task's commit in Mode 2. Default `per-task` in interactive mode; `on-failure-only` under an auto grant (see "Autonomy is granted, never inferred"). Set via the mode-selection question or by the user saying so explicitly.
 
-| Policy | Behavior |
-|---|---|
-| `per-task` (default) | Pause after each task. Show diff stat + verification result, wait for "go" or "stop". |
-| `per-N` | Pause after every N tasks. N capped at 5 so the user doesn't lose the plot. |
-| `on-failure-only` | Don't pause unless a step or verification fails. |
+| Policy | Behavior | Applies to |
+|---|---|---|
+| `per-task` (default) | Pause after each task. Show diff stat + verification result, wait for "go" or "stop". | Both modes |
+| `per-N` | Pause after every N tasks. N capped at 5 so the user doesn't lose the plot. | Both modes |
+| `on-failure-only` | Don't pause unless a step or verification fails. | Both modes |
 
-**Implicit pause** (overrides any policy): always pause on test failure, lint failure, or any non-zero exit from a verification command. The user can re-engage and let the skill hand to `debug-loop`.
+**Implicit pause** (overrides any policy, either mode): always pause on test failure, lint failure, or any non-zero exit from a verification command. The user can re-engage and let the skill hand to `debug-loop`.
 
 Over-configurable is a smell. We stop here. The user can interrupt mid-execution and redirect.
 
 ## Context loading
 
-Loading `spec.md`, `handoff.md`, and `decisions.md` into every subagent prompt costs tokens and pollutes the drafter's attention with material the plan already distilled. The plan is the contract.
+Loading the spec, `handoff.md`, and `decisions.md` into every subagent prompt costs tokens and pollutes the drafter's attention with material the plan already distilled. The plan is the contract.
 
 **Build digests once at skill init, reuse across tasks:**
 
@@ -233,7 +243,7 @@ Thrashing prevention is load-bearing. The cheap thing — re-running the same fa
 
 - Never re-run the exact same command after a non-flake failure without changing something first.
 - Never silently mark a failed verification done.
-- Never edit `plan.md` to make a verification pass. The plan is read-only.
+- Never edit the plan to make a verification pass. The plan is read-only.
 
 ## Progress & resume
 
@@ -270,7 +280,7 @@ printf '%s\n' "$json" > "$tmp" && mv "$tmp" "$workspace/progress.json"
 
 A concurrent-session crash mid-write must not produce a half-baked `progress.json`.
 
-`plan_sha` is populated at first run from `git rev-parse HEAD`. Blueprint does **not** stamp a Plan-SHA into `plan.md`; `progress.json` is the only mutable file here.
+`plan_sha` is populated at first run from `git rev-parse HEAD`. Blueprint does **not** stamp a Plan-SHA into the plan file; `progress.json` is the only mutable file here.
 
 ### Resume
 
@@ -290,7 +300,7 @@ When no blueprint workspace is active, use the canonical fallback root: `./.clau
 
 Once per invocation, before mode selection, on risky plans only — **and only if the pre-flight `inside_worktree` check returned false**. If we're already in a worktree, skip this section entirely.
 
-Risky signals (any one triggers the suggestion) — representative examples: > 15 files, root config touched (`package.json`, `go.mod`, etc.), migration files present. Full enumeration: `references/isolated-work-signals.md`.
+Risky signals (any one triggers the suggestion) — representative examples: > 10 files, root config touched (`package.json`, `go.mod`, etc.), migration files present. The `isolated-work` skill owns the full signal table — see its "When to trigger" section. If `isolated-work` isn't installed, use the representative examples above as the heuristic.
 
 Prompt:
 
@@ -323,7 +333,7 @@ When the last task is `done` in `progress.json`:
    - Working tree clean (no uncommitted changes).
    - All task commits land on the current branch.
    - Every task in `progress.json` is `done`.
-   - `spec.md`, `handoff.md`, `decisions.md` still readable at the workspace paths.
+   - The current `spec.v*.md`, `handoff.md`, `decisions.md` still readable at the workspace paths.
 
    If any are not satisfied, do not invoke. Surface the gap and ask the user.
 
@@ -337,17 +347,18 @@ If `verify-before-done` isn't installed, print:
 
 ## Anti-patterns
 
-- **One session per workspace, period.** Two `execute-plan` sessions against the same `.claude-plans/<dir>` is undefined behavior — `progress.json` races are not handled and the skill does not lock. For parallel work, use `isolated-work` to set up a separate worktree with its own workspace.
-- **Don't read `plan.md` inside drafter subagents.** The main session extracts and injects the task text. Plan files include neighboring tasks and review history — distracting noise for a single-task drafter.
-- **Don't load spec/handoff/decisions into every drafter prompt.** Build the digests once at init, reuse them. Trust the task text to carry per-task intent.
-- **Don't write progress checkboxes back into `plan.md`.** Plan is read-only after blueprint produces it. Use `progress.json` + `TodoWrite`.
-- **Don't auto-promote past a reviewer-requested change.** "Mostly looks fine" is how regressions ship. One re-review round, then escalate.
-- **Don't run the full `ui-validation` surface list per task.** Per-task UI is a smoke check on the routes the task touched; the full sweep belongs to `verify-before-done`.
-- **Don't retry the same failing command in a loop.** Change something or hand to `debug-loop` — re-running a real failure with no change is wasted tokens.
-- **Don't skip the freshness check because the plan "feels recent".** A plan written against an already-shifted codebase is worse than no plan; its code blocks look authoritative.
-- **Don't pick inline batch as the default for non-trivial plans.** You lose per-task context isolation and the reviewer pass — both load-bearing for catching drafter drift. Subagent-per-task is the default; inline is the escape hatch for tight 1-3 task plans or when you want main-thread reasoning visibility.
-- **Don't invent verification commands the plan didn't specify.** The plan author chose them deliberately; extras belong in `verify-before-done`.
-- **Don't treat `BLOCKED` as a retry signal.** It means "this task as defined can't proceed." Fix the context, fix the plan, or escalate — don't loop.
+- **One session per workspace, period.** `progress.json` races are unhandled; for parallel work, use `isolated-work` with a separate worktree and workspace.
+- **Don't read the plan inside drafter subagents.** The main session extracts and injects the task text; the full plan is noise for a single-task drafter.
+- **Don't load spec/handoff/decisions into every drafter prompt.** Build the digests once at init and reuse them.
+- **Don't write progress checkboxes back into the plan.** The plan is read-only after blueprint produces it; use `progress.json` + `TodoWrite`.
+- **Don't auto-promote past a reviewer-requested change.** One re-review round, then escalate.
+- **Don't run the full `ui-validation` surface list per task.** Per-task UI is a smoke check on the touched routes; the full sweep belongs to `verify-before-done`.
+- **Don't retry the same failing command in a loop.** Change something or hand to `debug-loop`.
+- **Don't skip the freshness check because the plan "feels recent".** A plan written against a shifted codebase is worse than no plan.
+- **Don't pick inline batch as the default for non-trivial plans.** Subagent-per-task is the default; inline is the escape hatch for tight 1-3 task plans or main-thread reasoning visibility.
+- **Don't invent verification commands the plan didn't specify.** Extras belong in `verify-before-done`.
+- **Don't trust drafter-reported verification output.** The main session re-runs the plan's verification commands after `DONE`; the reviewer only sees the re-run output.
+- **Don't treat `BLOCKED` as a retry signal.** Fix the context, fix the plan, or escalate — don't loop.
 
 ## Composition
 
@@ -359,14 +370,6 @@ If `verify-before-done` isn't installed, print:
   - `verify-before-done` once at end of plan.
   - `isolated-work` optionally, before execution, when risky signals fire and the worktree-guard returned false.
 - **Sibling-installed check:** canonical two-path probe (`~/.claude/skills/<name>/SKILL.md` OR `~/.claude/plugins/cache/**/skills/<name>/SKILL.md`). Missing → one-line graceful-degradation note, continue.
-- **Reads:** `.claude-plans/<active>/{plan,spec,handoff,decisions}.md` (all read-only), `.claude-plans/<active>/progress.json` (resume; rewritten as execution advances), git history (`git log <plan_sha>..HEAD`, `git show`, etc.).
+- **Reads:** `.claude-plans/<active>/` — current `plan.v*.md` and `spec.v*.md` (highest N), `handoff.md`, `decisions.md` (all read-only), plus `progress.json` (resume; rewritten as execution advances), and git history (`git log <plan_sha>..HEAD`, `git diff <pre_dispatch_sha>..HEAD`, etc.).
 - **Writes:** `.claude-plans/<active>/progress.json` (atomic via tmpfile + rename); commits to the current branch (via subagents in Mode 1, directly in Mode 2). Screenshots under `.claude-plans/<active>/screenshots/task-<N>/` are written **only via `ui-validation`** — this skill never writes them directly.
 
-## Open questions
-
-Carried forward to dogfooding, not resolved here.
-
-1. **Drafter model floor for sensitive paths.** Reviewer escalates to opus on auth/migration/root-config; should the **drafter** also escalate to opus for those, or trust the plan to have distilled the hard thinking such that the drafter task is mechanical? Currently leaning no — escalating only on `BLOCKED` re-dispatch.
-2. **"Frontend file" heuristic.** The current list (`.tsx`, `.jsx`, `.vue`, `.svelte`, `.css`, `.scss`, `.html` + route patterns) covers SPA stacks but not SSR templates (Jinja, ERB, Blade). False-positive risk if widened; false-negative risk if not. Leaning: SPA + `.html` only.
-3. **Headed vs headless Playwright default.** Per-task UI smoke defaults to headless. The user may want headed for visual debugging during a long execution; currently no surface for that.
-4. **Reviewer ambiguity on task scope.** Reviewer is told not to ask for things outside scope — but plan tasks vary in tightness. If a task says "add the endpoint" without listing tests, reviewer stays silent. This trusts plan quality more than may be safe.

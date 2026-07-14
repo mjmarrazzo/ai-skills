@@ -12,6 +12,8 @@ Pinned system prompts for each source-typed subagent. Every prompt enforces the 
 
 **Defaults:** N = 15 records max per source; M = N + 2 lines total (header allowance); time budget 120s.
 
+Budgets are counted in **lines**, not tokens — an LLM can't count tokens, so line caps are the real, enforceable unit throughout this skill.
+
 **Substitution placeholders** the parent fills before dispatch:
 - `<TOPIC>` — the focused topic (interactive wave result, or `topic` input).
 - `<PATHS>` — best-effort file paths from the request (space-separated).
@@ -235,7 +237,7 @@ For each matched library (cap: top N=5 most-relevant), invoke the `tech-brief` s
 
 ```yaml
 intent: read_only
-library: <canonical-name>          # package-manager install name, lowercased, kebab-cased
+name: <canonical-name>             # package-manager install name, lowercased, kebab-cased
 ecosystem: <ecosystem-enum>        # js | ts | python | go | java | kotlin | rust | dotnet | ruby | php | swift | aws | gcp | azure | gradle | maven | npm | cli | db | infra | general
 caller: pre-task-research
 ```
@@ -282,7 +284,7 @@ Stale briefs include `[stale]` in the header: `### tech-brief: react (js, v19.1.
 # → cap at 5; pick top 3 here = zod, react, vite
 
 intent: read_only
-library: zod
+name: zod
 ecosystem: ts
 caller: pre-task-research
 ```
@@ -294,7 +296,7 @@ caller: pre-task-research
 # → pydantic (topic-mention + manifest) → fastapi (manifest) → sqlalchemy (manifest)
 
 intent: read_only
-library: pydantic
+name: pydantic
 ecosystem: python
 caller: pre-task-research
 ```
@@ -306,7 +308,7 @@ caller: pre-task-research
 # → go-redis (topic-mention + manifest) → gin (manifest)
 
 intent: read_only
-library: go-redis
+name: go-redis
 ecosystem: go
 caller: pre-task-research
 ```

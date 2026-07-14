@@ -84,7 +84,6 @@ Loose coupling — grill-me works standalone. When siblings are installed:
 - **`knowledge-capture`:** at session start (with-docs mode), read its digest if installed — known repo gotchas inform which questions to lead with.
 - **`tech-brief`:** if libraries are named in the plan and briefs exist at `~/.claude/data/tech-briefs/<ecosystem>/<lib>.md`, fold relevant excerpts into recon.
 - **`blueprint`:** blueprint Phase 1 MAY offer to invoke grill-me before drafting `spec.v1.md`. If grill-me detects an active `.claude-plans/<workspace>/` directory, it appends its exit summary to that workspace's `decisions.md`.
-- **`vscode-preview`:** after writing/updating `CONTEXT.md` or an ADR (with-docs mode), offer to open it in preview.
 
 If a sibling isn't installed, mention once and proceed without it.
 

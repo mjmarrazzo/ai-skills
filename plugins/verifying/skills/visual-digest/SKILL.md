@@ -41,7 +41,7 @@ Auto mode opt-in:
 - Caller parameter: `mode=auto`.
 - Sibling invocation: `ui-validation` and `blueprint` pass `mode=auto` by default (they've already gated the user; double-prompting is friction).
 
-In auto mode, the skill infers from filename keywords + image dims and **logs every inference** to `.claude-plans/<active>/open-questions.md` (workspace) or `./.claude-results/<ts>/open-questions.md` (ad-hoc). Format pinned in this workspace's `decisions.md` HITL entry.
+In auto mode, the skill infers from filename keywords + image dims and **logs every inference** to `.claude-plans/<active>/open-questions.md` (workspace) or `./.claude-results/<ts>/open-questions.md` (ad-hoc), one dated bullet per inferred decision.
 
 ## Inputs
 
@@ -54,16 +54,17 @@ In auto mode, the skill infers from filename keywords + image dims and **logs ev
 | `flow_step` | string | optional | e.g. `"1-of-3"`, scales coverage floor |
 | `viewports_match` | bool | compare only | normalization gate |
 | `comparison_mode` | `"structural" \| "exact"` | compare only | default `structural` |
-| `caller` | string | required | cycle-guard param. `caller=visual-digest` is misuse, skill logs and no-ops. |
+| `caller` | string | optional | cycle-guard param; sibling skills pass their name. Defaults to `chat` when user-invoked. `caller=visual-digest` is misuse, skill logs and no-ops. |
 
 ## Workflow (load-bearing — track via TodoWrite)
 
-Four steps, always in this order. Full mechanics in `references/workflow.md`.
+Four digest steps, always in this order, then validate. Full mechanics in `references/workflow.md`.
 
 1. **Blank-guard FIRST.** Fill `meta.status` and `meta.blank_or_error_detected` BEFORE anything else, then set `meta.legibility` (how readable the image is — separate from enumeration `confidence`). If blank/error: write a stub with `meta` only, halt, surface to caller. No "looks fine" on a blank canvas, ever.
 2. **Regions before elements.** Enumerate ≤6 top-level layout regions with `role` enum and `bbox_pct`.
 3. **Elements per region.** Each element gets stable id, kind, label, state, parent_region. `bbox_pct` is optional and **default-omitted in describe mode / on mockups / on non-full-res images** — eyeballed coordinates are theater.
 4. **Coverage check.** Cross-check element count against `expected_complexity` floor (if provided). Miss attaches an `open_question`; **does NOT downgrade `confidence`**. `flow_step` scales the floor.
+5. **Validate.** Run `python3 scripts/validate-digest.py <digest.yml>` on every digest written (each per-image digest and any compare digest). Fix violations and re-run until it exits 0; only then report to the caller.
 
 Compare mode (2 images, mockup vs impl) runs steps 1-4 INDEPENDENTLY for each image, then diffs the typed outputs into `mockup_vs_impl_deltas`. Describe variant-set mode (`variant_set: true`) runs steps 1-4 INDEPENDENTLY for every frame, then diffs each sibling against a baseline frame into `cross_frame_deltas` (Step 5 in `references/workflow.md`). **Never re-look at the images side-by-side** in either case. Mechanics in `references/comparison.md` and `references/workflow.md`.
 
@@ -104,7 +105,14 @@ The skill **requires** a vision-capable Claude model with at least one image att
 
 ## Active workspace resolution
 
-Use the canonical algorithm pinned in `.claude-plans/2026-05-14-composition-skills/decisions.md`. In brief: `WORKSPACE_PATH` env first; enumerate `.claude-plans/*/` dirs with `plan.md` or `spec.md`; prefer the one matching the current branch's ticket key; fall back to most-recent by mtime; otherwise ad-hoc mode.
+**Active-workspace resolution** (canonical, shared across all sibling skills):
+1. If the caller passes `WORKSPACE_PATH` (explicit absolute path), use it — no discovery.
+2. Otherwise enumerate `.claude-plans/*/` in the repo root (or cwd if not in a git repo).
+3. Filter to directories containing `plan.v*.md` or `spec.v*.md` (blueprint writes only versioned artifacts, never bare `plan.md`/`spec.md`). When a skill needs "the plan" or "the spec", use the highest-N version.
+4. Exactly one match → use it.
+5. Multiple → prefer the one whose slug contains the current branch's ticket key (branch `MSP-7032/foo` → workspace with `MSP-7032` in slug).
+6. Still multiple → most recent by mtime of the newest `plan.v*.md` (fall back to dir mtime).
+7. Zero → ad-hoc mode, no workspace. Ad-hoc artifacts go under `./.claude-results/<YYYY-MM-DD-HHMMSS>/<skill-name>/` (gitignored).
 
 ## Composition
 
@@ -112,9 +120,10 @@ Use the canonical algorithm pinned in `.claude-plans/2026-05-14-composition-skil
 |---|---|
 | **Callees** | none — visual-digest is a leaf. The "callee" is the vision-capable model itself. |
 | **Callers** | `ui-validation` (post-Playwright, describe or compare), `blueprint` (Phase 1 if mockup attached) |
-| **Cycle posture** | `caller=visual-digest` is misuse — skill logs and no-ops |
-| **Reads** | the image(s); workspace's `decisions.md` for the active-workspace algorithm |
+| **Cycle posture** | `caller` defaults to `chat` when user-invoked; `caller=visual-digest` is misuse — skill logs and no-ops |
+| **Reads** | the image(s) |
 | **Writes** | YAML digest at the path above; idempotent `.gitignore` append for `.claude-results/`; `open-questions.md` entries in auto mode |
+| **Validates** | every written digest via `scripts/validate-digest.py` before reporting |
 
 If a referenced sibling skill is not installed, mention it once and degrade gracefully — don't fail the workflow.
 
@@ -149,20 +158,23 @@ digest: .claude-plans/<active>/visual-digests/checkout-describe-1440x900.yml
 
 ## Anti-patterns
 
-- **Returning prose instead of filling the schema.** The schema IS the skill. A free-text description is a misuse; the caller can't grep or diff it. Fill every required field, omit optionals honestly.
-- **Trusting a blank canvas.** Always set `meta.blank_or_error_detected` and `meta.status` FIRST. "I'll just describe what's there" on an empty viewport ships broken UIs.
-- **Side-by-side compare instead of independent-then-diff.** Looking at two images together is where vibes win every time. Independent passes, then diff the typed output.
-- **Padding `bbox_pct` to seem thorough — especially in describe mode.** Low-confidence bboxes are noise pretending to be signal, and coordinates eyeballed off a downscaled mockup are pure theater. Default-omit in describe mode; reserve bbox for full-res live screenshots and `exact` compare. Add a one-line `notes_on_image_quality` for tiny dims (<200px).
-- **Omitting `meta.status`.** Callers check `status` first. Without it, an empty `elements` list reads as "looks fine" — exactly the failure mode this skill exists to fix.
-- **Ratcheting `confidence` down on every mid-flow screenshot.** Coverage misses attach an `open_question`; they do not move `confidence`.
-- **Dispatching a subagent for vision when invoked without an image.** Footgun — subagents can't receive images they weren't given. Halt with `halted_error` instead.
-- **`caller=visual-digest`.** Cycle guard. Skill logs an error and no-ops.
-- **Promising pixel-perfect comparison.** Non-goal. The schema doesn't support it; setting caller expectations the skill can't meet erodes trust.
-- **Treating a complete digest as a correctness pass.** A full, high-`confidence` digest proves the model *looked* at every region — not that it read them right. Don't let "the digest is clean" substitute for independent correctness review (human, spec reviewers, tests).
-- **`confidence: high` on a barely-legible image.** Confidence is enumeration completeness; legibility is read reliability. If the text is fuzzy, set `legibility: low` and keep `confidence` honest about what you could enumerate — don't collapse the two.
-- **Delta-only digesting variant-set siblings.** In a `variant_set`, every frame gets a full independent digest; `cross_frame_deltas` is computed from those. Skimming siblings against the baseline to save tokens reintroduces the rubber-stamp.
+Canonical list — `references/workflow.md` and `references/comparison.md` add only mode-specific ones.
+
+- **Returning prose instead of filling the schema** — the schema IS the skill; fill every required field, omit optionals honestly.
+- **Trusting a blank canvas** — set `meta.blank_or_error_detected` and `meta.status` FIRST, before describing anything.
+- **Side-by-side compare instead of independent-then-diff** — independent passes, then diff the typed output.
+- **Padding `bbox_pct` to seem thorough** — default-omit in describe mode / on mockups / non-full-res images; reserve bbox for full-res live screenshots and `exact` compare.
+- **Omitting `meta.status`** — without it an empty `elements` list reads as "looks fine", the exact failure mode this skill exists to fix.
+- **Ratcheting `confidence` down on every mid-flow screenshot** — coverage misses attach an `open_question`, they do not move `confidence`.
+- **Dispatching a subagent for vision when invoked without an image** — subagents can't receive images they weren't given; halt with `halted_error`.
+- **`caller=visual-digest`** — cycle guard; log an error and no-op.
+- **Promising pixel-perfect comparison** — non-goal; the schema doesn't support it.
+- **Treating a complete digest as a correctness pass** — a clean digest proves the model looked, not that it read right; correctness review is separate and downstream.
+- **`confidence: high` on a barely-legible image** — fuzzy text means `legibility: low`; don't collapse the two axes.
+- **Delta-only digesting variant-set siblings** — every frame gets a full independent digest; `cross_frame_deltas` is computed from those, never a skim.
+- **Skipping the validator** — an unvalidated digest can carry dangling `parent_region`/`contents` refs downstream; run `scripts/validate-digest.py` before reporting.
 
 ## Open questions
 
-- Programmatic YAML parsing in any future skill that compares two digests across sessions. Deferred — v1 hands the YAML to the caller LLM to diff.
+- Programmatic cross-digest comparison in any future skill (two digests across sessions). Deferred — v1 hands the YAML to the caller LLM to diff; `scripts/validate-digest.py` covers schema invariants only, not diffing.
 - Whether to support a third mode (`baseline` — write the first digest, freeze it, diff every subsequent run against it). Deferred to dogfooding.

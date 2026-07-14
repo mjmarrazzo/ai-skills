@@ -5,10 +5,14 @@ GitHub's REST API doesn't expose review-thread resolution state, and inline comm
 ## Fetch unresolved review threads + comments
 
 ```graphql
-query ListReviewThreads($owner: String!, $name: String!, $num: Int!) {
+query ListReviewThreads($owner: String!, $name: String!, $num: Int!, $threadCursor: String, $commentCursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $num) {
-      reviewThreads(first: 100) {
+      reviewThreads(first: 100, after: $threadCursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
           id
           isResolved
@@ -17,7 +21,11 @@ query ListReviewThreads($owner: String!, $name: String!, $num: Int!) {
           path
           line
           originalLine
-          comments(first: 50) {
+          comments(first: 50, after: $commentCursor) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
             nodes {
               id
               databaseId
@@ -48,6 +56,15 @@ gh api graphql \
   -f query="$(cat list-threads.graphql)" \
   -F owner="$OWNER" -F name="$REPO" -F num=$PR_NUMBER
 ```
+
+## Pagination
+
+Both connections are cursor-paginated; neither `first: 100` nor `first: 50` is a guarantee of completeness:
+
+- After each response, check `reviewThreads.pageInfo.hasNextPage`. If true, re-query with `-F threadCursor="<endCursor>"` and append the new nodes. Repeat until false.
+- Within each thread, check `comments.pageInfo.hasNextPage`. If true for any thread, re-query that thread's comments with `-F commentCursor="<endCursor>"` (or fetch the overflow thread individually via `node(id:)`) until exhausted.
+
+Only after both levels are exhausted is the unresolved-thread list complete. A 100+-thread PR truncated silently means comments are never triaged.
 
 Field notes:
 - `id` on `reviewThread` is the GraphQL node ID — needed for `resolveReviewThread`.

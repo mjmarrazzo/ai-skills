@@ -14,11 +14,13 @@ The corrosive default in two-image vision work is to look at both images at the 
 - Salient differences (hero image, color shift) crowd out structural ones (a missing input).
 - The output is unauditable — you can't grep for what was compared.
 
-Independent passes break this:
+Independent passes break this — with an honest caveat about what "independent" means here:
 
 1. Run the full 4-step workflow on image A. Output: digest A (`<basename-a>-describe-<viewport>.yml`).
-2. Run the full 4-step workflow on image B, with no shared context, no peeking at A's output. Output: digest B.
+2. Run the full 4-step workflow on image B **without re-opening image A** and without consulting digest A while enumerating. Output: digest B.
 3. Diff the two YAML documents by id, kind, and the field whitelist. Output: `mockup_vs_impl_deltas`.
+
+These are *sequential* independent passes within one context, not true isolation: the model that digests B has already seen A earlier in the conversation, so some residual context contamination is unavoidable. The discipline that remains enforceable — and load-bearing — is that image A is never re-opened while digesting B, and the typed digests are the **only** inputs to the comparison.
 
 Step 3 is a **string comparison**, not a vision pass. The model does not look at the pixels again. If the diff is ambiguous, the resolution rule is below.
 
@@ -125,10 +127,11 @@ The comparison digest's `regions`, `elements`, `flows`, `hierarchy` are duplicat
 
 ## Anti-patterns specific to compare mode
 
-- **Side-by-side vision pass.** The defining failure. If the model is "looking at both images at once" to compare, the skill has been misused. Run the digests independently.
-- **Re-looking at the images to resolve ambiguity.** Tempting when an `(kind, label)` match is fuzzy. Don't. The typed output is the source of truth; ambiguity resolves by edit distance and region affinity, not by re-pixeling.
-- **Skipping `viewports_match` declaration.** Compare mode without normalization across mismatched viewports produces noise that drowns the real signal. If the caller can't declare, ask the user before running.
-- **`exact` mode across non-matching viewports.** The skill silently downgrades to `structural`; callers who don't read the downgrade note end up confused. The downgrade is correct; the surprise is not.
-- **Diffing fields outside the whitelist.** Position deltas, bbox deltas, parent_region deltas under structural mode — all suppressed. Adding them back "for completeness" reintroduces the noise the whitelist was designed to filter.
-- **Treating renames as a single mismatch.** A rename is `extra` + `missing` (both flagged), not a `mismatched.field=label`. The double-flag is more honest — reviewers see "this is gone" AND "this appeared", which is the right mental model.
-- **Letting bbox positional differences dominate the diff.** Bbox is for human review, not comparison. Even in `exact` mode, bbox diffs are advisory — they don't gate "is this a regression".
+Canonical list lives in SKILL.md. Compare-mode additions:
+
+- **Re-looking at the images to resolve ambiguity** — the typed output is the source of truth; ambiguity resolves by edit distance and region affinity, not by re-pixeling.
+- **Skipping the `viewports_match` declaration** — comparing across mismatched viewports without normalization drowns the signal; if the caller can't declare, ask the user.
+- **`exact` mode across non-matching viewports** — the skill downgrades to `structural`; note the downgrade so the caller isn't surprised.
+- **Diffing fields outside the whitelist** — adding position/bbox/`parent_region` deltas back "for completeness" reintroduces filtered noise.
+- **Treating renames as a single mismatch** — a rename is `extra` + `missing`, both flagged; the double-flag is the right mental model.
+- **Letting bbox positional differences dominate the diff** — bbox diffs are advisory even in `exact` mode; they don't gate "is this a regression".

@@ -1,6 +1,6 @@
 ---
 name: knowledge-capture
-description: Use this skill whenever the user says "remember this", "save that", "worth knowing for next time", "note that down", "lesson learned", "this bit me", or is wrapping up work and reflecting on what was learned. Also auto-invoked by `debug-loop` at non-obvious root cause, by `execute-plan` at end-of-plan with blocked-task notes, by `finish-branch` at the pre-flight gate, and read by `blueprint` Phase 1 and `pre-task-research` on entry. Writes to a per-repo gitignored `.claude-knowledge/`. NEVER writes silently — always asks the user before persisting. Default mode is interactive; autonomous opt-in via `mode=auto` or phrase "go full auto". Skip only when the user explicitly opts out ("don't bother", "skip the knowledge capture", "I'll remember it") or the work is a trivial one-line edit.
+description: Use this skill to capture PROJECT engineering knowledge — repo-specific gotchas, patterns, and stack notes written to a per-repo gitignored `.claude-knowledge/` — when the user says "remember this" / "save that" / "worth knowing for next time" / "note that down" / "lesson learned" / "this bit me" about how THIS codebase or its tooling behaves, or is wrapping up work and reflecting on what was learned. Also auto-invoked by `debug-loop` at non-obvious root cause, by `execute-plan` at end-of-plan with blocked-task notes, by `finish-branch` at the pre-flight gate, and read by `blueprint` Phase 1 and `pre-task-research` on entry. NEVER writes silently — always asks the user before persisting. Default mode is interactive; autonomous opt-in via `mode=auto` or phrase "go full auto". Do NOT use for personal or global preferences — "remember I prefer tabs", "always answer tersely", "remember my email" are facts about the USER, not this repo; they route to Claude's built-in memory, not here. Skip when the fact belongs in built-in memory, when the user explicitly opts out ("don't bother", "skip the knowledge capture", "I'll remember it"), or when the work is a trivial one-line edit.
 ---
 
 # Knowledge Capture
@@ -18,7 +18,7 @@ Auto-trigger when:
 - `finish-branch` reaches its pre-flight gate (single prompt: "anything new worth remembering before opening this PR?").
 - `blueprint` Phase 1 or `pre-task-research` is gathering context for a new request — these READ the kind-files.
 
-Skip when: user explicitly opts out ("don't bother", "skip the knowledge capture", "I'll remember it") or the work is a one-line edit with nothing to record.
+Skip when: user explicitly opts out ("don't bother", "skip the knowledge capture", "I'll remember it"), the work is a one-line edit with nothing to record, or the "remember" is a personal/global preference ("remember I prefer X") — that's a fact about the user, not this repo, and it routes to Claude's built-in memory instead.
 
 ## Default mode and autonomous opt-in
 
@@ -78,6 +78,13 @@ The `source` block is the graveyard guard. Without it, a year-old entry has no p
 
 Slug: `<YYYY-MM-DD>-<kebab(title)>-<6char-content-hash>`. Separator is em-dash (U+2014). Titles MUST NOT contain `[` or `]`. Full grammar, grep patterns, and supersede chain examples in `references/entry-format.md`.
 
+Compute slugs with `scripts/slug.sh` rather than by hand — it pins the kebab normalization and the sha256 content hash from entry-format.md:
+
+```bash
+printf '%s\n%s\n%s' "<context>" "<lesson>" "<source_block>" | scripts/slug.sh "<title>"
+# → 2026-05-14-gradle-daemon-hangs-on-m3-macs-a1b2c3
+```
+
 **Append-only.** Corrections supersede:
 
 ```markdown
@@ -125,7 +132,16 @@ Idempotent — subsequent writes skip steps 1-5.
 
 `.claude-knowledge/` is **per-repo**, at the repo root, NOT under `.claude-plans/<workspace>/`. Knowledge spans workspaces.
 
-Auto-mode deferred entries DO go to the active workspace's `open-questions.md`, resolved per the canonical algorithm in `.claude-plans/2026-05-14-composition-skills/decisions.md` (briefly: `WORKSPACE_PATH` first, then enumerate `.claude-plans/*/` containing `plan.md` or `spec.md`, prefer matching branch ticket key, fall back to most-recent mtime, ad-hoc if zero matches).
+Auto-mode deferred entries DO go to the active workspace's `open-questions.md`, resolved as follows.
+
+**Active-workspace resolution** (canonical, shared across all sibling skills):
+1. If the caller passes `WORKSPACE_PATH` (explicit absolute path), use it — no discovery.
+2. Otherwise enumerate `.claude-plans/*/` in the repo root (or cwd if not in a git repo).
+3. Filter to directories containing `plan.v*.md` or `spec.v*.md` (blueprint writes only versioned artifacts, never bare `plan.md`/`spec.md`). When a skill needs "the plan" or "the spec", use the highest-N version.
+4. Exactly one match → use it.
+5. Multiple → prefer the one whose slug contains the current branch's ticket key (branch `MSP-7032/foo` → workspace with `MSP-7032` in slug).
+6. Still multiple → most recent by mtime of the newest `plan.v*.md` (fall back to dir mtime).
+7. Zero → ad-hoc mode, no workspace. Ad-hoc artifacts go under `./.claude-results/<YYYY-MM-DD-HHMMSS>/<skill-name>/` (gitignored).
 
 ## Ticket-convention detection
 
@@ -147,16 +163,18 @@ Sibling-installed check (callers MUST run before invoking): `~/.claude/skills/kn
 - `references/entry-format.md` — pinned grep patterns, slug rules, em-dash separator, tag bracket syntax, supersede mechanics, worked examples for each kind.
 - `references/read-api.md` — full digest output grammar, default limits, ordering rules, stale thresholds, empty-digest no-op.
 - `references/schema.json` — the literal `.schema.json` content shipped on first-write.
+- `scripts/slug.sh` — computes entry slugs per the pinned rule (`slug.sh "<title>" < body`).
 
 ## Anti-patterns
 
-- **Silent writes "to save the user a prompt."** The whole skill's value evaporates the moment a user finds an entry they didn't approve. The batched gate exists precisely so we ask LESS often, not so we ask never. If you're tempted to skip the prompt, defer to the batched gate — never bypass it. The "always ask" rule is permanent for v1.
-- **In-place edits to "correct" a prior entry.** ALWAYS supersede. The history is the data — a future LLM reading the file needs to see what we used to think to understand why we now think differently. The skill's parser treats the file as append-only; editing breaks slug stability.
-- **Skipping `source.files` / `source.commit` / `session_marker` to look concise.** An entry without provenance is a graveyard one-liner. Future readers have no way to navigate back to the captured state. The skill rejects writes missing these — surface the missing fields back to the caller, do not write a partial entry.
-- **Auto-fabricating an entry from session context** without the user's explicit phrase or a sibling-skill structured payload. We never invent knowledge. The LLM rephrasing a complaint as a gotcha is not the user saying "remember this."
-- **Long entries.** ≤6 lines total (heading + 3 body fields ≤2 lines each). Anything longer is two entries or a wiki page, not a gotcha.
-- **Treating `.claude-knowledge/` as project documentation.** It's gitignored by default. Users opt in to committing per-repo by removing the line — we do not push them.
-- **Mid-session per-checkpoint prompts.** Three prompts during one debug session is skip-fatigue. Queue and batch. Exception: user-initiated capture gets one immediate "what should I write?" because the user already asked.
-- **Reading the file with a markdown parser.** The grep patterns in `references/entry-format.md` are the parsing contract. Future LLMs use them. Anything fancier breaks across renderers.
-- **Materializing the directory on first READ.** Blueprint Phase 1 reads against fresh clones constantly. First-read on missing dir is an empty digest with zero side effects.
-- **Promoting auto-mode writes past the deferred-review log.** Auto-mode means "log to `open-questions.md` and let the user review later," not "write to kind-files without asking."
+- **Silent writes** — never persist without an ack; defer to the batched gate instead of bypassing it.
+- **In-place edits** — always supersede; the history is the data and editing breaks slug stability.
+- **Skipping the `source` block** — the skill rejects writes missing `files`/`commit`/`session_marker`; surface the gaps, don't write a partial entry.
+- **Auto-fabricating entries from session context** — only the user's explicit phrase or a sibling-skill structured payload creates an entry.
+- **Long entries** — ≤6 lines total; anything longer is two entries or a wiki page.
+- **Treating `.claude-knowledge/` as project documentation** — it's gitignored by default; users opt in to committing it themselves.
+- **Mid-session per-checkpoint prompts** — queue and batch; only user-initiated capture gets one immediate question.
+- **Parsing with anything but the pinned greps** — the grep patterns in `references/entry-format.md` are the contract.
+- **Materializing the directory on first READ** — first-read on a missing dir is an empty digest with zero side effects.
+- **Promoting auto-mode writes past the deferred-review log** — auto means "log to `open-questions.md` for later review", never "write without asking".
+- **Capturing user preferences** — "I prefer X" facts belong in built-in memory, not the repo knowledge log.

@@ -46,8 +46,8 @@ type CreateInput struct {
     TenantID               string
     IDPID                  string
     VerificationTTLMinutes int
-    Now                    time.Time
-    NewID                  func() string // injected for testability
+    Now                    func() time.Time // injected for testability
+    NewID                  func() string
     NewCode                func() string
 }
 

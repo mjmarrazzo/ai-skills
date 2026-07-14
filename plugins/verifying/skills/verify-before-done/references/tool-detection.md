@@ -47,9 +47,14 @@ Prefer ruff over flake8 when both present.
 
 | Detection signal | Check | Command |
 |---|---|---|
-| `build.gradle.kts` / `build.gradle` | Build + tests | `./gradlew build` |
-| Gradle build with ktlint plugin | Lint | `./gradlew ktlintCheck` |
+| `build.gradle.kts` / `build.gradle` | Compile / typecheck | `./gradlew classes` (or `compileJava` / `compileKotlin` for a single source set) |
+| `build.gradle.kts` / `build.gradle` | Tests | `./gradlew test` |
+| Gradle build with spotless | Format | `./gradlew spotlessCheck` |
+| Gradle build with ktlint plugin | Format / lint | `./gradlew ktlintCheck` |
+| Gradle build with checkstyle | Lint | `./gradlew checkstyleMain checkstyleTest` |
 | Gradle build with detekt | Static analysis | `./gradlew detekt` |
+
+Do not run `./gradlew build` as a catch-all — it conflates compile, test, and lint into one exit code and hides which check class failed. Run per-class tasks so each row reports independently.
 
 For repos that declare cloud-credential env vars in their CLAUDE.md (e.g., `AWS_PROFILE` / `AWS_REGION`): if they're unset before running integration-flavored test tasks, print a one-line reminder before proceeding.
 

@@ -1,6 +1,6 @@
 # Ticket body template
 
-The audience for this ticket is another LLM (or another team) that will run `blueprint` (or equivalent) to produce a spec + implementation plan. Body must contain enough requirements to plan from without re-interrogating the original requester.
+The audience for this ticket is another LLM (or another team) that will run `blueprint` (or equivalent) to produce a spec + implementation plan. The ticket gives them enough to *understand and pick up the problem* without re-interrogating the requester — the feature or bug, why it matters, any decisions already accepted, and pointers to the code. It does **not** contain the implementation plan; that's what the implementer produces after pulling the ticket in. Scope the problem, not the solution.
 
 ## Required sections, in order
 
@@ -21,12 +21,12 @@ Context the next LLM needs to plan. 1–3 short paragraphs. Include:
 
 ### 3. Scope
 
-What's in. Bulleted; include affected services / files with absolute or repo-relative paths when known.
+What's in. Bulleted; point at the affected services / files with absolute or repo-relative paths when known. These are *pointers to where the work lands*, not instructions for what to change there — the implementer decides the fix.
 
 > Example:
-> - `services/service-x/handlers/admin.go` — swap signature middleware for API-key middleware.
-> - `services/service-x/middleware/auth.go` — add `APIKeyAuth` alongside existing `HMACAuth`; keep both during cutover.
-> - Operator runbook update for the new env var `SERVICE_X_ADMIN_KEY`.
+> - `services/service-x/handlers/admin.go` — admin request auth is enforced here.
+> - `services/service-x/middleware/auth.go` — current `HMACAuth` middleware; where request-auth methods are wired.
+> - Operator tooling / runbook — a new admin key will need to be surfaced to operators.
 
 ### 4. Out of scope
 
@@ -68,4 +68,5 @@ File paths, sibling tickets, docs. Skip the section if empty.
 - Plain markdown, no HTML. GitHub issues and JIRA descriptions both render markdown.
 - File paths in backticks. Use `file:line` or `file:line-line` for ranges.
 - No "TBD", no "N/A" — skip the section instead.
-- Code blocks for commands, schemas, and example payloads.
+- Code blocks for commands, schemas, and example payloads — not for proposed implementation code.
+- Describe the problem and desired outcome, not the implementation. "Swap X for Y", "add function Z", and step-by-step how-to belong to the implementer, not the ticket. Decisions already accepted are fine to state as decisions.

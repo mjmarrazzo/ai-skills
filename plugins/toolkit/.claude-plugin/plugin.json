@@ -1,7 +1,7 @@
 {
   "name": "toolkit",
   "version": "0.1.0",
-  "description": "Cross-cutting utilities — fdm, vscode-preview, caveman. Functional domain modeling discipline, rendered markdown preview at review gates, and a togglable terse output register.",
+  "description": "Cross-cutting utilities — fdm, caveman. Functional domain modeling discipline and a togglable terse output register.",
   "author": {
     "name": "mjmarrazzo"
   }

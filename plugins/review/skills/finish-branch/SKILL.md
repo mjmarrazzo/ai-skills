@@ -1,6 +1,6 @@
 ---
 name: finish-branch
-description: Use this skill whenever the user says "make the PR", "open a pull request", "open the PR", "let's ship it", "ready for review", "create the PR", "push for review", or "PR it". Also trigger automatically when verify-before-done emits a passing run in the same session, unless the user says "I'll open the PR myself", "just push the branch", or "no PR yet". When blueprint Phase 7 hands off and the user picks "PR it" at the execution-mode prompt, trigger immediately. Default bias is to run — if the user is talking about shipping work on a branch, this skill is the right one.
+description: Use this skill whenever the user says "make the PR", "open a pull request", "open the PR", "let's ship it", "ready for review", "create the PR", "push for review", or "PR it". When verify-before-done emits a passing run in the same session, offer — "verify is green — open the draft PR?" — and trigger on acceptance; do not fire automatically. Skip the offer if the user says "I'll open the PR myself", "just push the branch", or "no PR yet". When blueprint Phase 7 hands off and the user picks "PR it" at the execution-mode prompt, trigger immediately. Default bias is to run — if the user is talking about shipping work on a branch, this skill is the right one.
 ---
 
 # finish-branch
@@ -16,7 +16,7 @@ Use `TodoWrite` to track the pre-flight checks as they run, then the watch-and-p
 ## Active-workspace resolution
 
 1. If `WORKSPACE_PATH` is passed as a context parameter, use it — no discovery.
-2. Enumerate `.claude-plans/*/` in repo root (or cwd), filter to dirs containing a plan or spec artifact. Blueprint writes **versioned** files (`plan.v<N>.md`, `spec.v<N>.md`) — never a bare `plan.md`/`spec.md` — so match `plan.v*.md` OR `plan.md` (and likewise spec). The **current** plan/spec is the highest N (`ls plan.v*.md | sort -V | tail -1`); fall back to a bare `plan.md` only if no versioned file exists.
+2. Enumerate `.claude-plans/*/` in repo root (or cwd), filter to dirs containing `plan.v*.md` or `spec.v*.md`. Blueprint writes **only versioned** files (`plan.v<N>.md`, `spec.v<N>.md`) — never a bare `plan.md`/`spec.md`. The **current** plan/spec is the highest N (`ls plan.v*.md | sort -V | tail -1`).
 3. If one match, use it. If multiple, prefer the slug containing the current branch's ticket key; break ties by mtime of the current (highest-N) plan file.
 4. If zero matches: ad-hoc mode — generate PR body from git log alone, note "_No blueprint workspace found — summary generated from commits._"
 
@@ -78,6 +78,8 @@ Run `git merge-base --is-ancestor <base> HEAD`. If base has commits the branch d
 
 Do not rebase without explicit user confirmation.
 
+**Sequencing after (a):** a rebase produces a new HEAD, which invalidates `verify.json` (gate 3 checks `commit_sha == HEAD`). finish-branch never invokes verify-before-done itself — after the rebase and confirmed force-push, tell the user (or the calling pipeline) to re-run verify-before-done, then re-invoke finish-branch. On that re-run, gate 3 re-fires against the new HEAD and must pass again before the PR opens.
+
 **6. Knowledge-capture reflection (interactive mode only)**
 
 Single batched prompt (skip entirely in auto mode — auto mode relies on debug-loop / execute-plan having queued any captures to `open-questions.md` during execution):
@@ -123,7 +125,7 @@ On rename: re-run pre-flight from step 4. After push succeeds, offer to delete t
 
 ## PR title generation
 
-Source priority (everywhere below, `spec.md`/`plan.md` mean the **current** artifact — the highest-N `spec.v*.md`/`plan.v*.md` blueprint wrote, falling back to a bare file only if no versioned one exists):
+Source priority (everywhere below, `spec.md`/`plan.md` mean the **current** artifact — the highest-N `spec.v*.md`/`plan.v*.md` blueprint wrote):
 1. `spec.md` → `## Goal` section, first sentence
 2. `handoff.md` → `**Goal (one sentence):**` line
 3. Fallback: `git log --oneline -1`
@@ -205,7 +207,7 @@ Not folded in, and never attached to the draft. If the user names reviewers ("ma
 
 ## Always open as draft
 
-Every PR opens as a draft — `gh pr create --draft`, no exceptions. Draft is the staging state, not a special case: it lets CI and automated reviewers (Copilot, CodeRabbit, etc.) run and comment *before* any human is pinged. "Ready for review" is an **earned promotion**, not the default — the PR is flipped to ready only after the watch-and-promote phase below comes back clean. This guarantees the one thing the user cares about: human reviewers are only pinged on work that is genuinely clean.
+Every PR opens as a draft — `gh pr create --draft`, no exceptions. Draft is the staging state, not a special case: it lets CI and automated reviewers (Copilot, CodeRabbit, etc.) run and comment *before* any human is pinged. (This codifies the sequence users previously hand-drove on every PR — draft, wait for checks and bot review, triage, then ready — replacing an earlier signal-based draft-vs-ready decision.) "Ready for review" is an **earned promotion**, not the default — the PR is flipped to ready only after the watch-and-promote phase below comes back clean. This guarantees the one thing the user cares about: human reviewers are only pinged on work that is genuinely clean.
 
 Do not add human reviewers at creation time. Reviewer assignment happens at promotion (see "Promote to ready"), so a reviewer is never notified about a draft that still has red checks.
 
@@ -215,9 +217,24 @@ The only override is the user opting *out* of the watch entirely ("just open the
 
 After the draft PR is created, finish-branch shepherds it to ready. This phase is a **bounded loop**: watch → route red items to fixers → fixers push → checks re-run → re-evaluate. When everything is clean, promote.
 
-### 1. Background the watch
+### 1. Detect bot reviewers (cheap, once)
 
-Checks and automated reviews take minutes, so don't block the session. Background the watch and re-engage when it settles, using `ScheduleWakeup` with a delay matched to how long this repo's checks usually take (start at ~120–270s while checks are actively running; back off to longer idle ticks if a bot review is the only thing outstanding). Each wake-up, poll:
+Before starting the watch, check whether this repo has automated reviewers at all — don't burn the 10-minute give-up window on a repo that has no bots:
+
+```bash
+gh pr list --state merged --limit 10 --json number,reviews,comments \
+  --jq '[.[] | (.reviews[]?.author.login, .comments[]?.author.login)] | map(select(test("\\[bot\\]$|copilot|coderabbit|greptile|sourcery"))) | unique'
+```
+
+If the result is empty across ~10 recent merged PRs, no bot reviewer is active: skip the bot-review settle window entirely — the watch settles on checks alone. If bots appear, keep the full settle condition below.
+
+### 2. Background the watch
+
+Checks and automated reviews take minutes, so don't block the session. Background the watch and re-engage when it settles, using `ScheduleWakeup` with a delay matched to how long this repo's checks usually take (start at ~120–270s while checks are actively running; back off to longer idle ticks if a bot review is the only thing outstanding).
+
+**If `ScheduleWakeup` isn't available** (probe the deferred-tool list / ToolSearch for it before assuming), fall back to a background Bash poll: run `gh pr checks <num> --watch` in the background, or an interval loop (`while :; do gh pr checks <num> --json name,bucket,link; sleep 150; done`) as a background command, and re-engage when it exits or reports. The deciding signal is identical in both modes: **no check left in bucket `pending`** (plus the bot-review condition below, when bots are present) — the wake-up mechanism changes, the settle condition does not.
+
+Each wake-up, poll:
 
 ```bash
 # Status checks — settled when no bucket == "pending"
@@ -231,7 +248,7 @@ The watch is **settled** when: every check has left `pending` (all are pass/fail
 
 Tell the user the watch is backgrounded and roughly when you'll check back. They can interrupt anytime.
 
-### 2. Route by type when the watch settles
+### 3. Route by type when the watch settles
 
 Evaluate what's outstanding and route — **finish-branch does not fix anything itself**; it dispatches:
 
@@ -241,13 +258,13 @@ Evaluate what's outstanding and route — **finish-branch does not fix anything 
 
 This dispatch is automatic — no confirmation gate before invoking the triage skills. That's safe because **each triage skill has its own hard approval gate** before it edits or pushes anything; finish-branch only auto-*enters* triage, it never auto-applies a fix. (If the user is running finish-branch in an explicitly non-interactive/auto mode, the triage skills' own auto-mode behavior governs from there.)
 
-### 3. Loop, with a cap
+### 4. Loop, with a cap
 
 A triage skill's push re-triggers the checks. On the next wake-up, re-poll and re-evaluate. Repeat until clean — but **cap at 3 rounds**. If the PR still isn't clean after 3 watch→fix→re-check cycles, stop the loop and hand back to the user with a summary of what's still red and why (likely a real failure that needs human judgment, an escalation from triage, or a genuinely flaky suite). Don't loop forever chasing green.
 
 Also stop and hand back immediately (no further rounds) if: a triage skill reports an `escalate` verdict, a fix can't be applied cleanly, or a push is rejected.
 
-### 4. Promote to ready
+### 5. Promote to ready
 
 When the watch settles with all checks green and no unresolved review threads:
 
@@ -274,20 +291,20 @@ Always print the exact command and wait for confirmation:
 
 ## Anti-patterns
 
-- **Committing dangling changes.** Never stage, stash, or commit on the user's behalf. The pre-flight dirty-tree check is a hard stop, not a suggestion.
-- **Opening a PR from main.** Hard block with no confirmation path.
-- **AI-cheerleader PR bodies.** Summary bullets must be factual and imperative — what was added/changed/removed. Reject any generated text that evaluates the work ("dramatically improves", "exciting new feature").
-- **Scope-drift PRs.** If the diff touches files outside spec.md's stated scope, call it out at the confirmation checkpoint. Don't silently let an oversized diff go to review.
-- **Swallowing verify failures.** If the gate was skipped, the draft-PR default and the body warning note are the only safety net. Do not pretend the gate passed.
-- **Embedding `.claude-plans/` paths in the PR body.** Gitignored and meaningless to reviewers — inline the content.
-- **Becoming a branch router.** finish-branch's job is the PR lifecycle up to ready: open draft → watch → dispatch red items to the right fixer → promote. It does NOT offer a merge/discard/keep menu, and it does NOT fix anything itself — failed checks go to `ci-check-triage`, comments go to `pr-review-triage`, real bugs end up in `debug-loop`. Dispatching is not the same as fixing or merging; keep the boundary. Merging belongs to git/GitHub, not this skill.
-- **Fixing checks or comments inline.** Tempting during the watch, but it duplicates the triage skills and skips their approval gates. Always dispatch; never patch a failing test or apply a review suggestion directly from within finish-branch.
-- **Promoting to ready while red.** The whole point of always-draft is that ready is earned. Never `gh pr ready` with failing checks or unresolved threads unless the user explicitly overrode the watch — and if they did, say so and warn.
-- **Looping forever chasing green.** Cap at 3 watch→fix→re-check rounds, then hand back to the user. A failure that survives 3 rounds needs human judgment, not a 4th automated pass.
+- **Committing dangling changes** — never stage, stash, or commit on the user's behalf; the dirty-tree gate is a hard stop.
+- **Opening a PR from main** — hard block, no confirmation path.
+- **AI-cheerleader PR bodies** — summary bullets are factual and imperative; reject text that evaluates the work ("dramatically improves").
+- **Scope-drift PRs** — if the diff touches files outside spec.md's stated scope, call it out at the confirmation checkpoint.
+- **Swallowing verify failures** — if the gate was skipped, keep the body warning note; never pretend the gate passed.
+- **Embedding `.claude-plans/` paths in the PR body** — gitignored and meaningless to reviewers; inline the content.
+- **Becoming a branch router** — finish-branch owns open draft → watch → dispatch → promote; no merge/discard/keep menu, no fixing (checks → `ci-check-triage`, comments → `pr-review-triage`, bugs → `debug-loop`), no merging.
+- **Fixing checks or comments inline** — always dispatch; patching directly duplicates the triage skills and skips their approval gates.
+- **Promoting to ready while red** — never `gh pr ready` with failing checks or unresolved threads unless the user explicitly overrode the watch (then say so and warn).
+- **Looping forever chasing green** — cap at 3 watch→fix→re-check rounds, then hand back to the user.
 
 ## Composition
 
-- **Callers:** verify-before-done hands off here on success; blueprint Phase 7 on user's "PR it" choice; direct user invocation after any green session.
+- **Callers:** verify-before-done offers this skill on success ("verify is green — open the draft PR?") and hands off only on the user's yes; blueprint Phase 7 on user's "PR it" choice; direct user invocation after any green session.
 - **Reads:** `verify.json`, `progress.json`, current `spec.v*.md`, `handoff.md`, current `plan.v*.md`, `decisions.md`, `open-questions.md` — all from `<active>/`, all optional; degrades gracefully to git-log body when workspace is absent. `open-questions.md` count is surfaced in the pre-flight summary.
 - **Writes:** nothing to repo or workspace directly. Side effects: `git push`, `gh pr create --draft`, `gh pr edit`, `gh pr ready`, `gh pr edit --add-reviewer` (at promotion), and `ScheduleWakeup` for the background watch. May invoke `knowledge-capture` (which owns its own writes).
 - **Calls:**
@@ -295,8 +312,7 @@ Always print the exact command and wait for confirmation:
   - `ci-check-triage` during the watch phase when checks are red, passing `caller=finish-branch` + `PR_NUMBER`. It owns classification and delegates real fixes to debug-loop.
   - `pr-review-triage` during the watch phase when review comments are unresolved, passing `caller=finish-branch` + `PR_NUMBER`. It owns grading and applies approved fixes.
   - finish-branch does **not** invoke verify-before-done. verify and finish-branch are separate gates with separate failure modes: verify runs many times during development; finish-branch runs once per PR (then watches it). The boundary is real.
-- **Cycle prevention:** the watch loop is bounded by the 3-round cap, and the triage skills receive `caller=finish-branch` so they don't try to re-invoke finish-branch. Neither triage skill calls back here; the loop re-entry is driven solely by finish-branch's own wake-ups re-polling the settled checks.
-- **Cycle prevention:** if a future caller opts in to invoking verify-before-done from within this skill, pass `caller=finish-branch` so verify-before-done suppresses its own finish-branch hand-off (no re-entry).
+- **Cycle prevention:** the watch loop is bounded by the 3-round cap, and the triage skills receive `caller=finish-branch` so they never re-invoke finish-branch. Loop re-entry is driven solely by finish-branch's own wake-ups re-polling the settled checks.
 - **Sibling absent:** if verify-before-done isn't installed and `verify.json` is missing, say so once, then proceed per user's explicit confirmation.
 
 ## Open questions
