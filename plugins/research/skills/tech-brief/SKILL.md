@@ -194,7 +194,7 @@ Subsequent writes skip steps 2 and 3.
 - **Per-repo briefs** — repo-scoped knowledge is `knowledge-capture`'s namespace; this skill is global.
 - **Bloating past the per-kind cap** (library=200, service=280, platform=220, tool=180) — truncate References → Common patterns → Mental model, then refuse and surface the body.
 - **Trusting "latest" without naming it** — resolve to a concrete semver at write time; never persist the string "latest".
-- **Briefing every dep on blueprint Phase 1** — Phase 1 reads existing briefs and makes ONE batched offer for un-briefed tech.
+- **Briefing every dep on blueprint Phase 1** — Phase 1 reads existing briefs only. It makes no create offer; the user invokes this skill directly when they want a new brief.
 - **Tutorial-creep** — briefs are mental-model documents; tutorials live upstream.
 - **Code-listing-creep** — snippets are illustrative shapes, ≤15 lines, never full examples.
 - **Paraphrase-creep** — don't restate upstream docs section-by-section; link them.
