@@ -1,126 +1,182 @@
 # plan.v<N>.md template
 
-The plan is what an engineer (or subagent) needs to execute the spec without thinking architecturally. Bite-sized tasks, exact file paths, exact code where code is shown, exact commands with expected output.
+The plan is the **executor's** document. The spec settled *what* and *why*; the plan settles *where, in what order, and how we know it worked*.
 
-Assume the executor knows how to code but knows little about this codebase. Don't make them re-derive what the spec already pinned down.
+Optimize for one property: **a weaker model, or you six weeks from now, can execute a task without thinking architecturally and without exploring the repo to figure out what was meant.**
 
-## TDD-first ordering (mandatory when tests apply)
+## What that does NOT mean: pasting the implementation
 
-Tests are written **before** the code they verify, and the failing-test run is an explicit step. This is not a stylistic preference — it is the default discipline of every plan blueprint produces.
+Do not write out finished function bodies, full test files, or complete components. Paste-ready code is the weakest form of executor help:
 
-Rules:
+- **It goes stale.** Code in the plan and code in the spec drift the moment either is revised, and the executor then has to reconcile plan-code against actual repo state — that is *more* thinking, not less.
+- **It produces fake TDD.** When the test body and the implementation body are both written up front, the test was shaped to match the implementation instead of constraining it. The red/green run becomes theater.
+- **It crowds out the useful part.** Tokens spent re-typing an obvious mapping function are tokens not spent naming the trap that will actually break the executor.
 
-- **Every behavioral task starts with a failing test step.** The test code is shown in full, ready to paste. No "write tests later", no "add tests at the end of the task".
-- **The run-and-fail step is explicit.** Show the exact command and the specific failure mode expected (`AssertionError`, `ImportError`, `NameError`, HTTP 404, etc.). "Expect failure" without a reason is a plan failure — the executor needs to know the *right* failure vs. a setup problem.
-- **Implementation code follows the failing test.** Never put implementation before its test.
-- **The run-and-pass step is explicit.** Same command, expected PASS.
-- **One commit per red→green cycle** unless tasks are tightly coupled.
-- **Refactor (optional step 6) goes after green**, never before.
+What removes thinking from a weaker executor, in order of value:
 
-When TDD does *not* apply, the task header MUST say so and why. Acceptable reasons:
+1. The **exact path** (and line range when modifying), so it never searches.
+2. The **contract** — signature level. Names and types the rest of the plan depends on.
+3. The **traps** — what to preserve, what not to collapse, what looks refactorable but isn't.
+4. The **verification** — exact command, expected result, expected pre-implementation failure.
 
-- Pure config / infrastructure changes (Dockerfile tweaks, IAM policy, CI YAML) with no logic to assert.
-- UI styling changes where the verification belongs to `ui-validation`, not unit tests.
-- Migrations / one-shot scripts where the assertion is "ran without error against a copy of prod data" — call that out explicitly as the verification step.
-- Generated code (codegen output, OpenAPI stubs).
+Prose describing intent, plus those four, beats a pasted body nearly every time.
 
-For these, replace Steps 1–4 with a single **Verification** step that names the concrete check (command, screenshot diff, manual smoke). Don't fake a unit test that doesn't actually exercise the change.
+### When code IS worth pasting
+
+Heuristic: **if the prose describing it would be longer than the code, paste the code.** In practice that means:
+
+- A regex, format string, or magic constant where exactness matters.
+- SQL DDL / a migration statement.
+- A config or YAML block that must match an external schema.
+- A short (~5 line) algorithm where the description is genuinely harder to follow than the lines.
+
+Everything else: describe it.
 
 ## Header
-
-Every plan starts with:
 
 ```markdown
 # <Slug> — Implementation Plan
 
-> Spec: `spec.v<N>.md` (current highest-numbered spec). Handoff: `handoff.md`. Decisions: `decisions.md`.
+> Spec: `spec.v<N>.md` (current highest). Decisions: `decisions.md`.
 
 **Goal:** <one sentence>
 **Approach:** <2-3 sentences summarizing the architecture from the spec>
-**Tech stack:** <key libraries / frameworks this touches>
+**Stack / verify:** <key libraries, plus the commands that gate this repo — e.g. `npm run typecheck && npm run lint`>
+
+**Autonomy frontier: Tasks 1–<K> run unattended. Task <K+1> needs you (<gate reason>).**
 
 ---
 ```
 
+The **autonomy frontier** is the first task whose gate is not `auto`. State it once, up top, in plain language. It is the line that tells the human how far they can walk away — it is the most-read sentence in the document.
+
+Order tasks so the frontier sits as late as possible: pure work first, then I/O, then anything needing eyes, credentials, or money. Where dependencies allow it, this is free; where they don't, say so rather than faking the order.
+
 ## File map
 
-Before the tasks, list every file the plan will create or modify. Locks in decomposition before granular work begins.
+Every file the plan creates, modifies, or deletes — before any task detail. Locks in decomposition, and carries the **contracts** so later tasks can reference names without redefining them.
 
 ```markdown
 ## Files
 
-- Create: `src/foo/bar.py` — <one-line role>
-- Modify: `src/foo/baz.py:120-180` — <one-line role>
-- Test: `tests/foo/test_bar.py` — <one-line role>
+- Create `src/auth/refresh.ts` — `classifyRefresh(status, errorCode?) → "refreshed"|"terminal"|"transient"` (pure)
+- Create `src/auth/refresh.client.ts` — `refreshSession(): Promise<{outcome}>`, single-flight, bounded retry
+- Modify `src/api/fetch.client.ts:18-34` — 401 branch → refresh / replay / terminal / transient
+- Delete `src/api/legacy-retry.ts` — superseded by `refreshSession`; confirm no importers first
+- Test   `src/auth/refresh.test.ts` — classifier cases
 ```
 
-## Tasks
+`Delete` is a first-class row. Deletions are the most commonly missed part of a change; if nothing is deleted, write `- Delete <none>` so the reader knows it was considered.
 
-Each task is a coherent unit (one component, one endpoint, one migration). Inside the task, each step is one action, 2-5 minutes. **Step 1 is always the failing test** when TDD applies (see "TDD-first ordering" above):
+## Task tags
+
+Every task carries a **kind** and a **gate**.
+
+```markdown
+### Task 4 — apiFetch 401 branch  `[io]` `[gate: auto]`
+```
+
+**Kind** — what the work *is*. Determines how it gets verified:
+
+| kind | what it covers | verification | default gate |
+|---|---|---|---|
+| `pure` | no I/O; deterministic input → output | unit tests | `auto` |
+| `io` | network, filesystem, DB, process boundary | unit tests with the boundary mocked, plus a named integration check | `auto` |
+| `ui` | rendering, styling, layout, interaction | component test where meaningful + `ui-validation` screenshots | `eyes` |
+| `infra` | IaC, CI YAML, Dockerfile, IAM, build config | plan/dry-run diff, or a lint/validate command | `review` |
+| `migration` | schema change, backfill, one-shot script | dry-run against a copy; state the reversibility story | `live` |
+| `codegen` | generated output | regenerate and confirm a clean diff | `auto` |
+
+**Gate** — who has to look, and when execution stops:
+
+| gate | behavior |
+|---|---|
+| `auto` | execute, verify, continue. No stop. |
+| `review` | execute, then stop and show the diff before continuing. |
+| `eyes` | execute, then stop with screenshots / output for human judgment. |
+| `live` | stop **before** executing. Touches a real account, costs money, or mutates shared state. |
+
+The kind implies a default gate. Override it when the specific task warrants — a `pure` task rewriting a security-critical predicate can be `[gate: review]` — and say why on the same line. Never silently downgrade a `live` or `migration` task to `auto`.
+
+Because the kind already declares what verification applies, a task tagged `[infra]` or `[migration]` does not need to argue that unit tests don't fit. The tag says it.
+
+## Task shape
+
+Each task is one coherent unit — one module, one endpoint, one migration. Aim for something an executor finishes and commits in one sitting.
 
 ````markdown
-### Task N: <component name>
+### Task 4 — apiFetch 401 branch  `[io]` `[gate: auto]`
 
-**Files:**
-- Create: `exact/path.py`
-- Modify: `exact/path.py:LINES`
+**Modify** `src/api/fetch.client.ts:18-34` (the 401 branch)
 
-- [ ] **Step 1: Write the failing test**
+Replace the unconditional `invalidateQueries(["me"])` with: `refreshSession()` →
+`refreshed` = replay the original request once (a second 401 is terminal, never
+re-refresh) · `terminal` = `markSessionExpired()`, invalidate `["me"]`, throw
+`"Session expired"` · `transient` = throw `"Session refresh unavailable"` with no
+mark and no invalidate.
 
-```python
-# the actual test code, ready to paste
-```
+**Preserve:** `credentials: "include"` stays AFTER the `init` spread — a caller must
+not be able to drop the cookie.
 
-- [ ] **Step 2: Run test, expect failure**
+**Contract:** `refreshSession(): Promise<{outcome: RefreshOutcome}>` (Task 2).
 
-```
-pytest tests/path/test.py::test_name -v
-```
-Expected: FAIL — <specific reason>
+**Test** `src/api/fetch.client.test.ts` — cases:
+- refreshed → original request replayed exactly once
+- replay returns 401 → treated as terminal, no second refresh
+- terminal → marks expired, invalidates `["me"]`, throws
+- transient → throws without marking or invalidating
 
-- [ ] **Step 3: Implement**
+Mock `refreshSession`, not `fetch` — the point is the branch logic, not the network.
 
-```python
-# the actual implementation, ready to paste
-```
+**Verify:** `npx vitest run src/api/fetch.client.test.ts` → 4 pass.
+Before implementing, the same command fails with `TypeError: refreshSession is not a function`.
 
-- [ ] **Step 4: Run test, expect pass**
-
-```
-pytest tests/path/test.py::test_name -v
-```
-Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-```
-git add <files>
-git commit -m "PROJ-XXXX: <message>"
-```
+**Commit:** `PROJ-XXXX: route apiFetch 401s through session refresh`
 ````
+
+Sections, in order: the file line, the intent prose, `Preserve:` (when there are traps), `Contract:` (when later tasks depend on names), `Test:` (file + cases), `Verify:` (command + expected pass and expected pre-implementation failure), `Commit:`.
+
+Drop any section that genuinely doesn't apply. Don't pad with headings.
+
+## Test discipline
+
+Tests come **before** the implementation. That rule is unchanged; only the verbosity is.
+
+- **Name the test file and the cases.** One line per case, phrased as the assertion it makes. Four sharp case lines beat forty lines of pasted test body.
+- **Name the seam.** What gets mocked, faked, or stubbed — and, when it's not obvious, why that seam and not a deeper one.
+- **The expected pre-implementation failure is required.** Not "expect failure" — the actual failure (`TypeError: x is not a function`, `AssertionError`, HTTP 404). The executor needs to distinguish the *right* red from a broken setup.
+- **Write the tests, run them red, then implement, then run them green.** One commit per red→green cycle unless tasks are tightly coupled.
+- **Refactor comes after green**, never before.
+
+Tasks tagged `infra`, `migration`, `codegen`, or `ui` (styling-only) verify per the kind table instead. State the concrete check — the dry-run command, the regenerate-and-diff, the screenshot surface. Never invent a unit test that doesn't actually exercise the change.
 
 ## No placeholders
 
-These are plan failures — never ship a plan with them:
+Plan failures — never ship a plan containing them:
 
 - "TBD", "TODO", "fill in later", "see spec"
-- "Add appropriate error handling" without showing what
-- "Write tests for the above" without showing the tests
-- "Similar to Task N" — repeat the code; tasks may be read out of order
-- Code blocks that reference functions / types not defined in any earlier task
+- "Add appropriate error handling" without saying which errors and what happens
+- "Write tests for the above" without naming the cases
+- "Similar to Task N" — restate it; tasks get read out of order
+- A `Contract:` referencing a name no earlier task defines
+- A `Verify:` step with no command, or a command with no expected result
 
 ## Self-review
 
-After drafting the plan, read it once with fresh eyes:
+After drafting, read it once with fresh eyes:
 
-1. **Spec coverage:** Walk each spec section. Can you point to the task that implements it? List gaps and add tasks.
-2. **Placeholder scan:** Grep for the patterns above. Fix.
-3. **Type / name consistency:** Method names, type names, and property names referenced in later tasks match what earlier tasks defined.
-4. **UI verification:** If the spec touches frontend, the plan includes a verification task that hands off to a UI-validation skill (or names the surfaces / viewports / credentials that need checking).
-5. **TDD ordering:** Every behavioral task starts with a failing test step before any implementation code. Tasks that skip TDD have an explicit reason in the header (config-only, UI-only, codegen, migration). No task hides implementation before its test.
+1. **Spec coverage.** Walk each spec section; point at the task that implements it. Add tasks for gaps.
+2. **Placeholder scan.** Grep the patterns above.
+3. **Name consistency.** Every `Contract:` name matches what the defining task declared, and matches the spec.
+4. **File map completeness.** Every path touched by a task appears in the map, including deletions.
+5. **Frontier honesty.** Is the stated frontier actually the first non-`auto` task? Is any task tagged `auto` that really touches a live system, costs money, or needs a human eye?
+6. **Test ordering.** Every behavioral task names its cases before its implementation prose, and every `Verify:` carries an expected pre-implementation failure.
+7. **Trap coverage.** For each modified file: is there anything an executor would plausibly "clean up" that must not change? If yes, it needs a `Preserve:` line.
 
-Fix issues inline. No need to re-review — just fix and move on.
+Fix inline. No second pass.
 
 ## Auto-mode notes
 
-If executing in autonomous mode, every non-trivial decision the executor rolls with (instead of pausing to ask the user) goes into `.claude-plans/<active>/open-questions.md` per the convention. The plan itself doesn't enumerate these — they emerge during execution.
+In autonomous mode, every non-trivial decision the executor rolls with instead of pausing goes to `.claude-plans/<active>/open-questions.md`. The plan doesn't enumerate these — they emerge during execution.
+
+Auto mode does **not** override gates. A `live` task stops even in auto mode; the run reports that it stopped and why. Gates are a property of the work, not of the operator's patience.
