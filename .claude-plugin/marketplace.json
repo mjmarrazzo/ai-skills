@@ -16,7 +16,7 @@
     {
       "name": "planning",
       "source": "./plugins/planning",
-      "description": "Planning — blueprint, draft-ticket, grill-me."
+      "description": "Planning — blueprint, draft-ticket."
     },
     {
       "name": "executing",
@@ -36,7 +36,7 @@
     {
       "name": "toolkit",
       "source": "./plugins/toolkit",
-      "description": "Cross-cutting utilities — fdm, vscode-preview, caveman."
+      "description": "Cross-cutting utilities — fdm."
     },
     {
       "name": "orchestration",

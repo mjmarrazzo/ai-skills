@@ -56,7 +56,6 @@ Skills are grouped around a research → planning → executing → verifying �
 ### `planning` — Planning
 - [`blueprint`](plugins/planning/skills/blueprint/SKILL.md) — discovery questionnaire → parallel-reviewed spec → bite-sized implementation plan, all gitignored under `.claude-plans/`. Phase 1 reads knowledge-capture, offers pre-task-research, runs visual-digest on attached mockups. The entry point for substantive engineering work.
 - [`draft-ticket`](plugins/planning/skills/draft-ticket/SKILL.md) — light discovery → optional verification → high-level bullets → workshop loop → tracker-target confirm → create, for work the user is scoping but **not** implementing themselves. Tracker-agnostic: the body is the same whether it lands as a GitHub issue, a JIRA ticket, or elsewhere — resolved at create time, asking when unclear. Produces ONE ticket whose body is detailed enough for another team or LLM to plan and implement from. Interactive only — no auto mode.
-- [`grill-me`](plugins/planning/skills/grill-me/SKILL.md) — relentless one-question-at-a-time interview that stress-tests a plan, design, or proposal. With-docs variants sharpen domain language into `CONTEXT.md` and offer ADRs sparingly. Pokes holes before you commit.
 
 ### `executing` — Executing
 - [`execute-plan`](plugins/executing/skills/execute-plan/SKILL.md) — walks `plan.md` task-by-task in one of two modes (subagent-per-task with two-stage review, or inline batch with checkpoints). Owns `progress.json` for resume across sessions.
@@ -75,7 +74,6 @@ Skills are grouped around a research → planning → executing → verifying �
 
 ### `toolkit` — Cross-cutting utilities
 - [`fdm`](plugins/toolkit/skills/fdm/SKILL.md) — applies Functional Domain Modeling discipline when explicitly invoked or when the repo's doctrine adopts FDM (generic "implement X" requests stay with blueprint/execute-plan): pushes I/O to the edge, keeps domain functions pure, three-file (handler / domain / repository) decomposition, mock-free domain tests. References cover backend stacks (Go, Java/Spring, TypeScript/Node, Python/FastAPI) and frontend stacks (React, Vue, Svelte).
-- [`caveman`](plugins/toolkit/skills/caveman/SKILL.md) — togglable terse-output register. `/caveman on` for this session, `/caveman persist` to survive new sessions (requires a one-time SessionStart hook install). Code, URLs, paths, and sibling-skill templates preserved verbatim. Default OFF.
 
 ### `orchestration` — Fleet-style drivers
 - [`auto-ship`](plugins/orchestration/skills/auto-ship/SKILL.md) — the architect. Takes a work item to a **ready-for-review** PR autonomously: grants autonomy via a `.pipeline.json` written into the workspace, then relays sealed subagents through blueprint → execute-plan → verify-before-done → finish-branch, carrying only artifact paths between phases. Confirms work item + issue target + stop point once up front, then runs to a draft PR promoted to ready — and **never merges**. Halts and surfaces on blocked tasks, red verification, or stuck CI.

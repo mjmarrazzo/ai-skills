@@ -1,7 +1,7 @@
 {
   "name": "planning",
   "version": "0.1.0",
-  "description": "Planning phase — blueprint, draft-ticket, grill-me. Discovery-driven spec + plan, handoff ticket drafting, and relentless plan stress-testing.",
+  "description": "Planning phase — blueprint, draft-ticket. Discovery-driven spec + plan and handoff ticket drafting.",
   "author": {
     "name": "mjmarrazzo"
   }
