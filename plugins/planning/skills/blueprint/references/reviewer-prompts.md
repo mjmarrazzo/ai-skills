@@ -92,7 +92,9 @@ Inputs:
 
 The plan deliberately does NOT contain finished code — it carries intent, contracts,
 traps to avoid, and verification commands. Do not flag the absence of pasted
-implementations or pasted test bodies; that is the format working as intended.
+implementations or pasted test bodies; that is the format working as intended. Do flag the
+inverse: any code block that carries comment text an executor would paste into the repo —
+that rationale belongs in the plan's prose, not in the diff.
 
 Read the plan, then the spec, then the source files the plan says it modifies. Verify that
 the paths and line ranges actually exist and contain what the plan claims.

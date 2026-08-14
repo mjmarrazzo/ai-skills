@@ -32,6 +32,14 @@ Heuristic: **if the prose describing it would be longer than the code, paste the
 
 Everything else: describe it.
 
+### Pasted blocks carry no comments
+
+A code block in the plan is paste-ready, and an executor will paste it verbatim — comments and all. So the plan's *why* goes in the plan's prose, in `Preserve:` lines, and in `decisions.md` — never as comment text baked into a block to paste. A four-line rationale that reads well in the plan lands in the PR as comment noise on a file whose own idiom is one terse line, and it goes stale the moment the code moves.
+
+Two failure shapes to watch for, both from real plans: a comment warning against an approach nobody took (planner voice, meaningless at the code site), and a comment that names the very flag or string a `Verify:` step greps for (the plan's own comment breaks the plan's own check).
+
+When a rationale genuinely is load-bearing *at the code site*, instruct rather than pre-write: `Add a one-line comment noting the tenant namespace is separate from the distribution.` The executor writes it in the file's voice, at the file's density.
+
 ## Header
 
 ```markdown

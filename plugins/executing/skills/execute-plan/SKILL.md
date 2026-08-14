@@ -99,6 +99,12 @@ If on `main` / `master` / `develop`, refuse and ask the user to switch. If the p
 
 A ticket key is detected from the workspace slug or a branch prefix matching `^[A-Z][A-Z0-9]+-\d+`, or from a `CLAUDE.md` convention. When a ticket key is detected, inject into every drafter prompt (Mode 1) and every inline commit step (Mode 2): _All commit messages MUST start with `<KEY>: ` where `<KEY>` is the ticket key extracted from the workspace slug._ When no ticket key is present, proceed generically with no prefix.
 
+### 8. Comment discipline (both modes)
+
+The comment rule in `references/subagent-prompts.md` (drafter working agreement) is the canonical wording, and it binds **every** edit this skill produces — the Mode 1 drafter prompt carries it verbatim, and in Mode 2 the main session holds itself to the same rule on its own edits. Read it once at init; don't restate a second copy.
+
+**It outranks verbatim reproduction of the plan.** When a plan's code block contains comment text, strip it as you paste unless it carries a real *why* the surrounding file would want. That is not plan drift and never warrants a `NEEDS_CONTEXT` round trip — the plan owns the code's behavior, the file's own idiom owns its comment density. Legitimate comments still land: a non-obvious *why*, a workaround and its cause, a subtle invariant.
+
 ## Mode 1: Subagent-per-task
 
 ### Per-task lifecycle
@@ -358,6 +364,7 @@ If `verify-before-done` isn't installed, print:
 - **Don't pick inline batch as the default for non-trivial plans.** Subagent-per-task is the default; inline is the escape hatch for tight 1-3 task plans or main-thread reasoning visibility.
 - **Don't invent verification commands the plan didn't specify.** Extras belong in `verify-before-done`.
 - **Don't trust drafter-reported verification output.** The main session re-runs the plan's verification commands after `DONE`; the reviewer only sees the re-run output.
+- **Don't paste a plan's comment blocks into the repo.** Comment discipline outranks verbatim fidelity in both modes; the plan's rationale stays in the plan.
 - **Don't treat `BLOCKED` as a retry signal.** Fix the context, fix the plan, or escalate — don't loop.
 
 ## Composition
