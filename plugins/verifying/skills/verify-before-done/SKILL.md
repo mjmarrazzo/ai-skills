@@ -40,9 +40,10 @@ Full per-stack detection tables (TS/JS, Python, Go, Rust, JVM/Kotlin, monorepo o
 
 ## Order of checks
 
-**format → lint → typecheck → tests → plan verifications → ui-validation**
+**format → comments → lint → typecheck → tests → plan verifications → ui-validation**
 
 - **Format** first: fastest (~5s); format failures make lint output noisy.
+- **Comments**: a read of the diff, no tooling, advisory only (see Comment-density scan).
 - **Lint** before typecheck: syntactic errors block type inference; cascading errors obscure the root cause.
 - **Typecheck** before tests: a test passing against a type-unsafe call is not meaningful.
 - **Tests**: most expensive; only after static checks are clean.
@@ -70,6 +71,14 @@ Format changes required (report-only — say "fix the formatting" to apply):
 **Linters with `--fix` — never automatic.** `eslint --fix`, `ruff --fix`, `clippy --fix` can change program behavior. Default is report and stop. Opt-in via the "autofix lint" phrase; when set, print the full diff and confirm with the user before continuing.
 
 **Imports and unused vars — never auto-remove.** Too many legitimate patterns look like dead code mid-refactor.
+
+## Comment-density scan
+
+Read `git diff` against the branch base and flag added comment lines that don't earn their place: restatements of the code beneath them, banner or section dividers, step-by-step narration, TODO/placeholder leftovers, and any hunk whose comment density sits well above the surrounding file's. Comments carrying a non-obvious *why*, a workaround and its cause, or a subtle invariant are legitimate — leave them alone.
+
+This catches noise from any source: a pasted plan block, a subagent, or a hand edit. Report `file:line` with a one-line reason and the suggested cut.
+
+**Advisory only** — no exit code, never flips `result` to `"fail"`, never aborts the run. It's a judgment call, so it goes to the user as `(advisory)` and they decide. Skip silently when the diff adds no comment lines.
 
 ## Relevant tests strategy
 
@@ -106,6 +115,7 @@ If no `plan.v*.md` exists or the plan has no verification steps, skip this phase
 verify-before-done — <slug>
 ─────────────────────────────────────────────────────
 ✓ format          prettier           2 files would change   0.8s  (advisory)
+✓ comments        diff scan          1 noisy block          0.3s  (advisory)
 ✓ lint            eslint             0 errors               3.2s
 ✓ typecheck       tsc --noEmit       0 errors               6.1s
 ✓ tests           vitest run         14/14 passed           4.9s
@@ -148,6 +158,7 @@ Check `status` semantics: `pass` (ran, exit 0), `fail` (ran, non-zero — flips 
 | Failure class | First action | Handoff |
 |---|---|---|
 | Format | Report file list as advisory, continue | None |
+| Comment noise | Report file:line + suggested cut as advisory, continue | User decides |
 | Lint — whitespace / import order | Report, suggest "autofix lint" | User decides |
 | Lint — semantic (unused-vars, unsafe equality) | Report file:line + rule name | "lint error in `src/auth.ts:42` — fix or suppress?" |
 | Typecheck | Report file:line:col + message | debug-loop: typecheck failure + log path |

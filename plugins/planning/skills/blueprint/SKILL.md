@@ -350,6 +350,7 @@ Blueprint stands alone and composes loosely with siblings — it never embeds th
 - **Don't skip Phase 1 because the request "seems clear".** A 60-second questionnaire catches more rework than it costs.
 - **Don't let the spec grow implementations.** Signatures, schemas, and decisions — bodies belong to the plan. A spec the human can't read in a few minutes has stopped being a gate.
 - **Don't paste finished code into the plan** to feel thorough. It goes stale, it fakes TDD, and it displaces the traps and contracts that actually help the executor.
+- **Don't write comments into a plan's code blocks.** Whatever a pasted block contains, the executor pastes. Rationale belongs in the plan's prose and `decisions.md`; if it must live at the code site, tell the executor to add a one-line comment rather than pre-writing four.
 - **Don't escalate to a second reviewer to look thorough.** One reviewer per gate is the default; cross-family escalation is for irreversible or wide-blast-radius work.
 - **Don't ship a document without a provenance stamp.** A reader must be able to tell what reviewed it — including "nothing".
 - **Don't commit the workspace.** `.claude-plans/` is the user's working surface, never project documentation.
