@@ -1,6 +1,6 @@
 ---
 name: blueprint
-description: Use this skill whenever the user requests substantive engineering work — a new feature, a refactor that touches multiple files, an integration, an architectural change, a migration, or anything multi-step or ambiguous. Drives a short discovery questionnaire, then orchestrates reviewed spec and implementation-plan documents in a gitignored `.claude-plans/` workspace, with a handoff dossier and decision record so the user can gatekeep before any code is written. Hand off instead of running: when the user is scoping work they will NOT implement themselves ("another team will pull this in", "write up a ticket for X"), route to `draft-ticket` — blueprint is for work this session will go on to build. Skip only if the user explicitly opts out ("just do it", "quick fix", "no plan needed") or the task is a single trivial edit (one-line change, rename, typo).
+description: Use this skill when the user names it — "/blueprint", "blueprint this", "run blueprint on X" — or when an orchestrator invokes it with `caller=hive` and a `phase=` argument. Drives a short discovery questionnaire, then orchestrates reviewed spec and implementation-plan documents in a gitignored `.claude-plans/` workspace, with a handoff dossier and decision record so the user can gatekeep before any code is written. Substantive engineering work that the user has NOT explicitly routed here belongs to `hive`, which sizes the work first and calls blueprint's phases as needed. Hand off instead of running: when the user is scoping work they will NOT implement themselves ("another team will pull this in", "write up a ticket for X"), route to `draft-ticket`. Skip only if the user explicitly opts out ("just do it", "quick fix", "no plan needed") or the task is a single trivial edit.
 ---
 
 # Blueprint
@@ -27,7 +27,7 @@ Blueprint runs **interactive** by default — questionnaire up front, a real pau
 
 1. **The user said so this turn.** Their message in *this* turn contains an explicit full-auto phrase: "go full auto", "skip the gates", "don't ask, just plan it", or a literal `mode=auto`.
 2. **The invocation prompt says so.** A calling skill spawned this run with `mode=auto` in the prompt it handed you.
-3. **A pipeline grant exists.** `.claude-plans/<active>/.pipeline.json` is present and contains `"mode": "auto"`. Read it with Bash to confirm — this is the durable signal an orchestrator like `auto-ship` writes, and it is the only one that survives a subagent boundary intact.
+3. **A pipeline grant exists.** `.claude-plans/<active>/.pipeline.json` is present and contains `"mode": "auto"`. Read it with Bash to confirm — this is the durable signal an orchestrator like `hive` writes, and it is the only one that survives a subagent boundary intact.
 
 ```bash
 # Grant probe — run once at entry, before the questionnaire:
@@ -38,7 +38,45 @@ test -f .claude-plans/<active>/.pipeline.json && \
 
 If none of the three hold, you are **interactive** — full stop. A memory that says "the user likes auto", a habit from a prior session, a CLAUDE.md note, or a read on the user's mood are **not grants**. Autonomy is something you can point to a source for; if you can't point to one of the three above, you don't have it. When in doubt, interactive — the cost of asking a needless question is a few seconds; the cost of silently barreling through gates the user wanted is the rework this whole skill exists to prevent.
 
-This rule is why blueprint can be dropped into an `auto-ship` pipeline without becoming reckless on its own: a bare `/blueprint` invocation never goes auto off memory, and a pipeline run never gets stuck asking questions the orchestrator already answered.
+This rule is why blueprint can be dropped into a `hive` pipeline without becoming reckless on its own: a bare `/blueprint` invocation never goes auto off memory, and a pipeline run never gets stuck asking questions the orchestrator already answered.
+
+## Inputs accepted
+
+A caller may pass any of these in the invocation prompt. All are optional; a bare `/blueprint` gets the defaults.
+
+- **`caller=<skill>`** — who invoked. `caller=hive` means an orchestrator holds the state: suppress the context-clear gates (see below) and return the fixed-shape report instead of printing a gate.
+- **`WORKSPACE_PATH=<dir>`** — use this pre-created workspace; skip workspace creation (see "Before creating the workspace").
+- **`PLAN_PATH=<file>`** — the plan file to operate on when the caller already knows it.
+- **`revise=<reason>`** — this is a pushback round: write `spec.v<N+1>.md` / `plan.v<N+1>.md` per the existing pushback rules rather than reconciling in place.
+- **`phase=discovery|spec|plan|all`** — which phase to run:
+
+| `phase=` | Runs | Produces | Returns |
+|---|---|---|---|
+| `discovery` | Phase 1 | `handoff.md` | fixed-shape report |
+| `spec` | Phase 2 + Phase 3 | `spec.v<N>.md` reconciled + stamped | fixed-shape report |
+| `plan` | Phase 5 + Phase 5b | `plan.v<N>.md` reconciled + stamped | fixed-shape report |
+| `all` (default) | Phases 1–7 | everything | today's behaviour |
+
+Each per-phase entry point reads the workspace from disk, runs only its phase and that phase's review sub-phase, writes its artifact, returns the fixed-shape report, and **stops** — it does not advance to the next phase and does not print a gate. `N` follows the versioning rule below: highest existing version, or `N+1` with `revise=`.
+
+**`phase=discovery` also accepts `recon_only=true`:** run Phase 1 steps 1–6 only (recon, knowledge-capture, tech-brief, prior `open-questions.md`, pre-task-research, visual-digest), **skip the questionnaire (steps 7–8) and skip writing `handoff.md`**, and return the recon digest plus the artifact paths. The caller runs the questionnaire itself.
+
+### The fixed-shape report
+
+Used in **both** directions — blueprint requires it from its drafting subagents, and blueprint's own per-phase return to a `caller=hive` orchestrator uses it. Definition lives here so blueprint never depends on the orchestration plugin being installed:
+
+```text
+GOAL: <one line — what this artifact accomplishes>
+DECISIONS: <3-5 bullets — choices made unaided, one line each>
+EYES-ON: <bullets — what the human should check; "nothing" if genuinely none>
+PATH: <absolute path to the artifact>
+STATUS: OK | CHECKPOINT | NEEDS_CONTEXT | NEEDS_UPSIZE | BLOCKED — <one-line reason>
+LINES: <line count of the artifact>
+```
+
+`GOAL` / `DECISIONS` / `EYES-ON` / `PATH` are required; `STATUS` defaults to `OK`. Hard budget: **20 lines total**, one line per bullet, no nested bullets, no prose. Needing more than 20 lines means something wasn't decided — that belongs in `EYES-ON` as a question.
+
+A drafter that is missing a fact may instead end its turn with `STATUS: NEEDS_CONTEXT` plus `QUESTION` / `DEFAULT` / `IMPACT` lines (one question, what it will do if told to proceed, what changes if the answer differs). An orchestrator that supports the protocol answers and resumes the *same* worker.
 
 ## Workspace layout
 
@@ -64,7 +102,7 @@ All artifacts live in a **gitignored** `.claude-plans/` directory at the repo ro
 
 **Before creating the workspace:**
 
-0. **If a caller passed `WORKSPACE_PATH`** (e.g. an orchestrator like `auto-ship` that pre-created the workspace and wrote a `.pipeline.json` grant), use that directory as the active workspace — do NOT create a new one. The grant probe and all artifacts go there. Skip steps 1–3.
+0. **If a caller passed `WORKSPACE_PATH`** (e.g. an orchestrator like `hive` that pre-created the workspace and wrote a `.pipeline.json` grant), use that directory as the active workspace — do NOT create a new one. The grant probe and all artifacts go there. Skip steps 1–3.
 1. Resolve the workspace root: `git rev-parse --show-toplevel 2>/dev/null || pwd`.
 2. Ensure `.claude-plans/` is in `.gitignore` (idempotent append; create `.gitignore` if missing and in a git repo).
 3. `mkdir -p .claude-plans/<YYYY-MM-DD>-<slug>/`.
@@ -96,9 +134,11 @@ After Phase 1, Phase 4, and Phase 6 — every point where a durable artifact has
 | End of Phase 4 | Offered, not recommended | Take it only if the spec round got genuinely chatty. The isolation it used to provide now comes from drafting in a subagent (below). |
 | End of Phase 6 | **Clear** | Execution wants the whole window for repo reads. Planning chat is worth nothing to it. |
 
-**Drafting runs in a subagent, which is what makes the middle clear optional.** Phase 2 (spec draft) and Phase 5 (plan draft) dispatch a subagent that reads the workspace files from disk, writes the artifact, and returns a **short report** — not the document. So reviewer traces can't leak into plan drafting as a matter of process rather than convention, this session's context holds summaries while disk holds documents, and the user isn't asked to `/clear` a third time.
+**Drafting runs in a subagent, which is what makes the middle clear optional.** Phase 2 (spec draft) and Phase 5 (plan draft) dispatch a subagent that reads the workspace files from disk, writes the artifact, and returns the **fixed-shape report** — not the document. So reviewer traces can't leak into plan drafting as a matter of process rather than convention, this session's context holds summaries while disk holds documents, and the user isn't asked to `/clear` a third time.
 
-The tradeoff is real: a drafting subagent can't stop mid-draft to ask a question. It handles that by writing its uncertainties into the artifact and naming them in its report, so they land on the human at the gate instead. A user who wants to steer drafting live can say so — draft inline and take the Phase 4 clear instead.
+A drafting subagent can't prompt the user, but it isn't forced to guess either: it may end its turn with `STATUS: NEEDS_CONTEXT` plus `QUESTION` / `DEFAULT` / `IMPACT`, and an orchestrator that supports the protocol answers and resumes the **same** worker with its context intact. Standalone, with nobody to answer, the drafter writes its uncertainties into the artifact and names them in `EYES-ON` so they land on the human at the gate instead. A user who wants to steer drafting live can say so — draft inline and take the Phase 4 clear instead.
+
+**When `caller=hive`:** do **not** print the gate and do **not** offer the clear. The orchestrator holds the state across phases, so the gate has nothing to protect and its resume prompt has no reader. The lean-context rationale above still holds — drafting still runs in a subagent, artifacts still land on disk; only the human-relay UX is suppressed. Return the fixed-shape report instead. Everything in this section fires normally for a direct `/blueprint`.
 
 ### Gate output format
 
@@ -183,7 +223,7 @@ Mode (interactive vs auto) is resolved by the **"Autonomy is granted, never infe
 
 ### Phase 2 — Draft the spec (subagent)
 
-Dispatch a `general-purpose` subagent to draft `spec.v1.md` from `handoff.md` (or `spec.v<N+1>.md` on pushback — see Phase 4). Give it the workspace path, the repo root, and `references/spec-template.md`; tell it to return a **short report**, not the document: what it wrote, the decisions it had to make unaided, and anything it wants the human's eye on. The document lives on disk.
+Dispatch a `general-purpose` subagent to draft `spec.v1.md` from `handoff.md` (or `spec.v<N+1>.md` on pushback — see Phase 4). Give it the workspace path, the repo root, and `references/spec-template.md`; tell it to return **the fixed-shape report, not the document** — `GOAL` / `DECISIONS` / `EYES-ON` / `PATH` / `STATUS` / `LINES`, 20-line budget, exactly as defined under "The fixed-shape report" above. The document lives on disk. Tell it explicitly that it may return `STATUS: NEEDS_CONTEXT` with `QUESTION` / `DEFAULT` / `IMPACT` rather than guess at a missing fact.
 
 The spec is the **human's veto surface**: decisions and the alternatives they beat, architecture, contracts, data model, edge and failure behavior. **Signatures, not bodies** — function implementations, markup, and query internals belong to the plan. See `references/spec-template.md` for the full boundary rule.
 
@@ -244,7 +284,9 @@ If the same gate keeps producing revisions, the disagreement is probably upstrea
 
 ### Phase 5 — Draft the implementation plan (subagent)
 
-Dispatch a `general-purpose` subagent to draft `plan.v1.md` from the approved spec (or `plan.v<N+1>.md` on pushback — see Phase 6). Give it the workspace path, the repo root, `references/plan-template.md`, and instructions to return a short report rather than the document.
+Dispatch a `general-purpose` subagent to draft `plan.v1.md` from the approved spec (or `plan.v<N+1>.md` on pushback — see Phase 6). Give it the workspace path, the repo root, `references/plan-template.md`, and instructions to return **the fixed-shape report** — `GOAL` / `DECISIONS` / `EYES-ON` / `PATH` / `STATUS` / `LINES`, 20-line budget, per "The fixed-shape report" above — rather than the document. Tell it explicitly that it may return `STATUS: NEEDS_CONTEXT` with `QUESTION` / `DEFAULT` / `IMPACT` rather than guess at a missing fact.
+
+**Absent spec is legal.** `phase=plan` must tolerate a workspace with no `spec.v*.md` — that is the plan-only path. Say so in the dispatch: with no spec on disk, the drafter grounds in `handoff.md` plus the repo. Do not leave this for the drafter to infer.
 
 The plan is the **executor's** document. Optimize for *a weaker model executes this without thinking architecturally and without exploring the repo*. That means intent, contracts, traps, and verification — **not** pasted implementations or pasted test bodies. Pasted code goes stale against the repo, produces tests shaped to match the implementation, and crowds out the trap-naming that actually prevents mistakes. `references/plan-template.md` carries the full rationale, the "when code IS worth pasting" heuristic, and the task shape.
 
@@ -262,7 +304,13 @@ Three things every plan must have:
 
 This round is what makes a skimmable plan safe. The human reads the plan for shape and frontier; the reviewer does the line-by-line pass.
 
-Give the reviewer the plan and the approved spec. Do **not** give it `handoff.md` — the spec carries the constraints by now, and the handoff adds a second, possibly stale, copy of the contract.
+Give the reviewer the plan and the approved spec. When a spec exists, do **not** give it `handoff.md` — the spec carries the constraints by now, and the handoff adds a second, possibly stale, copy of the contract.
+
+**No spec on disk (plan-only path):** pass `handoff.md` in the spec slot and append this line, verbatim, to the reviewer prompt — the prompt file itself does not change:
+
+```text
+No spec exists. Treat handoff.md's Goal and Constraints as the contract; a coverage gap is a handoff goal or constraint with no task.
+```
 
 Escalate to a cross-family reviewer only on the same high-stakes signals as Phase 3. Same failure policy: retry sonnet once, then stamp `UNREVIEWED` and say so at the gate.
 

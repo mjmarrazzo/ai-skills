@@ -23,10 +23,31 @@ Rule of thumb: **a signature is a contract, a body is an implementation.** If a 
 
 Scale each section to the work. A medium feature runs 1-2 pages; a migration across three services maybe 4. A trivial change that ran through blueprint anyway can be half a page — that's fine. Length is not thoroughness.
 
+The `## At a glance` block below is the decision surface: it must let the human approve, push back, or decide to read on **in under a minute** — it is not a summary, everything after it is reference material for someone who already decided to dig.
+
+- Mandatory even on a half-page spec — a tiny artifact's block is three lines, not absent.
+- Written last, from the finished document — never drafted first as an outline.
+- Rewritten on every revision, sitting directly below the `**v<N> change:**` line (§ Version notes).
+
 ```markdown
 # <Slug> — Spec
 
 > Context, constraints, and discovery Q&A: `handoff.md`. Locked choices: `decisions.md`.
+
+## At a glance
+
+**What/why:** <one line: what this changes> — <one line: why it matters>.
+
+**Decisions locked:**
+- <decision — one line>
+- <decision — one line>
+- <decision — one line>
+
+**What to veto** (each points at its section):
+- <choice worth pushing back on> → § <section>
+- <choice worth pushing back on> → § <section>
+
+**Verification:** <one line — how this gets checked>
 
 ## Goal
 

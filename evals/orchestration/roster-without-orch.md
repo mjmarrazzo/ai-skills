@@ -1,6 +1,6 @@
 # Skill roster (orchestration NOT installed — baseline)
 
-You are the Claude Code skill router. Below are the installed skills and their `description` fields. The orchestration group (auto-ship, doctrine-audit) is NOT installed in this baseline.
+You are the Claude Code skill router. Below are the installed skills and their `description` fields. The orchestration group (hive, doctrine-audit) is NOT installed in this baseline.
 
 - **planning:blueprint** — Use whenever the user requests substantive engineering work — a new feature, a refactor that touches multiple files, an integration, an architectural change, a migration, or anything multi-step or ambiguous. Drives a discovery questionnaire, then parallel-reviewed spec and implementation-plan documents, with a handoff dossier so the user can gatekeep before any code is written. Skip only if the user explicitly opts out ("just do it", "quick fix") or the task is a single trivial edit.
 

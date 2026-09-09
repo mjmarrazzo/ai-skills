@@ -12,6 +12,12 @@ Its other half — repo orientation and contract research — exists to feed spe
 
 **Link to source files; don't paraphrase them.**
 
+The `## At a glance` block below is the decision surface: it must let the human approve, push back, or decide to read on **in under a minute** — it is not a summary, everything after it is reference material for someone who already decided to dig.
+
+- Mandatory even on a half-page handoff — a tiny artifact's block is three lines, not absent.
+- Written last, from the finished document — never drafted first as an outline.
+- Rewritten on every revision, sitting directly below the handoff's own change note, same rule as the spec's `**v<N> change:**` line.
+
 ```markdown
 # <Slug> — Handoff
 
@@ -20,6 +26,19 @@ Its other half — repo orientation and contract research — exists to feed spe
 **Ticket / source:** <PROJ-XXXX link, GitHub issue, Slack thread, or "ad-hoc request from user">
 
 **Date opened:** YYYY-MM-DD
+
+## At a glance
+
+**Goal:** <the goal sentence, verbatim from above>
+
+**Constraints (3-5):**
+- <constraint>
+- <constraint>
+- <constraint>
+
+**Read to produce this:** <sources — repo files, docs, prior tickets>
+
+**Still open:** <one line, or "none">
 
 ## Context
 
