@@ -1,61 +1,61 @@
 {
-  "skill_name": "orchestration (auto-ship + doctrine-audit)",
+  "skill_name": "orchestration (hive + doctrine-audit)",
   "eval_type": "triggering-classification",
   "notes": "Each prompt is routed by a subagent given the full skill roster. We measure whether the two new orchestrators fire when they should (recall) and are NOT stolen for ordinary single-phase work (precision). gold_with = correct skill when orchestration is installed. acceptable_without = plausible routes when orchestration is absent (baseline / graceful degradation).",
   "evals": [
     {
-      "id": 0, "name": "autoship-explicit-issue",
-      "prompt": "auto-ship issue #214 — take it all the way to a PR for me",
-      "category": "should-fire-autoship",
-      "gold_with": "orchestration:auto-ship",
+      "id": 0, "name": "hive-explicit-issue",
+      "prompt": "hive issue #214 — take it all the way to a PR for me",
+      "category": "should-fire-hive",
+      "gold_with": "orchestration:hive",
       "acceptable_without": ["planning:blueprint", "none"]
     },
     {
-      "id": 1, "name": "autoship-pipeline-phrase",
+      "id": 1, "name": "hive-pipeline-phrase",
       "prompt": "Run the whole pipeline autonomously on this ticket and get it to a ready-for-review PR without me babysitting it.",
-      "category": "should-fire-autoship",
-      "gold_with": "orchestration:auto-ship",
+      "category": "should-fire-hive",
+      "gold_with": "orchestration:hive",
       "acceptable_without": ["planning:blueprint", "none"]
     },
     {
-      "id": 2, "name": "autoship-end-to-end",
+      "id": 2, "name": "hive-end-to-end",
       "prompt": "Drive this end to end and open the PR — don't stop to ask me at each step.",
-      "category": "should-fire-autoship",
-      "gold_with": "orchestration:auto-ship",
+      "category": "should-fire-hive",
+      "gold_with": "orchestration:hive",
       "acceptable_without": ["planning:blueprint", "none"]
     },
     {
       "id": 3, "name": "decoy-plain-feature",
       "prompt": "Add a rate limiter to the login endpoint.",
-      "category": "decoy-not-autoship",
-      "gold_with": "planning:blueprint",
+      "category": "decoy-not-hive",
+      "gold_with": "orchestration:hive",
       "acceptable_without": ["planning:blueprint"]
     },
     {
       "id": 4, "name": "decoy-open-pr",
       "prompt": "Open a PR for this branch.",
-      "category": "decoy-not-autoship",
+      "category": "decoy-not-hive",
       "gold_with": "review:finish-branch",
       "acceptable_without": ["review:finish-branch"]
     },
     {
       "id": 5, "name": "decoy-execute-plan",
       "prompt": "Execute the plan.",
-      "category": "decoy-not-autoship",
+      "category": "decoy-not-hive",
       "gold_with": "executing:execute-plan",
       "acceptable_without": ["executing:execute-plan"]
     },
     {
       "id": 6, "name": "decoy-plan-together",
       "prompt": "Let's plan this feature together — I want to review each step before we write anything.",
-      "category": "decoy-not-autoship",
-      "gold_with": "planning:blueprint",
+      "category": "decoy-not-hive",
+      "gold_with": "orchestration:hive",
       "acceptable_without": ["planning:blueprint"]
     },
     {
       "id": 7, "name": "decoy-bare-ship-it",
       "prompt": "Looks good, ship it.",
-      "category": "decoy-not-autoship-hard",
+      "category": "decoy-not-hive-hard",
       "gold_with": "review:finish-branch",
       "acceptable_without": ["review:finish-branch"]
     },

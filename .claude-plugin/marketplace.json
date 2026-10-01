@@ -41,7 +41,7 @@
     {
       "name": "orchestration",
       "source": "./plugins/orchestration",
-      "description": "Orchestration — auto-ship, doctrine-audit. Fleet-style skills that drive the rest of the spine autonomously."
+      "description": "Orchestration — hive, doctrine-audit. Fleet-style skills that drive the rest of the spine autonomously."
     }
   ]
 }

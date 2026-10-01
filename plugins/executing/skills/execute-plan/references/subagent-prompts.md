@@ -45,7 +45,8 @@ You are implementing one task from an approved implementation plan.
 - Run the verification commands listed in the task. Report stdout/stderr.
 - Commit at the step the plan tells you to commit. Use the commit message the plan specifies.
 - If you finish all steps and verifications pass: report `DONE` with the commit SHA.
-- If a step is ambiguous and you can't proceed: report `NEEDS_CONTEXT` with the specific question. One round of context augmentation is allowed.
+- If a step is ambiguous and you can't proceed: end your turn with `STATUS: NEEDS_CONTEXT` plus `QUESTION:` (the specific question), `DEFAULT:` (what you'll do if told to proceed), and `IMPACT:` (what changes if the answer differs). Then wait — you will be resumed by message, not re-dispatched, once the question is answered.
+- If the task cannot be satisfied without a design change the plan does not authorize: report `NEEDS_UPSIZE` with a one-line reason. Do not redesign; do not exceed the task's file scope.
 - If a verification fails after one honest attempt to fix what looks like a clear mistake: report `BLOCKED` with the failing command's full output.
 - Do not improvise outside the task's file scope. Do not add tests the plan didn't specify.
 - Comment sparingly. A comment earns its place only when it says something the code can't: a non-obvious *why*, a workaround and its cause, a subtle invariant or gotcha. Do NOT restate what the code already says, narrate each step, add banner/section-divider comments, or leave TODO/placeholder noise. Match the file's existing comment density — if the surrounding code is uncommented, don't introduce comments. Same discipline for styles: no comments explaining self-evident CSS. Aim for code simple enough to read without a running commentary; if a block seems to *need* heavy comments to follow, prefer simplifying the code over annotating it.
@@ -69,9 +70,11 @@ The reviewer flagged the following issues with your previous commit (<sha>). Add
 
 One re-dispatch round only. If the reviewer rejects again, escalate to the user.
 
-### Re-dispatch on `NEEDS_CONTEXT`
+### Resume on `NEEDS_CONTEXT`
 
-Same drafter prompt, with the specific question's answer appended after the relevant digest. Do not dump the whole spec or whole handoff — answer the specific question the drafter raised. One augment per task; second `NEEDS_CONTEXT` from the same task converts to `BLOCKED`.
+Not a re-dispatch. The drafter that reported `NEEDS_CONTEXT` is stopped, not discarded — it keeps its context and whatever it already committed. The main session answers the specific `QUESTION` (never dumps the whole spec or handoff) and resumes the **same** drafter via `SendMessage`, including the `DEFAULT` it acted on if the answer confirms it. The drafter does not restate or redo work it already committed; it picks up from where it stopped. Cap: **three round-trips per drafter per task**; a fourth converts to `BLOCKED`. Under an auto grant with no user to ask, the main session answers with the drafter's own `DEFAULT` unless `IMPACT` names a halt condition, and logs the exchange to `open-questions.md`.
+
+A `CHECKPOINT` pause (see `SKILL.md` § Checkpoint policy) is a distinct status from `NEEDS_CONTEXT` and does not count against this cap.
 
 ## Reviewer prompt
 
@@ -133,7 +136,11 @@ These caps live in the main session's task-loop logic; the subagents don't enfor
 | `DONE` + reviewer `ACCEPT` | Mark task done, advance. | — |
 | `DONE` + reviewer `CHANGES_REQUESTED` | Re-dispatch drafter with reviewer notes. One re-review round. | 1 round, then escalate. |
 | `DONE` + reviewer `ESCALATE` | Pause, surface reviewer reasoning, ask user. | — |
-| `NEEDS_CONTEXT` | Augment prompt with answer to specific question, re-dispatch. | 1 augment, then convert to `BLOCKED`. |
+| `NEEDS_CONTEXT` | Answer the `QUESTION`, resume the **same** drafter via `SendMessage`. | 3 round-trips per task, then convert to `BLOCKED`. |
+| `CHECKPOINT` | Surface `TASK:` / `DIFFSTAT:` / `VERIFY:`; resolved by `go`/`stop` over `SendMessage` to the same worker. | Not counted against the `NEEDS_CONTEXT` cap. |
+| `NEEDS_UPSIZE` | Mark `upsize_requested` in `progress.json`; return `NEEDS_UPSIZE` plus reason to the caller. No fix attempt, no re-dispatch. | No retry budget, by design. |
 | `BLOCKED` | Invoke `debug-loop` with `caller=execute-plan`. | 2 `debug-loop` invocations per task, then hard pause. |
 
 After any cap is hit: hard pause, surface state to the user, do not auto-retry. The user owns the next call.
+
+Canonical status enum, spelled identically to `SKILL.md` and hive's `worker-prompts.md`: `OK | CHECKPOINT | NEEDS_CONTEXT | NEEDS_UPSIZE | BLOCKED`.

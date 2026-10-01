@@ -21,7 +21,7 @@ execute-plan runs **interactive** by default: it asks the mode-selection questio
 
 1. **The user said so this turn** — their message contains "go full auto", "skip the gates", "don't pause", or a literal `mode=auto`.
 2. **The invocation prompt says so** — a calling skill spawned this run with `mode=auto`.
-3. **A pipeline grant exists** — `.claude-plans/<active>/.pipeline.json` is present with `"mode": "auto"`. Confirm with Bash; this is the durable signal an orchestrator like `auto-ship` writes, and the only one that survives a subagent boundary intact.
+3. **A pipeline grant exists** — `.claude-plans/<active>/.pipeline.json` is present with `"mode": "auto"`. Confirm with Bash; this is the durable signal an orchestrator like `hive` writes, and the only one that survives a subagent boundary intact.
 
 ```bash
 test -f .claude-plans/<active>/.pipeline.json && \
@@ -59,7 +59,9 @@ Print the resolved path before doing anything else so the user can catch a wrong
 
 ### 3. Load companion artifacts
 
-From the same workspace directory: the current spec — `ls spec.v*.md | sort -V | tail -1`, falling back to a bare `spec.md` (**required** — refuse without it), `handoff.md` (**required**), `decisions.md` (optional; only for end-of-plan handoff, not per-task prompts), `progress.json` (optional; if present, this is a resumed run — see § Progress & resume).
+From the same workspace directory: the current spec — `ls spec.v*.md | sort -V | tail -1`, falling back to a bare `spec.md`; `handoff.md` (**required**); `decisions.md` (optional; only for end-of-plan handoff, not per-task prompts); `progress.json` (optional; if present, this is a resumed run — see § Progress & resume).
+
+**Spec is required unless no spec exists.** If neither a versioned `spec.v*.md` nor a bare `spec.md` is present in the workspace (the `plan-only` tier has no spec), build the spec digest from `handoff.md` alone, print exactly `no spec in this workspace (plan-only tier); grounding drafters in handoff.md`, and proceed. This does not relax anything else: `handoff.md` stays required, and this is the only condition under which a missing spec doesn't refuse — a lost spec that should exist still gets refused.
 
 ### 4. Freshness check
 
@@ -115,7 +117,8 @@ digraph task_lifecycle {
     "Drafter reports status" -> "Main session re-runs verification" [label="DONE"];
     "Main session re-runs verification" -> "Reviewer dispatched" [label="pass"];
     "Main session re-runs verification" -> "Invoke debug-loop" [label="fail"];
-    "Drafter reports status" -> "Augment context, re-dispatch" [label="NEEDS_CONTEXT"];
+    "Drafter reports status" -> "Answer question, resume same drafter" [label="NEEDS_CONTEXT"];
+    "Drafter reports status" -> "Mark upsize_requested, return NEEDS_UPSIZE" [label="NEEDS_UPSIZE"];
     "Drafter reports status" -> "Invoke debug-loop" [label="BLOCKED"];
     "Reviewer dispatched" -> "Decision";
     "Decision" -> "Mark task done in progress.json" [label="ACCEPT"];
@@ -131,7 +134,7 @@ One drafter, one reviewer, at most one re-review round per task. Caps are load-b
 
 Fresh `general-purpose` agent per task. Never reads the plan itself — the main session extracts the task text and injects it. Model `sonnet` by default, `opus` on re-dispatch after `BLOCKED`.
 
-Drafter prompt structure: see `references/subagent-prompts.md`. The prompt carries the spec digest, the handoff digest, the verbatim task text, the task's file scope, a working agreement (DONE/NEEDS_CONTEXT/BLOCKED status protocol, no out-of-scope edits, no plan mutation, comment discipline — comment only the non-obvious, match surrounding density), and the ticket prefix line when applicable.
+Drafter prompt structure: see `references/subagent-prompts.md`. The prompt carries the spec digest, the handoff digest, the verbatim task text, the task's file scope, a working agreement (`DONE`/`NEEDS_CONTEXT`/`NEEDS_UPSIZE`/`BLOCKED` status protocol, no out-of-scope edits, no plan mutation, comment discipline — comment only the non-obvious, match surrounding density), and the ticket prefix line when applicable.
 
 **Record the branch SHA before every dispatch** (`git rev-parse HEAD` → `pre_dispatch_sha`). The task's commit range is `<pre_dispatch_sha>..HEAD` — this covers multi-commit drafts and CHANGES_REQUESTED re-dispatch commits, which `<sha>~ <sha>` would miss.
 
@@ -165,12 +168,19 @@ The override exists because the original "sonnet on cost grounds" rationale dism
 
 ### Failures during drafting
 
+`NEEDS_CONTEXT` is a **resume, not a re-dispatch** (spec § Amendment A). The drafter ends its turn with `STATUS: NEEDS_CONTEXT` plus `QUESTION` / `DEFAULT` / `IMPACT`. The main session answers the specific `QUESTION` — never dumps the spec — and resumes the **same** drafter via `SendMessage`, so no completed work is redone. Cap: **three round-trips per drafter per task**; a fourth converts to `BLOCKED`. Under an auto grant with no user to ask, answer with the drafter's own `DEFAULT` unless `IMPACT` names a halt condition, and log the exchange to `open-questions.md`.
+
+A **checkpoint pause is a distinct status, not a `NEEDS_CONTEXT`**, and never counts against that cap — see § Checkpoint policy for the `CHECKPOINT` round-trip.
+
 | Drafter status | Action | Cap |
 |---|---|---|
-| `NEEDS_CONTEXT` | Answer the specific question (do not dump the whole spec); re-dispatch with the augmented prompt. | One augment per task; second `NEEDS_CONTEXT` converts to `BLOCKED`. |
+| `NEEDS_CONTEXT` | Answer the `QUESTION` (do not dump the whole spec); resume the same drafter by message. | 3 round-trips per task; a 4th converts to `BLOCKED`. |
+| `NEEDS_UPSIZE` | The task cannot be satisfied without a design change the plan does not authorize — not a failure, not missing context. Do not attempt a fix and do not re-dispatch: mark the task `upsize_requested` in `progress.json`, stop advancing, and return `NEEDS_UPSIZE` plus the drafter's one-line reason to the caller. With an orchestrator caller, the orchestrator applies its own upsize policy; with a direct user, surface it the way `ESCALATE` is surfaced above — reasoning shown, user decides. | No retry budget, by design. |
 | `BLOCKED` | Invoke `debug-loop` with the failing output, task definition, diff if any, and `caller=execute-plan`. | 2 `debug-loop` invocations per task. |
 
 After any cap is hit: hard pause, surface state, do not auto-retry. The user owns the next call.
+
+Canonical drafter/worker status enum, spelled identically to `references/subagent-prompts.md` and hive's `worker-prompts.md`: `OK | CHECKPOINT | NEEDS_CONTEXT | NEEDS_UPSIZE | BLOCKED`.
 
 ## Mode 2: Inline batch
 
@@ -193,7 +203,17 @@ Checkpoints fire at task boundaries in **both** modes: after reviewer `ACCEPT` i
 | `per-N` | Pause after every N tasks. N capped at 5 so the user doesn't lose the plot. | Both modes |
 | `on-failure-only` | Don't pause unless a step or verification fails. | Both modes |
 
-**Implicit pause** (overrides any policy, either mode): always pause on test failure, lint failure, or any non-zero exit from a verification command. The user can re-engage and let the skill hand to `debug-loop`.
+**`oversight` picks the policy, when present.** The grant probe itself (§ Autonomy is granted, never inferred) is unchanged — interactive-vs-auto still resolves from those three sources. What's new is one extra read: if `oversight` is present in `.pipeline.json`, use it to pick the checkpoint policy instead of defaulting.
+
+| `oversight` | Mode question | Execution mode | Checkpoint policy |
+|---|---|---|---|
+| `every step` | asked (today's interactive path) | user's pick, default subagent-per-task | `per-task` |
+| `plan check` | skipped | subagent-per-task | `on-failure-only` |
+| `auto` | skipped | subagent-per-task | `on-failure-only` |
+
+**Implicit pause** (overrides any policy, either mode, and never waived at any `oversight` level): always pause on test failure, lint failure, or any non-zero exit from a verification command. The user can re-engage and let the skill hand to `debug-loop`.
+
+**`CHECKPOINT` under `oversight=every step`.** When execute-plan itself runs as a sealed worker (an orchestrator caller with `oversight=every step`), a `per-task` checkpoint is surfaced with the canonical `STATUS: CHECKPOINT` plus `TASK:` / `DIFFSTAT:` / `VERIFY:`, resolved by the caller `SendMessage`ing `go` or `stop` back to this same sealed run — not a fresh dispatch. `CHECKPOINT` round-trips never count against the `NEEDS_CONTEXT` cap (see § Failures during drafting); without that carve-out a ten-task plan at `every step` would exhaust a three-round-trip cap at task four.
 
 Over-configurable is a smell. We stop here. The user can interrupt mid-execution and redirect.
 

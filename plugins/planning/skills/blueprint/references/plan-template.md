@@ -40,6 +40,12 @@ Two failure shapes to watch for, both from real plans: a comment warning against
 
 When a rationale genuinely is load-bearing *at the code site*, instruct rather than pre-write: `Add a one-line comment noting the tenant namespace is separate from the distribution.` The executor writes it in the file's voice, at the file's density.
 
+The `## At a glance` block below is the decision surface: it must let the human approve, push back, or decide to read on **in under a minute** — it is not a summary, everything after it is reference material for someone who already decided to dig.
+
+- Mandatory even on a half-page plan — a tiny artifact's block is three lines, not absent.
+- Written last, from the finished document — never drafted first as an outline.
+- Rewritten on every revision, sitting directly below the plan's own change note, same rule as the spec's `**v<N> change:**` line.
+
 ## Header
 
 ```markdown
@@ -52,6 +58,19 @@ When a rationale genuinely is load-bearing *at the code site*, instruct rather t
 **Stack / verify:** <key libraries, plus the commands that gate this repo — e.g. `npm run typecheck && npm run lint`>
 
 **Autonomy frontier: Tasks 1–<K> run unattended. Task <K+1> needs you (<gate reason>).**
+
+## At a glance
+
+**Tasks:** <N total — model/gate mix, e.g. 8 sonnet / 2 opus>.
+
+**Autonomy frontier:** <the frontier line above, copied verbatim>
+
+**File map:** <+X create · ~Y modify · -Z delete>
+
+**Riskiest traps (3):**
+1. <trap>
+2. <trap>
+3. <trap>
 
 ---
 ```

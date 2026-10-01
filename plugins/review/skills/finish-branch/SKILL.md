@@ -38,7 +38,7 @@ If none hold, you are **interactive** — a memory or the user's mood is not a g
 
 **Auto never waives a safety gate.** The pre-flight gates below (dirty tree, verify.json freshness, PR-from-main hard block) block in *both* modes — auto means "don't stop to ask permission for the things you'd otherwise ask about", not "skip the checks that protect the branch". The one human-in-the-loop checkpoint that auto *does* skip is the PR-title confirmation; under a grant, use the generated title and note it in `open-questions.md`.
 
-**Stop point under a grant.** If `.pipeline.json` carries `"stop_at": "ready-for-review"` (the `auto-ship` default), finish-branch's normal terminus — promote the draft to ready and ping human reviewers — *is* the stop. Do not merge; merging is always the human's call.
+**Stop point under a grant.** If `.pipeline.json` carries `"stop_at": "ready-for-review"` (the orchestrator default — `hive` writes it), finish-branch's normal terminus — promote the draft to ready and ping human reviewers — *is* the stop. Do not merge; merging is always the human's call.
 
 ## Pre-flight gates
 
