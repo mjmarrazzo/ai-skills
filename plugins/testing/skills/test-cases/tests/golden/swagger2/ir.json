@@ -1,0 +1,506 @@
+{
+  "source": "tests/fixtures/specs/swagger2.yaml",
+  "sha256": "1ead4541eae29967a40044c6ba4888bcffc61eb9cbd9a6fd6e2efdc39a6e02da",
+  "version": "2.0",
+  "title": "Accounts API",
+  "server_path": "/api",
+  "operations": [
+    {
+      "method": "POST",
+      "path": "/accounts",
+      "operation_id": "postAccounts",
+      "op_id_synthesized": true,
+      "spec_ref": "#/paths/~1accounts/post",
+      "tags": [],
+      "summary": "Create an account",
+      "description": "",
+      "params": [],
+      "body": {
+        "content_types": [
+          "application/json"
+        ],
+        "media": "application/json",
+        "required": true,
+        "schema_name": "Account",
+        "root_type": "object",
+        "additional_properties": null,
+        "fields": [
+          {
+            "path": "id",
+            "name": "id",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": true,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "Base",
+            "spec_ref": "#/definitions/Base/properties/id",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "createdAt",
+            "name": "createdAt",
+            "type": "string",
+            "format": "date-time",
+            "required": false,
+            "nullable": false,
+            "read_only": true,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "Base",
+            "spec_ref": "#/definitions/Base/properties/createdAt",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "email",
+            "name": "email",
+            "type": "string",
+            "format": "email",
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "Account",
+            "spec_ref": "#/definitions/Account/allOf/1/properties/email",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "name",
+            "name": "name",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": true,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "maxLength": 30
+            },
+            "schema_ref": "Account",
+            "spec_ref": "#/definitions/Account/properties/name",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "age",
+            "name": "age",
+            "type": "integer",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "exclusiveMinimum": 18
+            },
+            "schema_ref": "Account",
+            "spec_ref": "#/definitions/Account/properties/age",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "metadata",
+            "name": "metadata",
+            "type": "object",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "Account",
+            "spec_ref": "#/definitions/Account/properties/metadata",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "tree",
+            "name": "tree",
+            "type": "object",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "Node",
+            "spec_ref": "#/definitions/Account/properties/tree",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "tree.label",
+            "name": "label",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "Node",
+            "spec_ref": "#/definitions/Node/properties/label",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "tree.children",
+            "name": "children",
+            "type": "array",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "Node",
+            "spec_ref": "#/definitions/Node/properties/children",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "tree.children[]",
+            "name": "children[]",
+            "type": "object",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "Node",
+            "spec_ref": "#/definitions/Node/properties/children/items",
+            "description": "",
+            "truncated": true
+          }
+        ],
+        "spec_ref": "#/paths/~1accounts/post/parameters/1"
+      },
+      "security": {
+        "secured": true,
+        "schemes": [],
+        "header_param": true,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "Created",
+          "schema_name": "Account",
+          "content_types": [
+            "application/json"
+          ]
+        },
+        {
+          "status": "400",
+          "description": "Bad request",
+          "schema_name": null,
+          "content_types": [
+            "application/json"
+          ]
+        }
+      ],
+      "unsupported": [
+        "recursion at #/definitions/Node/properties/children/items"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/accounts/{accountId}",
+      "operation_id": "getAccount_134ad2",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1accounts~1{accountId}/get",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "accountId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "accountId",
+            "name": "accountId",
+            "type": "string",
+            "format": "uuid",
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1accounts~1{accountId}/parameters/0",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1accounts~1{accountId}/parameters/0"
+        }
+      ],
+      "body": null,
+      "security": {
+        "secured": true,
+        "schemes": [],
+        "header_param": true,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "OK",
+          "schema_name": "Account",
+          "content_types": [
+            "application/json"
+          ]
+        },
+        {
+          "status": "404",
+          "description": "Not found",
+          "schema_name": null,
+          "content_types": [
+            "application/json"
+          ]
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "GET",
+      "path": "/accounts/{accountId}/notes",
+      "operation_id": "getAccount_357eb4",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1accounts~1{accountId}~1notes/get",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "accountId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "accountId",
+            "name": "accountId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1accounts~1{accountId}~1notes/get/parameters/0",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1accounts~1{accountId}~1notes/get/parameters/0"
+        }
+      ],
+      "body": null,
+      "security": {
+        "secured": true,
+        "schemes": [],
+        "header_param": true,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "OK",
+          "schema_name": null,
+          "content_types": [
+            "application/json"
+          ]
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "POST",
+      "path": "/accounts/{accountId}/avatar",
+      "operation_id": "uploadAvatar",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1accounts~1{accountId}~1avatar/post",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "accountId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "accountId",
+            "name": "accountId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/0",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/0"
+        }
+      ],
+      "body": {
+        "content_types": [
+          "multipart/form-data"
+        ],
+        "media": "multipart/form-data",
+        "required": true,
+        "schema_name": null,
+        "root_type": "object",
+        "additional_properties": null,
+        "fields": [
+          {
+            "path": "caption",
+            "name": "caption",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "maxLength": 100
+            },
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/2",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "file",
+            "name": "file",
+            "type": "file",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/3",
+            "description": "",
+            "truncated": false
+          }
+        ],
+        "spec_ref": "#/paths/~1accounts~1{accountId}~1avatar/post/parameters"
+      },
+      "security": {
+        "secured": true,
+        "schemes": [],
+        "header_param": true,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "Uploaded",
+          "schema_name": null,
+          "content_types": [
+            "application/json"
+          ]
+        }
+      ],
+      "unsupported": []
+    }
+  ],
+  "schemas": {
+    "Base": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "readOnly": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        }
+      }
+    },
+    "Account": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Base"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email"
+            }
+          },
+          "required": [
+            "email"
+          ]
+        }
+      ],
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 30,
+          "x-nullable": true
+        },
+        "age": {
+          "type": "integer",
+          "minimum": 18,
+          "exclusiveMinimum": true
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "additionalProp1": {
+              "type": "string"
+            }
+          }
+        },
+        "tree": {
+          "$ref": "#/definitions/Node"
+        }
+      }
+    },
+    "Node": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node"
+          }
+        }
+      }
+    }
+  },
+  "security_schemes": {
+    "apiKey": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "x-api-key"
+    }
+  },
+  "warnings": [
+    "dropped additionalProp1 at #/definitions/Account/properties/metadata/properties/additionalProp1",
+    "skipped x-amazon-apigateway-any-method at /proxy",
+    "duplicate operationId getAccount; suffixed every member"
+  ]
+}

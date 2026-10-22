@@ -1,7 +1,7 @@
 PY ?= python3
 export PYTHONPATH := scripts
 
-.PHONY: check unit check-ruby corpus
+.PHONY: check unit check-ruby corpus golden
 
 check: unit check-ruby
 
@@ -13,3 +13,9 @@ check-ruby:
 
 corpus:
 	$(PY) -m unittest tests.test_corpus -v
+
+golden:
+	@test "$(UPDATE)" = "1" || { echo "golden: refusing to rewrite goldens without UPDATE=1"; exit 1; }
+	$(PY) -m tests.regen_golden
+	git status --short -- tests/golden
+	git diff --stat -- tests/golden

@@ -5,7 +5,7 @@ import unittest
 from contextlib import contextmanager
 from pathlib import Path
 
-from test_cases import ir, load
+from test_cases import derive, graph as graph_mod, ir, load, profile, validate, yamlfmt
 
 from . import support
 
@@ -16,6 +16,21 @@ KNOWN_DIVERGENCES: dict[str, str] = {
         "Ruby 2.6 libyaml rejects a plain scalar containing ':' inside a flow sequence ([a:b]); PyYAML accepts it"
     ),
 }
+
+
+KNOWN_GRAPH_ERRORS: dict[str, str] = {
+    "msp-console/docs/api.yaml": "/msp/mfe-registry and /msp/mfe-registry/{service}/{major} slug to one id",
+    "msp-form-api/api.yaml": "/forms and /forms/{a}/{b} slug to one id",
+    "dsd-resident-portal-backend/backend-api/api.yaml": "/profile-msp and /profile/msp slug to one id",
+    "rep-cms/docs/api.yaml": "/tenants/{t}/entries and /tenants/{t}/entries/{a}/{b} slug to one id",
+}
+
+
+def _derive_all(spec):
+    g = graph_mod.build_graph(spec)
+    prof = profile.resolve(None)
+    cases = [*derive.derive(spec, g, prof), *profile.profile_cases(spec, g, prof)]
+    return derive.order_cases(profile.apply(cases, spec, g, prof), spec, g)
 
 
 @contextmanager
@@ -76,6 +91,15 @@ class CorpusTest(unittest.TestCase):
                         rb_doc = load.load_doc(path)
                     rb_dict = ir.to_dict(ir.build_ir(rb_doc, path, digest))
                     self.assertEqual(py_dict, rb_dict)
+
+                known = next((r for k, r in KNOWN_GRAPH_ERRORS.items() if path.endswith(k)), None)
+                if known is not None:
+                    with self.assertRaises(graph_mod.GraphError):
+                        graph_mod.build_graph(spec)
+                else:
+                    cases = _derive_all(spec)
+                    self.assertEqual(validate.invariants(cases, spec), [])
+                    self.assertEqual(yamlfmt.dump(cases), yamlfmt.dump(_derive_all(spec)))
 
                 entry = self.survey.get(path)
                 if entry is not None:

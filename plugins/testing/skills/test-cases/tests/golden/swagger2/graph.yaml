@@ -1,0 +1,38 @@
+version: 1
+entities:
+  - id: "accounts"
+    collection_path: "/accounts"
+    item_path: "/accounts/{accountId}"
+    id_param: "accountId"
+    parent: null
+    ops:
+      C: "postAccounts"
+      R: "getAccount_134ad2"
+    actions:
+      - "uploadAvatar"
+    singleton: false
+    lifecycle: true
+    id_candidate:
+      field: "id"
+      source: "spec-candidate"
+    depends_on: []
+    needs: []
+  - id: "accounts-notes"
+    collection_path: "/accounts/{accountId}/notes"
+    item_path: null
+    id_param: null
+    parent: "accounts"
+    ops:
+      R: "getAccount_357eb4"
+    actions: []
+    singleton: true
+    lifecycle: false
+    id_candidate: null
+    depends_on:
+      - "accounts"
+    needs:
+      - "accounts"
+order:
+  - "accounts"
+  - "accounts-notes"
+warnings: []

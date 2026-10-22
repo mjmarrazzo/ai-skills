@@ -1,0 +1,1632 @@
+version: 1
+engine: "test-cases/0.1.0"
+spec:
+  source: "tests/fixtures/specs/oas3.yaml"
+  version: "3.0.3"
+  sha256: "ad910f29708d38a01efb06e3ee9175467a92355aa4d5a60ed9ac753ecc8cb75a"
+profile:
+  name: "generic"
+  source: null
+error_shape:
+  code_key: "code"
+  violations_key: "violations"
+  field_key: "field"
+  message_key: "message"
+entity: "parts"
+cases:
+  - id: "parts.createPart.body.widgetId.required.missing"
+    title: "POST /v1/{tenantId}/parts rejects widgetId: required.missing"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "widgetId"
+    rule: "required.missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/widgetId"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "widgetId"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "widgetId"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "parts.createPart.body.widgetId.required.null"
+    title: "POST /v1/{tenantId}/parts rejects widgetId: required.null"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "widgetId"
+    rule: "required.null"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/widgetId"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        widgetId: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "widgetId"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "parts.createPart.body.widgetId.required.empty"
+    title: "POST /v1/{tenantId}/parts rejects widgetId: required.empty"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "widgetId"
+    rule: "required.empty"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/widgetId"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        widgetId: ""
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "widgetId"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "parts.createPart.body.widgetId.type.wrong.int"
+    title: "POST /v1/{tenantId}/parts rejects widgetId: type.wrong int"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "widgetId"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/widgetId/type"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        widgetId: 123
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "widgetId"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "parts.createPart.body.widgetId.format.short"
+    title: "POST /v1/{tenantId}/parts rejects widgetId: format.short"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "widgetId"
+    rule: "format.short"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/widgetId/format"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        widgetId: "123e4567-e89b-12d3-a456-42661417400"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "widgetId"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "parts.createPart.body.widgetId.format.long"
+    title: "POST /v1/{tenantId}/parts rejects widgetId: format.long"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "widgetId"
+    rule: "format.long"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/widgetId/format"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        widgetId: "123e4567-e89b-12d3-a456-4266141740000"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "widgetId"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "parts.createPart.body.widgetId.format.non_hex"
+    title: "POST /v1/{tenantId}/parts rejects widgetId: format.non_hex"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "widgetId"
+    rule: "format.non_hex"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/widgetId/format"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        widgetId: "123e4567-e89b-12d3-a456-42661417400g"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "widgetId"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "parts.createPart.body.widgetId.format.no_hyphens"
+    title: "POST /v1/{tenantId}/parts rejects widgetId: format.no_hyphens"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "widgetId"
+    rule: "format.no_hyphens"
+    negative: true
+    technique: "ep"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/widgetId/format"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        widgetId: "123e4567e89b12d3a456426614174000"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "widgetId"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "parts.createPart.body.widgetId.unbounded.oversize"
+    title: "POST /v1/{tenantId}/parts rejects widgetId: unbounded.oversize"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "RESOURCE_LIMIT"
+    loc: "body"
+    field: "widgetId"
+    rule: "unbounded.oversize"
+    negative: true
+    technique: "owasp-api4"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/widgetId"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        widgetId: "<<str:10000>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 400
+        - 413
+      code: null
+      violations:
+        - field: "widgetId"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "parts.createPart.body.label.required.missing"
+    title: "POST /v1/{tenantId}/parts rejects label: required.missing"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "label"
+    rule: "required.missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/label"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "label"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "label"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "parts.createPart.body.label.required.null"
+    title: "POST /v1/{tenantId}/parts rejects label: required.null"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "label"
+    rule: "required.null"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/label"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        label: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "label"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "parts.createPart.body.label.required.empty"
+    title: "POST /v1/{tenantId}/parts rejects label: required.empty"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "label"
+    rule: "required.empty"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/label"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        label: ""
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "label"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "parts.createPart.body.label.type.wrong.int"
+    title: "POST /v1/{tenantId}/parts rejects label: type.wrong int"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "label"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/label/type"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        label: 123
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "label"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "parts.createPart.body.label.maxLength.minus1"
+    title: "POST /v1/{tenantId}/parts accepts label: maxLength.minus1"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "LENGTH_BOUNDARY_VALID"
+    loc: "body"
+    field: "label"
+    rule: "maxLength.minus1"
+    negative: false
+    technique: "bva-3"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/label/maxLength"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        label: "<<str:9>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 201
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "parts.createPart.body.label.maxLength.max"
+    title: "POST /v1/{tenantId}/parts accepts label: maxLength.max"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "LENGTH_BOUNDARY_VALID"
+    loc: "body"
+    field: "label"
+    rule: "maxLength.max"
+    negative: false
+    technique: "bva-3"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/label/maxLength"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        label: "<<str:10>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 201
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "parts.createPart.body.label.maxLength.plus1"
+    title: "POST /v1/{tenantId}/parts rejects label: maxLength.plus1"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "LENGTH_INVALID"
+    loc: "body"
+    field: "label"
+    rule: "maxLength.plus1"
+    negative: true
+    technique: "bva-3"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/components/schemas/PartCreate/properties/label/maxLength"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        label: "<<str:11>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "label"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "parts.createPart.body.role.mass_assignment.role"
+    title: "POST /v1/{tenantId}/parts rejects role: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "role"
+    rule: "mass_assignment.role"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post/requestBody"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        role: "admin"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "role"
+      body: null
+      not_persisted:
+        - "role"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.body.tenantId.mass_assignment.tenantId"
+    title: "POST /v1/{tenantId}/parts rejects tenantId: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "tenantId"
+    rule: "mass_assignment.tenantId"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post/requestBody"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tenantId: "other-tenant"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "tenantId"
+      body: null
+      not_persisted:
+        - "tenantId"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.body.status.mass_assignment.status"
+    title: "POST /v1/{tenantId}/parts rejects status: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "status"
+    rule: "mass_assignment.status"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post/requestBody"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        status: "ACTIVE"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "status"
+      body: null
+      not_persisted:
+        - "status"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.body.price.mass_assignment.price"
+    title: "POST /v1/{tenantId}/parts rejects price: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "price"
+    rule: "mass_assignment.price"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post/requestBody"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        price: 0
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "price"
+      body: null
+      not_persisted:
+        - "price"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.body.id.mass_assignment.id"
+    title: "POST /v1/{tenantId}/parts rejects id: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "id"
+    rule: "mass_assignment.id"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post/requestBody"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        id: "00000000-0000-0000-0000-000000000000"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "id"
+      body: null
+      not_persisted:
+        - "id"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.body.isAdmin.mass_assignment.isAdmin"
+    title: "POST /v1/{tenantId}/parts rejects isAdmin: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "isAdmin"
+    rule: "mass_assignment.isAdmin"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post/requestBody"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        isAdmin: true
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "isAdmin"
+      body: null
+      not_persisted:
+        - "isAdmin"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.path.tenantId.path.not_found"
+    title: "POST /v1/{tenantId}/parts rejects tenantId: path.not_found"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "NOT_FOUND"
+    loc: "path"
+    field: "tenantId"
+    rule: "path.not_found"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post/parameters/0"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path:
+        tenantId: "<<nonexistent:tenantId>>"
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 404
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "parts.createPart.auth._.auth.missing"
+    title: "POST /v1/{tenantId}/parts rejects op: auth.missing"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "AUTH_MISSING"
+    loc: "auth"
+    field: null
+    rule: "auth.missing"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "parts.createPart.auth._.auth.malformed"
+    title: "POST /v1/{tenantId}/parts rejects op: auth.malformed"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "AUTH_INVALID"
+    loc: "auth"
+    field: null
+    rule: "auth.malformed"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "malformed"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "parts.createPart.op._.happy.full"
+    title: "POST /v1/{tenantId}/parts accepts op: happy.full"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 201
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.op._.required.all_missing"
+    title: "POST /v1/{tenantId}/parts rejects op: required.all_missing"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "REQUIRED_MISSING"
+    loc: "op"
+    field: null
+    rule: "required.all_missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "replace"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.op._.body.malformed"
+    title: "POST /v1/{tenantId}/parts rejects op: body.malformed"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.malformed"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "{\""
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.op._.body.array"
+    title: "POST /v1/{tenantId}/parts rejects op: body.array"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.array"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "[]"
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.op._.body.empty"
+    title: "POST /v1/{tenantId}/parts rejects op: body.empty"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "EMPTY_BODY"
+    loc: "op"
+    field: null
+    rule: "body.empty"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "none"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.createPart.op._.body.content_type"
+    title: "POST /v1/{tenantId}/parts rejects op: body.content_type"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "WRONG_CONTENT_TYPE"
+    loc: "op"
+    field: null
+    rule: "body.content_type"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: "text/plain"
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 415
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "parts.createPart.lifecycle._.lifecycle.crud"
+    title: "parts: create, read and mutate through the lifecycle"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/parts"
+      operationId: "createPart"
+    kind: "LIFECYCLE"
+    loc: "lifecycle"
+    field: null
+    rule: "lifecycle.crud"
+    negative: false
+    technique: "lifecycle"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts/post"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps:
+      - operationId: "createPart"
+        expect: 201
+        capture:
+          partId: "partId"
+      - operationId: "getPart"
+        expect: 200
+        capture: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "parts.getPart.path.tenantId.path.not_found"
+    title: "GET /v1/{tenantId}/parts/{partId} rejects tenantId: path.not_found"
+    operation:
+      method: "GET"
+      path: "/v1/{tenantId}/parts/{partId}"
+      operationId: "getPart"
+    kind: "NOT_FOUND"
+    loc: "path"
+    field: "tenantId"
+    rule: "path.not_found"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get/parameters/0"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path:
+        tenantId: "<<nonexistent:tenantId>>"
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 404
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "parts.getPart.path.partId.path.not_found"
+    title: "GET /v1/{tenantId}/parts/{partId} rejects partId: path.not_found"
+    operation:
+      method: "GET"
+      path: "/v1/{tenantId}/parts/{partId}"
+      operationId: "getPart"
+    kind: "NOT_FOUND"
+    loc: "path"
+    field: "partId"
+    rule: "path.not_found"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get/parameters/1"
+    needs:
+      - "widgets"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path:
+        partId: "<<nonexistent:partId>>"
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 404
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "parts.getPart.auth._.auth.missing"
+    title: "GET /v1/{tenantId}/parts/{partId} rejects op: auth.missing"
+    operation:
+      method: "GET"
+      path: "/v1/{tenantId}/parts/{partId}"
+      operationId: "getPart"
+    kind: "AUTH_MISSING"
+    loc: "auth"
+    field: null
+    rule: "auth.missing"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get"
+    needs:
+      - "widgets"
+      - "parts"
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "parts.getPart.auth._.auth.malformed"
+    title: "GET /v1/{tenantId}/parts/{partId} rejects op: auth.malformed"
+    operation:
+      method: "GET"
+      path: "/v1/{tenantId}/parts/{partId}"
+      operationId: "getPart"
+    kind: "AUTH_INVALID"
+    loc: "auth"
+    field: null
+    rule: "auth.malformed"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get"
+    needs:
+      - "widgets"
+      - "parts"
+    actor: null
+    auth: "malformed"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "parts.getPart.op._.happy.full"
+    title: "GET /v1/{tenantId}/parts/{partId} accepts op: happy.full"
+    operation:
+      method: "GET"
+      path: "/v1/{tenantId}/parts/{partId}"
+      operationId: "getPart"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get"
+    needs:
+      - "widgets"
+      - "parts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []

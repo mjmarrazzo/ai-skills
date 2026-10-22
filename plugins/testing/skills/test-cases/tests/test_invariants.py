@@ -126,6 +126,10 @@ class FieldPaths(unittest.TestCase):
         c = case(kind="UNKNOWN_FIELD", input={"body": {"__unexpected_field__": "x"}})
         self.assertEqual(run(c), [])
 
+    def test_unknown_field_inside_array_items_ok(self):
+        c = case(kind="UNKNOWN_FIELD", input={"body": {"tags": [{"__unexpected_field__": "x"}]}})
+        self.assertEqual(run(c), [])
+
     def test_mass_assignment_existing_field_errors(self):
         c = case(kind="MASS_ASSIGNMENT", input={"body": {"name": "x"}})
         errs = run(c)

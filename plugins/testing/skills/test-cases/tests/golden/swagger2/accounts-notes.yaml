@@ -1,0 +1,184 @@
+version: 1
+engine: "test-cases/0.1.0"
+spec:
+  source: "tests/fixtures/specs/swagger2.yaml"
+  version: "2.0"
+  sha256: "1ead4541eae29967a40044c6ba4888bcffc61eb9cbd9a6fd6e2efdc39a6e02da"
+profile:
+  name: "generic"
+  source: null
+error_shape:
+  code_key: "code"
+  violations_key: "violations"
+  field_key: "field"
+  message_key: "message"
+entity: "accounts-notes"
+cases:
+  - id: "accounts-notes.getAccount_357eb4.path.accountId.path.not_found"
+    title: "GET /accounts/{accountId}/notes rejects accountId: path.not_found"
+    operation:
+      method: "GET"
+      path: "/accounts/{accountId}/notes"
+      operationId: "getAccount_357eb4"
+    kind: "NOT_FOUND"
+    loc: "path"
+    field: "accountId"
+    rule: "path.not_found"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1notes/get/parameters/0"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path:
+        accountId: "<<nonexistent:accountId>>"
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 404
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts-notes.getAccount_357eb4.auth._.auth.missing"
+    title: "GET /accounts/{accountId}/notes rejects op: auth.missing"
+    operation:
+      method: "GET"
+      path: "/accounts/{accountId}/notes"
+      operationId: "getAccount_357eb4"
+    kind: "AUTH_MISSING"
+    loc: "auth"
+    field: null
+    rule: "auth.missing"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1notes/get"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts-notes.getAccount_357eb4.auth._.auth.malformed"
+    title: "GET /accounts/{accountId}/notes rejects op: auth.malformed"
+    operation:
+      method: "GET"
+      path: "/accounts/{accountId}/notes"
+      operationId: "getAccount_357eb4"
+    kind: "AUTH_INVALID"
+    loc: "auth"
+    field: null
+    rule: "auth.malformed"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1notes/get"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "malformed"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts-notes.getAccount_357eb4.op._.happy.full"
+    title: "GET /accounts/{accountId}/notes accepts op: happy.full"
+    operation:
+      method: "GET"
+      path: "/accounts/{accountId}/notes"
+      operationId: "getAccount_357eb4"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1notes/get"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []

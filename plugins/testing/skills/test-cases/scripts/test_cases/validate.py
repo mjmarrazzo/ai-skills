@@ -97,7 +97,10 @@ def _field_errors(case, op):
     inp = case.get("input") or {}
     known = {f.path for f in op.body.fields} if op.body else set()
     injecting = case.get("kind") in FIELD_INJECTING_KINDS
-    for path in body_paths(inp.get("body")):
+    paths = body_paths(inp.get("body"))
+    for path in paths:
+        if injecting and any(other.startswith(path + ".") for other in paths):
+            continue
         if injecting and path in known:
             errs.append(f"injected body path {path} exists in spec")
         elif not injecting and path not in known:

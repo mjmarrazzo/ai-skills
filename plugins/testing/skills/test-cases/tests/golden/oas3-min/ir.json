@@ -1,0 +1,97 @@
+{
+  "source": "tests/fixtures/specs/oas3-min.json",
+  "sha256": "2bd9652110c9e689689d111bb0a3333fc2c6da7e1750f840b9dc305114086f7a",
+  "version": "3.0.0",
+  "title": "Items API",
+  "server_path": null,
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/items",
+      "operation_id": "listItems",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1items/get",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [],
+      "body": null,
+      "security": {
+        "secured": false,
+        "schemes": [],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "OK",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "POST",
+      "path": "/items",
+      "operation_id": "createItem",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1items/post",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [],
+      "body": {
+        "content_types": [
+          "application/json"
+        ],
+        "media": "application/json",
+        "required": true,
+        "schema_name": null,
+        "root_type": "object",
+        "additional_properties": null,
+        "fields": [
+          {
+            "path": "name",
+            "name": "name",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "maxLength": 10
+            },
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1items/post/requestBody/content/application~1json/schema/properties/name",
+            "description": "",
+            "truncated": false
+          }
+        ],
+        "spec_ref": "#/paths/~1items/post/requestBody"
+      },
+      "security": {
+        "secured": false,
+        "schemes": [],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "201",
+          "description": "Created",
+          "schema_name": null,
+          "content_types": [
+            "application/json"
+          ]
+        }
+      ],
+      "unsupported": []
+    }
+  ],
+  "schemas": {},
+  "security_schemes": {},
+  "warnings": []
+}

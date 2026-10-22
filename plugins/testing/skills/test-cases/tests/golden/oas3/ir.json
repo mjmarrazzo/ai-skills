@@ -1,0 +1,1689 @@
+{
+  "source": "tests/fixtures/specs/oas3.yaml",
+  "sha256": "ad910f29708d38a01efb06e3ee9175467a92355aa4d5a60ed9ac753ecc8cb75a",
+  "version": "3.0.3",
+  "title": "Widgets API",
+  "server_path": "/{stage}/widgets-svc",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/v1/{tenantId}/widgets",
+      "operation_id": "listWidgets",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/get",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "tenantId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "tenantId",
+            "name": "tenantId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/parameters/0"
+        },
+        {
+          "name": "cursor",
+          "location": "query",
+          "required": false,
+          "field": {
+            "path": "cursor",
+            "name": "cursor",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/get/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/get/parameters/0"
+        },
+        {
+          "name": "limit",
+          "location": "query",
+          "required": false,
+          "field": {
+            "path": "limit",
+            "name": "limit",
+            "type": "integer",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "minimum": 1,
+              "maximum": 100
+            },
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/get/parameters/1/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/get/parameters/1"
+        }
+      ],
+      "body": null,
+      "security": {
+        "secured": true,
+        "schemes": [
+          "bearerAuth"
+        ],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "OK",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "POST",
+      "path": "/v1/{tenantId}/widgets",
+      "operation_id": "createWidget",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/post",
+      "tags": [],
+      "summary": "",
+      "description": "Creates a widget in the tenant catalog.",
+      "params": [
+        {
+          "name": "tenantId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "tenantId",
+            "name": "tenantId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/parameters/0"
+        }
+      ],
+      "body": {
+        "content_types": [
+          "application/json"
+        ],
+        "media": "application/json",
+        "required": true,
+        "schema_name": "WidgetCreate",
+        "root_type": "object",
+        "additional_properties": false,
+        "fields": [
+          {
+            "path": "name",
+            "name": "name",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "minLength": 1,
+              "maxLength": 50,
+              "pattern": "^[A-Za-z0-9 ]+$"
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/name",
+            "description": "Display name shown in the widget catalog.",
+            "truncated": false
+          },
+          {
+            "path": "code",
+            "name": "code",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "pattern": "[A-Z]{3}",
+              "example": "ABC"
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/code",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "sku",
+            "name": "sku",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "pattern": "^\\p{IsLatin}+$"
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/sku",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "kind",
+            "name": "kind",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "enum": [
+                "SMALL",
+                "LARGE"
+              ]
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/kind",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "price",
+            "name": "price",
+            "type": "number",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "minimum": 0,
+              "maximum": 1000,
+              "multipleOf": 0.01
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/price",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "quantity",
+            "name": "quantity",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "maximum": 500,
+              "exclusiveMinimum": 0
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/quantity",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "startsAt",
+            "name": "startsAt",
+            "type": "string",
+            "format": "date-time",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/startsAt",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "birthday",
+            "name": "birthday",
+            "type": "string",
+            "format": "date",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/birthday",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "ownerId",
+            "name": "ownerId",
+            "type": "string",
+            "format": "uuid",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/ownerId",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "contactEmail",
+            "name": "contactEmail",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/contactEmail",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "homepage",
+            "name": "homepage",
+            "type": "string",
+            "format": "uri",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/homepage",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "callbackUrl",
+            "name": "callbackUrl",
+            "type": "string",
+            "format": "url",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/callbackUrl",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "dimensions",
+            "name": "dimensions",
+            "type": "object",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/dimensions",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "dimensions.width",
+            "name": "width",
+            "type": "integer",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "minimum": 1
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/dimensions/properties/width",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "dimensions.height",
+            "name": "height",
+            "type": "integer",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/dimensions/properties/height",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "tags",
+            "name": "tags",
+            "type": "array",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "minItems": 1,
+              "maxItems": 5,
+              "uniqueItems": true
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/tags",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "tags[]",
+            "name": "tags[]",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "maxLength": 20
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/tags/items",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "parts",
+            "name": "parts",
+            "type": "array",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/parts",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "parts[]",
+            "name": "parts[]",
+            "type": "object",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "PartRef",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/parts/items",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "parts[].id",
+            "name": "id",
+            "type": "string",
+            "format": "uuid",
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "PartRef",
+            "spec_ref": "#/components/schemas/PartRef/properties/id",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "id",
+            "name": "id",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": true,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/id",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "note",
+            "name": "note",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": true,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/note",
+            "description": "",
+            "truncated": false
+          }
+        ],
+        "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets/post/requestBody"
+      },
+      "security": {
+        "secured": true,
+        "schemes": [
+          "bearerAuth"
+        ],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "201",
+          "description": "Created",
+          "schema_name": "Widget",
+          "content_types": [
+            "application/json"
+          ]
+        },
+        {
+          "status": "400",
+          "description": "Bad request",
+          "schema_name": null,
+          "content_types": []
+        },
+        {
+          "status": "409",
+          "description": "Conflict",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "GET",
+      "path": "/v1/{tenantId}/widgets/{widgetId}",
+      "operation_id": "getWidget",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/get",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "tenantId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "tenantId",
+            "name": "tenantId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/parameters/0"
+        },
+        {
+          "name": "widgetId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "widgetId",
+            "name": "widgetId",
+            "type": "string",
+            "format": "uuid",
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/get/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/get/parameters/0"
+        }
+      ],
+      "body": null,
+      "security": {
+        "secured": true,
+        "schemes": [
+          "bearerAuth"
+        ],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "OK",
+          "schema_name": "Widget",
+          "content_types": [
+            "application/json"
+          ]
+        },
+        {
+          "status": "404",
+          "description": "Not found",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/{tenantId}/widgets/{widgetId}",
+      "operation_id": "updateWidget",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/put",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "tenantId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "tenantId",
+            "name": "tenantId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/parameters/0"
+        },
+        {
+          "name": "widgetId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "widgetId",
+            "name": "widgetId",
+            "type": "string",
+            "format": "uuid",
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/put/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/put/parameters/0"
+        }
+      ],
+      "body": {
+        "content_types": [
+          "application/json"
+        ],
+        "media": "application/json",
+        "required": true,
+        "schema_name": "WidgetCreate",
+        "root_type": "object",
+        "additional_properties": false,
+        "fields": [
+          {
+            "path": "name",
+            "name": "name",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "minLength": 1,
+              "maxLength": 50,
+              "pattern": "^[A-Za-z0-9 ]+$"
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/name",
+            "description": "Display name shown in the widget catalog.",
+            "truncated": false
+          },
+          {
+            "path": "code",
+            "name": "code",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "pattern": "[A-Z]{3}",
+              "example": "ABC"
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/code",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "sku",
+            "name": "sku",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "pattern": "^\\p{IsLatin}+$"
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/sku",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "kind",
+            "name": "kind",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "enum": [
+                "SMALL",
+                "LARGE"
+              ]
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/kind",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "price",
+            "name": "price",
+            "type": "number",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "minimum": 0,
+              "maximum": 1000,
+              "multipleOf": 0.01
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/price",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "quantity",
+            "name": "quantity",
+            "type": "integer",
+            "format": "int32",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "maximum": 500,
+              "exclusiveMinimum": 0
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/quantity",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "startsAt",
+            "name": "startsAt",
+            "type": "string",
+            "format": "date-time",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/startsAt",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "birthday",
+            "name": "birthday",
+            "type": "string",
+            "format": "date",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/birthday",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "ownerId",
+            "name": "ownerId",
+            "type": "string",
+            "format": "uuid",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/ownerId",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "contactEmail",
+            "name": "contactEmail",
+            "type": "string",
+            "format": "email",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/contactEmail",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "homepage",
+            "name": "homepage",
+            "type": "string",
+            "format": "uri",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/homepage",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "callbackUrl",
+            "name": "callbackUrl",
+            "type": "string",
+            "format": "url",
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/callbackUrl",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "dimensions",
+            "name": "dimensions",
+            "type": "object",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/dimensions",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "dimensions.width",
+            "name": "width",
+            "type": "integer",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "minimum": 1
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/dimensions/properties/width",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "dimensions.height",
+            "name": "height",
+            "type": "integer",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/dimensions/properties/height",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "tags",
+            "name": "tags",
+            "type": "array",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "minItems": 1,
+              "maxItems": 5,
+              "uniqueItems": true
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/tags",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "tags[]",
+            "name": "tags[]",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "maxLength": 20
+            },
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/tags/items",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "parts",
+            "name": "parts",
+            "type": "array",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/parts",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "parts[]",
+            "name": "parts[]",
+            "type": "object",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "PartRef",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/parts/items",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "parts[].id",
+            "name": "id",
+            "type": "string",
+            "format": "uuid",
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "PartRef",
+            "spec_ref": "#/components/schemas/PartRef/properties/id",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "id",
+            "name": "id",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": false,
+            "read_only": true,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/id",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "note",
+            "name": "note",
+            "type": "string",
+            "format": null,
+            "required": false,
+            "nullable": true,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "WidgetCreate",
+            "spec_ref": "#/components/schemas/WidgetCreate/properties/note",
+            "description": "",
+            "truncated": false
+          }
+        ],
+        "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/put/requestBody"
+      },
+      "security": {
+        "secured": true,
+        "schemes": [
+          "bearerAuth"
+        ],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "OK",
+          "schema_name": "Widget",
+          "content_types": [
+            "application/json"
+          ]
+        },
+        {
+          "status": "422",
+          "description": "Unprocessable",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/{tenantId}/widgets/{widgetId}",
+      "operation_id": "deleteWidget",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/delete",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "tenantId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "tenantId",
+            "name": "tenantId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/parameters/0"
+        },
+        {
+          "name": "widgetId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "widgetId",
+            "name": "widgetId",
+            "type": "string",
+            "format": "uuid",
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/delete/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}/delete/parameters/0"
+        }
+      ],
+      "body": null,
+      "security": {
+        "secured": true,
+        "schemes": [
+          "bearerAuth"
+        ],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "204",
+          "description": "Deleted",
+          "schema_name": null,
+          "content_types": []
+        },
+        {
+          "status": "404",
+          "description": "Not found",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "POST",
+      "path": "/v1/{tenantId}/widgets/{widgetId}/archive",
+      "operation_id": "archiveWidget",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}~1archive/post",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "tenantId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "tenantId",
+            "name": "tenantId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}~1archive/post/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}~1archive/post/parameters/0"
+        },
+        {
+          "name": "widgetId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "widgetId",
+            "name": "widgetId",
+            "type": "string",
+            "format": "uuid",
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}~1archive/post/parameters/1/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1widgets~1{widgetId}~1archive/post/parameters/1"
+        }
+      ],
+      "body": null,
+      "security": {
+        "secured": true,
+        "schemes": [
+          "bearerAuth"
+        ],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "Archived",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "POST",
+      "path": "/v1/{tenantId}/parts",
+      "operation_id": "createPart",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1v1~1{tenantId}~1parts/post",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "tenantId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "tenantId",
+            "name": "tenantId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1parts/post/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1parts/post/parameters/0"
+        }
+      ],
+      "body": {
+        "content_types": [
+          "application/json"
+        ],
+        "media": "application/json",
+        "required": true,
+        "schema_name": "PartCreate",
+        "root_type": "object",
+        "additional_properties": null,
+        "fields": [
+          {
+            "path": "widgetId",
+            "name": "widgetId",
+            "type": "string",
+            "format": "uuid",
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": "PartCreate",
+            "spec_ref": "#/components/schemas/PartCreate/properties/widgetId",
+            "description": "",
+            "truncated": false
+          },
+          {
+            "path": "label",
+            "name": "label",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {
+              "maxLength": 10
+            },
+            "schema_ref": "PartCreate",
+            "spec_ref": "#/components/schemas/PartCreate/properties/label",
+            "description": "",
+            "truncated": false
+          }
+        ],
+        "spec_ref": "#/paths/~1v1~1{tenantId}~1parts/post/requestBody"
+      },
+      "security": {
+        "secured": true,
+        "schemes": [
+          "bearerAuth"
+        ],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "201",
+          "description": "Created",
+          "schema_name": "Part",
+          "content_types": [
+            "application/json"
+          ]
+        },
+        {
+          "status": "400",
+          "description": "Bad request",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "GET",
+      "path": "/v1/{tenantId}/parts/{partId}",
+      "operation_id": "getPart",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "tenantId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "tenantId",
+            "name": "tenantId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get/parameters/0"
+        },
+        {
+          "name": "partId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "partId",
+            "name": "partId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get/parameters/1/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1parts~1{partId}/get/parameters/1"
+        }
+      ],
+      "body": null,
+      "security": {
+        "secured": true,
+        "schemes": [
+          "bearerAuth"
+        ],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "OK",
+          "schema_name": "Part",
+          "content_types": [
+            "application/json"
+          ]
+        }
+      ],
+      "unsupported": []
+    },
+    {
+      "method": "POST",
+      "path": "/v1/{tenantId}/shapes",
+      "operation_id": "createShape",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1v1~1{tenantId}~1shapes/post",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [
+        {
+          "name": "tenantId",
+          "location": "path",
+          "required": true,
+          "field": {
+            "path": "tenantId",
+            "name": "tenantId",
+            "type": "string",
+            "format": null,
+            "required": true,
+            "nullable": false,
+            "read_only": false,
+            "write_only": false,
+            "constraints": {},
+            "schema_ref": null,
+            "spec_ref": "#/paths/~1v1~1{tenantId}~1shapes/post/parameters/0/schema",
+            "description": "",
+            "truncated": false
+          },
+          "spec_ref": "#/paths/~1v1~1{tenantId}~1shapes/post/parameters/0"
+        }
+      ],
+      "body": {
+        "content_types": [
+          "application/json"
+        ],
+        "media": "application/json",
+        "required": true,
+        "schema_name": "Shape",
+        "root_type": "",
+        "additional_properties": null,
+        "fields": [],
+        "spec_ref": "#/paths/~1v1~1{tenantId}~1shapes/post/requestBody"
+      },
+      "security": {
+        "secured": true,
+        "schemes": [
+          "bearerAuth"
+        ],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "201",
+          "description": "Created",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": [
+        "oneOf at #/components/schemas/Shape"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "operation_id": "health",
+      "op_id_synthesized": false,
+      "spec_ref": "#/paths/~1health/get",
+      "tags": [],
+      "summary": "",
+      "description": "",
+      "params": [],
+      "body": null,
+      "security": {
+        "secured": false,
+        "schemes": [],
+        "header_param": false,
+        "optional": false
+      },
+      "responses": [
+        {
+          "status": "200",
+          "description": "OK",
+          "schema_name": null,
+          "content_types": []
+        }
+      ],
+      "unsupported": []
+    }
+  ],
+  "schemas": {
+    "WidgetCreate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "pattern": "^[A-Za-z0-9 ]+$",
+          "description": "Display name shown in the widget catalog."
+        },
+        "code": {
+          "type": "string",
+          "pattern": "[A-Z]{3}",
+          "example": "ABC"
+        },
+        "sku": {
+          "type": "string",
+          "pattern": "^\\p{IsLatin}+$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "SMALL",
+            "LARGE"
+          ]
+        },
+        "price": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "multipleOf": 0.01
+        },
+        "quantity": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 0,
+          "exclusiveMinimum": true,
+          "maximum": 500
+        },
+        "startsAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "birthday": {
+          "type": "string",
+          "format": "date"
+        },
+        "ownerId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contactEmail": {
+          "type": "string",
+          "format": "email"
+        },
+        "homepage": {
+          "type": "string",
+          "format": "uri"
+        },
+        "callbackUrl": {
+          "type": "string",
+          "format": "url"
+        },
+        "dimensions": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer"
+            }
+          }
+        },
+        "tags": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 20
+          }
+        },
+        "parts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/PartRef"
+          }
+        },
+        "id": {
+          "type": "string",
+          "readOnly": true
+        },
+        "note": {
+          "type": "string",
+          "nullable": true
+        }
+      }
+    },
+    "PartRef": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "Widget": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "SMALL",
+            "LARGE"
+          ]
+        }
+      }
+    },
+    "PartCreate": {
+      "type": "object",
+      "required": [
+        "widgetId",
+        "label"
+      ],
+      "properties": {
+        "widgetId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 10
+        }
+      }
+    },
+    "Part": {
+      "type": "object",
+      "properties": {
+        "partId": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "Shape": {
+      "oneOf": [
+        {
+          "$ref": "#/components/schemas/Circle"
+        },
+        {
+          "$ref": "#/components/schemas/Square"
+        }
+      ]
+    },
+    "Circle": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "type": "number"
+        }
+      }
+    },
+    "Square": {
+      "type": "object",
+      "properties": {
+        "side": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "security_schemes": {
+    "bearerAuth": {
+      "type": "http",
+      "scheme": "bearer"
+    }
+  },
+  "warnings": []
+}

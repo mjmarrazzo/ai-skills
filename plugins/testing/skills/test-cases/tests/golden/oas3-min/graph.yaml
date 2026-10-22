@@ -1,0 +1,19 @@
+version: 1
+entities:
+  - id: "items"
+    collection_path: "/items"
+    item_path: null
+    id_param: null
+    parent: null
+    ops:
+      C: "createItem"
+      L: "listItems"
+    actions: []
+    singleton: false
+    lifecycle: false
+    id_candidate: null
+    depends_on: []
+    needs: []
+order:
+  - "items"
+warnings: []
