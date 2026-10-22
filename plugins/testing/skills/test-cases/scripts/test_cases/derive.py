@@ -87,7 +87,7 @@ def case_id(entity, op_id, loc, field, rule_id, slug=None):
     parts = [_clean(entity), _clean(op_id), _clean(loc), field_part, _clean(rule_id)]
     if slug is not None:
         raw = slug if isinstance(slug, str) else json.dumps(slug)
-        text = str(slug) if not isinstance(slug, str) else slug
+        text = str(slug)
         cleaned = _clean(text)
         if cleaned != text or text == "":
             cleaned = (cleaned or "_") + "_" + hashlib.sha1(raw.encode()).hexdigest()[:6]
@@ -119,8 +119,8 @@ def order_cases(cases, spec, graph):
     ))
 
 
-def case_context(spec, graph, op):
-    entity_id = graph_mod.op_owner(graph)[op.operation_id]
+def case_context(spec, graph, op, owner=None):
+    entity_id = (owner or graph_mod.op_owner(graph))[op.operation_id]
     entity = next(e for e in graph.entities if e.id == entity_id)
     needs = [n for n in entity.needs if not n.startswith("llm:")]
     if entity.item_path and op.path.startswith(entity.item_path):
@@ -203,10 +203,11 @@ def _needs_pattern_sample(value):
 
 def _row_case(op, prof, entity_id, needs, *, loc, field, rule, kind, valid, technique, priority,
               spec_ref, label, delta=None, slug=None, status=None, violations=None,
-              persisted=(), tags=()):
+              persisted=(), tags=(), auth=None):
     if status is None:
         status, persisted = expected_status(op, prof, valid=valid, kind=kind, field=field)
     all_tags = list(tags) + (["undocumented-status"] if _undocumented(op, status) else [])
+    extra = {} if auth is None else {"auth": auth}
     return make_case(
         id=case_id(entity_id, op.operation_id, loc, field, rule, slug),
         title=f"{op.method} {op.path} {'accepts' if valid else 'rejects'} {label}",
@@ -216,10 +217,11 @@ def _row_case(op, prof, entity_id, needs, *, loc, field, rule, kind, valid, tech
         expected={
             "status": status,
             "violations": violations if violations is not None else (
-                [{"field": field}] if not valid and field else []),
+                [{"field": field}]
+                if not valid and field and loc in ("body", "query", "header") else []),
             "not_persisted": list(persisted),
         },
-        tags=all_tags,
+        tags=all_tags, **extra,
     )
 
 
@@ -348,7 +350,7 @@ def _query_extras(op, prof, entity_id, needs, p, seen):
 
     def add(rule, kind, valid, technique, value, status=None, priority="P2"):
         delta = {"query": {p.name: value}} if value is not rules.REMOVE else {"query": {}}
-        if value is not rules.REMOVE and rule != "pagination.walk":
+        if value is not rules.REMOVE:
             key = _dedupe_key(op, "query", p.name, value)
             if key in seen:
                 return
@@ -383,7 +385,7 @@ def _auth_cases(op, prof, entity_id, needs):
         return _row_case(
             op, prof, entity_id, needs, loc="auth", field=None, rule=rule, kind=kind, valid=valid,
             technique="auth-matrix", priority="P1", spec_ref=op.spec_ref, label=f"op: {rule}",
-            delta={}, status=status, tags=tags) | {"auth": auth}
+            delta={}, status=status, tags=tags, auth=auth)
 
     if not op.security.secured:
         return [make("auth.public", "PUBLIC_REACHABLE", True, "none", tags=("security",))]
@@ -506,7 +508,7 @@ def derive(spec, graph, profile, scope=None):
                 continue
             if scope.operation_ids is not None and op.operation_id not in scope.operation_ids:
                 continue
-        entity_id, base_needs = case_context(spec, graph, op)
+        entity_id, base_needs = case_context(spec, graph, op, owner)
         cases.extend(_op_cases(op, profile, entity_id, base_needs, swagger2))
     cases.extend(c for c in _lifecycle_cases(spec, graph, profile) if in_scope(c, scope))
     return order_cases(cases, spec, graph)

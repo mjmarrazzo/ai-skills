@@ -97,6 +97,7 @@ class Oas3Ops(unittest.TestCase):
     def test_path_rows(self):
         mal = self.get("widgets.getWidget.path.widgetId.path.malformed")
         self.assertEqual(mal["input"]["path"], {"widgetId": "not-a-uuid"})
+        self.assertEqual(mal["expected"]["violations"], [])
         self.assertEqual(mal["kind"], "INVALID_ID_FORMAT")
         nf = self.get("widgets.getWidget.path.widgetId.path.not_found")
         self.assertEqual(nf["input"]["path"], {"widgetId": "<<nonexistent:widgetId>>"})
