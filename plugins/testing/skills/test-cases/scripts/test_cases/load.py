@@ -127,6 +127,16 @@ def load_doc(path):
     return doc
 
 
+def load_json(path):
+    p = Path(path)
+    if not p.is_file():
+        raise LoadError(f"{path}: not found")
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise LoadError(f"{path}: JSON parse failed: {e}") from e
+
+
 def load_profile(path):
     return None if path is None else load_doc(path)
 
