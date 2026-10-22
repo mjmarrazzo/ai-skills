@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Protocol, Sequence
 
+from test_cases.indexers.kotlin_restassured import KotlinRestAssuredIndexer
+
 
 @dataclass(frozen=True)
 class SourceFile:
@@ -23,7 +25,7 @@ class Indexer(Protocol):
     def index(self, sources: Sequence[SourceFile], ctx: IndexContext) -> dict: ...
 
 
-INDEXERS: dict[str, Indexer] = {}
+INDEXERS: dict[str, Indexer] = {"kotlin-restassured": KotlinRestAssuredIndexer()}
 
 
 def select(name, rel_paths, registry=None):
