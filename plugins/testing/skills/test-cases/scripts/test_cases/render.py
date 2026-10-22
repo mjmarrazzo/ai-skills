@@ -96,7 +96,7 @@ def _drift_lines(entity, drift):
     keys = {(op["method"], _norm(op["path"])) for op in entity["ops"]}
     return ["- %s `%s %s` %s at %s: %s" % (
         d["type"], d["method"], d["path"], d.get("status", ""), d["test"], d.get("detail", ""))
-        for d in drift if (d["method"], _norm(d["path"])) in keys]
+        for d in drift if d["path"] is not None and (d["method"], _norm(d["path"])) in keys]
 
 
 def report(entities, coverage):
