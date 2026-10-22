@@ -1,0 +1,37 @@
+{
+  "openapi": "3.0.0",
+  "info": {"title": "Items API", "version": "1.0.0"},
+  "paths": {
+    "/items": {
+      "get": {
+        "operationId": "listItems",
+        "responses": {"200": {"description": "OK"}}
+      },
+      "post": {
+        "operationId": "createItem",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {"name": {"type": "string", "maxLength": 10}}
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {"type": "object", "properties": {"id": {"type": "string"}}}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
