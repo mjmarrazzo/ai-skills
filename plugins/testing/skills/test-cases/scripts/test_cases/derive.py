@@ -155,12 +155,13 @@ def _undocumented(op, status):
     return any(s not in docs for s in (status if isinstance(status, list) else [status]))
 
 
-def _priority(row, rule_id, field_name):
-    priority = "P3" if rule_id in rules.FORMAT_P3 else row.priority
+def _money_bump(priority, field_name):
     last = field_name.split(".")[-1].replace("[]", "").lower()
-    if any(hint in last for hint in rules.MONEY_HINTS):
-        return "P1"
-    return priority
+    return "P1" if any(hint in last for hint in rules.MONEY_HINTS) else priority
+
+
+def _priority(row, rule_id, field_name):
+    return _money_bump("P3" if rule_id in rules.FORMAT_P3 else row.priority, field_name)
 
 
 def _constraint_keyword(row, rule_id, field):
@@ -200,69 +201,249 @@ def _needs_pattern_sample(value):
     return isinstance(value, str) and any(p in value for p in _PLACEHOLDER_NEEDS_LLM)
 
 
-def _field_cases(spec, op, prof, entity_id, base_needs):
-    swagger2 = spec.version.startswith("2")
-    fields_by_path = {f.path: f for f in op.body.fields} if op.body else {}
-    targets = [("body", f.path, f, f.spec_ref, "", rules.RULES) for f in (op.body.fields if op.body else ())]
-    required_rows = tuple(r for r in rules.RULES if r.id.startswith("required."))
-    other_rows = tuple(r for r in rules.RULES if not r.id.startswith("required."))
+def _row_case(op, prof, entity_id, needs, *, loc, field, rule, kind, valid, technique, priority,
+              spec_ref, label, delta=None, slug=None, status=None, violations=None,
+              persisted=(), tags=()):
+    if status is None:
+        status, persisted = expected_status(op, prof, valid=valid, kind=kind, field=field)
+    all_tags = list(tags) + (["undocumented-status"] if _undocumented(op, status) else [])
+    return make_case(
+        id=case_id(entity_id, op.operation_id, loc, field, rule, slug),
+        title=f"{op.method} {op.path} {'accepts' if valid else 'rejects'} {label}",
+        operation={"method": op.method, "path": op.path, "operationId": op.operation_id},
+        kind=kind, loc=loc, field=field, rule=rule, negative=not valid, technique=technique,
+        priority=priority, specRef=spec_ref, needs=needs, input=delta or {},
+        expected={
+            "status": status,
+            "violations": violations if violations is not None else (
+                [{"field": field}] if not valid and field else []),
+            "not_persisted": list(persisted),
+        },
+        tags=all_tags,
+    )
+
+
+def _target_cases(op, prof, entity_id, base_needs, target, seen):
+    loc, name, field, ref, ref_prefix, rows, fields_by_path = target
+    out = []
+    for row in rows:
+        for variant in rules.expand(row, field):
+            value = variant.value
+            if loc != "body" and value is None:
+                continue
+            key = _dedupe_key(op, loc, name, value)
+            if key in seen:
+                continue
+            seen.add(key)
+            kw = _constraint_keyword(row, variant.rule_id, field)
+            if loc == "body":
+                spec_ref = f"{ref}/{kw}" if kw else ref
+                delta = {"body": {}, "remove": [name]} if value is rules.REMOVE else {
+                    "body": _body_delta(fields_by_path, name, value)}
+            else:
+                spec_ref = f"{ref}{ref_prefix}/{kw}" if kw else ref
+                delta = {("query" if loc == "query" else "headers"): {
+                    name: None if value is rules.REMOVE else copy.deepcopy(value)}}
+            valid = row.valid
+            kind = "INVALID_QUERY_PARAM" if loc == "query" and not valid else row.kind
+            needs = list(base_needs)
+            if _needs_pattern_sample(value) and "llm:pattern-sample" not in needs:
+                needs.append("llm:pattern-sample")
+            out.append(_row_case(
+                op, prof, entity_id, needs, loc=loc, field=name, rule=variant.rule_id, kind=kind,
+                valid=valid, technique=row.technique, priority=_priority(row, variant.rule_id, name),
+                spec_ref=spec_ref, label=f"{name or loc}: {variant.rule_id}"
+                + (f" {variant.slug}" if variant.slug else ""),
+                delta=delta, slug=variant.slug, tags=row.tags))
+    return out
+
+
+def _is_top_level(field):
+    return "." not in field.path and "[]" not in field.path
+
+
+def _body_cases(op, prof, entity_id, needs, seen):
+    fields = op.body.fields
+    by_path = {f.path: f for f in fields}
+    out = []
+    for f in fields:
+        out += _target_cases(op, prof, entity_id, needs, ("body", f.path, f, f.spec_ref, "", rules.RULES, by_path), seen)
+        if f.type == "string" and "maxLength" not in f.constraints and not f.truncated:
+            key = _dedupe_key(op, "body", f.path, "<<str:10000>>")
+            if key not in seen:
+                seen.add(key)
+                status = [expected_status(op, prof, valid=False)[0], 413]
+                out.append(_row_case(
+                    op, prof, entity_id, needs, loc="body", field=f.path, rule="unbounded.oversize",
+                    kind="RESOURCE_LIMIT", valid=False, technique="owasp-api4",
+                    priority=_money_bump("P3", f.path), spec_ref=f.spec_ref,
+                    label=f"{f.path}: unbounded.oversize",
+                    delta={"body": _body_delta(by_path, f.path, "<<str:10000>>")}, status=status))
+        if _is_top_level(f) and not f.required:
+            out.append(_row_case(
+                op, prof, entity_id, needs, loc="body", field=f.path, rule="optional.absent",
+                kind="OPTIONAL_ABSENT", valid=True, technique="ep",
+                priority=_money_bump("P3", f.path), spec_ref=f.spec_ref,
+                label=f"{f.path}: optional.absent", delta={"remove": [f.path]}))
+    if op.body.additional_properties is False:
+        out.append(_row_case(
+            op, prof, entity_id, needs, loc="body", field=None, rule="additionalProperties.unknown",
+            kind="UNKNOWN_FIELD", valid=False, technique="error-guess", priority="P2",
+            spec_ref=op.body.spec_ref, label="body: additionalProperties.unknown",
+            delta={"body": {"__unexpected_field__": "x"}}))
+    if op.body.root_type == "object" and op.body.additional_properties is not False:
+        top = {f.path for f in fields if _is_top_level(f)}
+        for name, value in rules.MASS_ASSIGNMENT_PROBES:
+            if name in top:
+                continue
+            out.append(_row_case(
+                op, prof, entity_id, needs, loc="body", field=name, rule=f"mass_assignment.{name}",
+                kind="MASS_ASSIGNMENT", valid=False, technique="owasp-api3", priority="P1",
+                spec_ref=op.body.spec_ref, label=f"{name}: mass_assignment", delta={"body": {name: value}}))
+    return out
+
+
+def _path_value(param):
+    field = param.field
+    if field.format == "uuid":
+        return "not-a-uuid", False
+    if field.type in ("integer", "number"):
+        return "abc", False
+    pattern = field.constraints.get("pattern")
+    if not isinstance(pattern, str):
+        return None, False
+    if rules.compile_pattern(pattern) is None:
+        return "<<pattern-negative>>", True
+    probe = next(r for r in rules.RULES if r.id == "pattern.out_of_class")
+    variants = rules.expand(probe, field)
+    return (variants[0].value, False) if variants else (None, False)
+
+
+def _path_cases(op, prof, entity_id, base_needs):
+    needs = [n for n in base_needs if n != entity_id]
+    tenant = prof.tenant["param"]
+    out = []
+    for p in op.params:
+        if p.location != "path":
+            continue
+        value, llm = _path_value(p)
+        if value is not None:
+            out.append(_row_case(
+                op, prof, entity_id, needs + (["llm:pattern-sample"] if llm else []), loc="path",
+                field=p.name, rule="path.malformed", kind="INVALID_ID_FORMAT", valid=False,
+                technique="error-guess", priority="P2", spec_ref=p.spec_ref,
+                label=f"{p.name}: path.malformed", delta={"path": {p.name: value}}))
+        if p.name != tenant:
+            out.append(_row_case(
+                op, prof, entity_id, needs, loc="path", field=p.name, rule="path.not_found",
+                kind="NOT_FOUND", valid=False, technique="error-guess", priority="P2",
+                spec_ref=p.spec_ref, label=f"{p.name}: path.not_found",
+                delta={"path": {p.name: f"<<nonexistent:{p.name}>>"}},
+                status=prof.error["statuses"]["not_found"], violations=[]))
+    return out
+
+
+def _query_extras(op, prof, entity_id, needs, p, seen):
+    out = []
+
+    def add(rule, kind, valid, technique, value, status=None, priority="P2"):
+        delta = {"query": {p.name: value}} if value is not rules.REMOVE else {"query": {}}
+        if value is not rules.REMOVE and rule != "pagination.walk":
+            key = _dedupe_key(op, "query", p.name, value)
+            if key in seen:
+                return
+            seen.add(key)
+        out.append(_row_case(
+            op, prof, entity_id, needs, loc="query", field=p.name, rule=rule, kind=kind,
+            valid=valid, technique=technique, priority=priority, spec_ref=p.spec_ref,
+            label=f"{p.name}: {rule}", delta=delta, status=status))
+
+    if p.required:
+        key = _dedupe_key(op, "query", p.name, None)
+        seen.add(key)
+        out.append(_row_case(
+            op, prof, entity_id, needs, loc="query", field=p.name, rule="query.missing",
+            kind="INVALID_QUERY_PARAM", valid=False, technique="ep", priority="P2",
+            spec_ref=p.spec_ref, label=f"{p.name}: query.missing", delta={"query": {p.name: None}}))
+    if p.name in rules.PAGINATION_NAMES:
+        add("pagination.walk", "PAGINATION", True, "ep", rules.REMOVE)
+        bad = -1 if p.field.type == "integer" else "not-a-valid-cursor"
+        add("pagination.bad_cursor", "INVALID_QUERY_PARAM", False, "error-guess", bad)
+    if p.name in rules.LIMIT_NAMES:
+        maximum = p.field.constraints.get("maximum")
+        if isinstance(maximum, (int, float)) and not isinstance(maximum, bool):
+            add("limit.over_max", "RESOURCE_LIMIT", False, "owasp-api4", maximum + 1)
+        for rule, value in (("limit.zero", 0), ("limit.negative", -1), ("limit.huge", 10**9)):
+            add(rule, "RESOURCE_LIMIT", False, "owasp-api4", value)
+    return out
+
+
+def _auth_cases(op, prof, entity_id, needs):
+    def make(rule, kind, valid, auth, status=None, tags=()):
+        return _row_case(
+            op, prof, entity_id, needs, loc="auth", field=None, rule=rule, kind=kind, valid=valid,
+            technique="auth-matrix", priority="P1", spec_ref=op.spec_ref, label=f"op: {rule}",
+            delta={}, status=status, tags=tags) | {"auth": auth}
+
+    if not op.security.secured:
+        return [make("auth.public", "PUBLIC_REACHABLE", True, "none", tags=("security",))]
+    return [
+        make("auth.missing", "AUTH_MISSING", False, "none", prof.auth["missing"]["status"]),
+        make("auth.malformed", "AUTH_INVALID", False, "malformed", prof.auth["malformed"]["status"]),
+    ]
+
+
+def _op_level_cases(op, prof, entity_id, needs):
+    def make(rule, kind, valid, priority, delta, status=None):
+        return _row_case(
+            op, prof, entity_id, needs, loc="op", field=None, rule=rule, kind=kind, valid=valid,
+            technique="ep" if valid or rule.startswith("required") else "error-guess",
+            priority=priority, spec_ref=op.spec_ref, label=f"op: {rule}", delta=delta, status=status)
+
+    out = [make("happy.full", "HAPPY_FULL", True, "P1", {})]
+    if not op.body:
+        return out
+    top = [f for f in op.body.fields if _is_top_level(f)]
+    optional = [f.path for f in top if not f.required]
+    if optional:
+        out.append(make("happy.min", "HAPPY_MIN", True, "P2", {"remove": optional}))
+    if any(f.required for f in top):
+        out.append(make("required.all_missing", "REQUIRED_MISSING", False, "P2",
+                        {"body": {}, "body_mode": "replace"}))
+    out += [
+        make("body.malformed", "MALFORMED_BODY", False, "P2", {"body_mode": "raw", "raw": '{"'}),
+        make("body.array", "MALFORMED_BODY", False, "P2", {"body_mode": "raw", "raw": "[]"}),
+        make("body.empty", "EMPTY_BODY", False, "P2", {"body_mode": "none"}),
+        make("body.content_type", "WRONG_CONTENT_TYPE", False, "P2", {"content_type": "text/plain"},
+             prof.error["statuses"]["unsupported_media"]),
+    ]
+    return out
+
+
+def _op_cases(op, prof, entity_id, base_needs, swagger2):
+    seen = set()
+    out = _body_cases(op, prof, entity_id, base_needs, seen) if op.body else []
+    out += _path_cases(op, prof, entity_id, base_needs)
     ref_prefix = "" if swagger2 else "/schema"
     for p in op.params:
         if p.location == "query":
-            targets.append(("query", p.name, p.field, p.spec_ref, ref_prefix, other_rows))
+            target = ("query", p.name, p.field, p.spec_ref, ref_prefix, tuple(
+                r for r in rules.RULES if not r.id.startswith("required.")), {})
+            out += _target_cases(op, prof, entity_id, base_needs, target, seen)
+            out += _query_extras(op, prof, entity_id, base_needs, p, seen)
         elif p.location == "header":
-            targets.append(("header", p.name, p.field, p.spec_ref, ref_prefix, required_rows))
-
-    seen = set()
-    out = []
-    for loc, name, field, ref, ref_prefix, rows in targets:
-        for row in rows:
-            for variant in rules.expand(row, field):
-                value = variant.value
-                if loc != "body" and value is None:
-                    continue
-                key = _dedupe_key(op, loc, name, value)
-                if key in seen:
-                    continue
-                seen.add(key)
-                kw = _constraint_keyword(row, variant.rule_id, field)
-                if loc == "body":
-                    spec_ref = f"{ref}/{kw}" if kw else ref
-                    delta = {"body": {}, "remove": [name]} if value is rules.REMOVE else {
-                        "body": _body_delta(fields_by_path, name, value)}
-                else:
-                    spec_ref = f"{ref}{ref_prefix}/{kw}" if kw else ref
-                    delta = {("query" if loc == "query" else "headers"): {
-                        name: None if value is rules.REMOVE else copy.deepcopy(value)}}
-                valid = row.valid
-                kind = "INVALID_QUERY_PARAM" if loc == "query" and not valid else row.kind
-                status, persisted = expected_status(op, prof, valid=valid, kind=kind, field=name)
-                tags = list(row.tags) + (["undocumented-status"] if _undocumented(op, status) else [])
-                needs = list(base_needs)
-                if _needs_pattern_sample(value) and "llm:pattern-sample" not in needs:
-                    needs.append("llm:pattern-sample")
-                title = (f"{op.method} {op.path} {'accepts' if valid else 'rejects'} {name or loc}: "
-                         f"{variant.rule_id}" + (f" {variant.slug}" if variant.slug else ""))
-                out.append(make_case(
-                    id=case_id(entity_id, op.operation_id, loc, name, variant.rule_id, variant.slug),
-                    title=title,
-                    operation={"method": op.method, "path": op.path, "operationId": op.operation_id},
-                    kind=kind, loc=loc, field=name, rule=variant.rule_id, negative=not valid,
-                    technique=row.technique, priority=_priority(row, variant.rule_id, name),
-                    specRef=spec_ref, needs=needs, input=delta,
-                    expected={
-                        "status": status,
-                        "violations": [{"field": name}] if not valid else [],
-                        "not_persisted": persisted,
-                    },
-                    tags=tags,
-                ))
+            target = ("header", p.name, p.field, p.spec_ref, ref_prefix, tuple(
+                r for r in rules.RULES if r.id.startswith("required.")), {})
+            out += _target_cases(op, prof, entity_id, base_needs, target, seen)
+    out += _auth_cases(op, prof, entity_id, base_needs)
+    out += _op_level_cases(op, prof, entity_id, base_needs)
     return out
 
 
 def derive(spec, graph, profile, scope=None):
     cases = []
     owner = graph_mod.op_owner(graph)
+    swagger2 = spec.version.startswith("2")
     for op in spec.operations:
         if profile_mod.is_excluded(profile, op):
             continue
@@ -272,5 +453,5 @@ def derive(spec, graph, profile, scope=None):
             if scope.operation_ids is not None and op.operation_id not in scope.operation_ids:
                 continue
         entity_id, base_needs = case_context(spec, graph, op)
-        cases.extend(_field_cases(spec, op, profile, entity_id, base_needs))
+        cases.extend(_op_cases(op, profile, entity_id, base_needs, swagger2))
     return order_cases(cases, spec, graph)
