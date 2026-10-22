@@ -44,7 +44,7 @@ bash link.sh
 
 `link.sh` globs `plugins/*/skills/*`, prunes stale links pointing back into this repo, and skips any name that already exists as a real directory.
 
-## Plugins (7) → Skills (17)
+## Plugins (8) → Skills (18)
 
 Skills are grouped around a research → planning → executing → verifying → review spine, plus cross-cutting utilities and an orchestration group that drives the spine autonomously. Default mode for every skill is **interactive** (front-heavy questions before any writes); autonomous mode is opt-in via `mode=auto`, phrases like "go full auto" / "skip the gates", or a pipeline grant written by an orchestrator (see [Autonomy grant](#autonomy-grant)).
 
@@ -78,6 +78,9 @@ Skills are grouped around a research → planning → executing → verifying �
 ### `orchestration` — Fleet-style drivers
 - [`hive`](plugins/orchestration/skills/hive/SKILL.md) — the front door for engineering work. Sizes the request with a cheap read-only triage worker, picks a depth tier (`direct` / `plan-only` / `full`), asks once how much oversight you want (`every step` / `plan check` / `auto`), then writes the `.pipeline.json` grant and relays sealed workers through blueprint → execute-plan → verify-before-done → finish-branch, carrying only artifact paths between phases. Halts and surfaces on blocked tasks, red verification, stuck CI, or a post-approval upsize — and **never merges**.
 - [`doctrine-audit`](plugins/orchestration/skills/doctrine-audit/SKILL.md) — fans out parallel auditor subagents (architecture / tests / docs / standards), each grounded in the project's doctrine sources (nested CLAUDE.md, lint configs, ADRs, `.claude-knowledge/`). Produces `file:line` violations that each cite the rule they break, dedupes against existing open issues, lists everything for approval, then files one scoped issue per violation. Default interactive — nothing filed before you approve.
+
+### `testing` — Test design
+- `test-cases` — deterministic engine (landed): OpenAPI/Swagger spec → IR → entity graph → rule-derived per-entity case files, plus a Kotlin/Java REST Assured test index and a coverage/drift gap report. Org dialects (error shape, auth, tenancy) live in profile data. SKILL.md and the LLM enrich/index steps are pending, so the skill is not invocable yet.
 
 ## Composition
 
