@@ -12,7 +12,7 @@ from . import support
 LIST_PATH = Path(os.environ.get("TEST_CASES_CORPUS") or support.REPO_ROOT / ".claude-plans/test-cases/research/specs.txt")
 
 KNOWN_DIVERGENCES: dict[str, str] = {
-    "/Users/Matthew.Marrazzo/coding/rep/rep-platform-authorizer/docs/api.yaml": (
+    "rep-platform-authorizer/docs/api.yaml": (
         "Ruby 2.6 libyaml rejects a plain scalar containing ':' inside a flow sequence ([a:b]); PyYAML accepts it"
     ),
 }
@@ -71,7 +71,7 @@ class CorpusTest(unittest.TestCase):
                 spec = ir.build_ir(doc, path, digest)
                 py_dict = ir.to_dict(spec)
 
-                if has_ruby and has_pyyaml and path not in KNOWN_DIVERGENCES:
+                if has_ruby and has_pyyaml and not any(path.endswith(k) for k in KNOWN_DIVERGENCES):
                     with backend("ruby"):
                         rb_doc = load.load_doc(path)
                     rb_dict = ir.to_dict(ir.build_ir(rb_doc, path, digest))
