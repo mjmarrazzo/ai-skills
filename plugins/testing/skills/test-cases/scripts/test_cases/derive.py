@@ -440,6 +440,60 @@ def _op_cases(op, prof, entity_id, base_needs, swagger2):
     return out
 
 
+def _lowest_2xx(op):
+    return min((s for s in _documented(op) if 200 <= s < 300), default=200)
+
+
+def _step(op, expect, capture=None):
+    return {"operationId": op.operation_id, "expect": expect, "capture": capture}
+
+
+def _lifecycle_case(create, entity, needs, rule, kind, negative, priority, steps, title):
+    return make_case(
+        id=case_id(entity.id, create.operation_id, "lifecycle", None, rule),
+        title=title,
+        operation={"method": create.method, "path": create.path, "operationId": create.operation_id},
+        kind=kind, loc="lifecycle", field=None, rule=rule, negative=negative,
+        technique="lifecycle", priority=priority, specRef=create.spec_ref, needs=needs,
+        steps=steps, expected={"status": steps[-1]["expect"]},
+    )
+
+
+def _lifecycle_cases(spec, graph, prof):
+    ops = {o.operation_id: o for o in spec.operations}
+    out = []
+    for entity in graph.entities:
+        by_flag = {f: ops[op_id] for f, op_id in entity.ops.items()
+                   if not profile_mod.is_excluded(prof, ops[op_id])}
+        create, read = by_flag.get("C"), by_flag.get("R")
+        if create is None or read is None:
+            continue
+        needs = list(entity.needs)
+        if entity.id_candidate is None or entity.id_param is None:
+            needs.append("llm:id-threading")
+        needs = list(dict.fromkeys(needs))
+        capture = ({entity.id_param: entity.id_candidate["field"]}
+                   if entity.id_candidate and entity.id_param else None)
+        not_found = prof.error["statuses"]["not_found"]
+        first = _step(create, _lowest_2xx(create), capture)
+        steps = [first, _step(read, _lowest_2xx(read))]
+        mutate = by_flag.get("U") or by_flag.get("P")
+        if mutate is not None:
+            steps += [_step(mutate, _lowest_2xx(mutate)), _step(read, _lowest_2xx(read))]
+        delete = by_flag.get("D")
+        if delete is not None:
+            steps += [_step(delete, _lowest_2xx(delete)), _step(read, not_found)]
+        out.append(_lifecycle_case(
+            create, entity, needs, "lifecycle.crud", "LIFECYCLE", False, "P1", steps,
+            f"{entity.id}: create, read and mutate through the lifecycle"))
+        if delete is not None:
+            twice = [copy.deepcopy(first), _step(delete, _lowest_2xx(delete)), _step(delete, not_found)]
+            out.append(_lifecycle_case(
+                create, entity, needs, "lifecycle.delete_twice", "DELETE_TWICE", True, "P2", twice,
+                f"{entity.id}: second delete returns not found"))
+    return out
+
+
 def derive(spec, graph, profile, scope=None):
     cases = []
     owner = graph_mod.op_owner(graph)
@@ -454,4 +508,5 @@ def derive(spec, graph, profile, scope=None):
                 continue
         entity_id, base_needs = case_context(spec, graph, op)
         cases.extend(_op_cases(op, profile, entity_id, base_needs, swagger2))
+    cases.extend(c for c in _lifecycle_cases(spec, graph, profile) if in_scope(c, scope))
     return order_cases(cases, spec, graph)
