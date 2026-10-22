@@ -1,0 +1,13 @@
+version: 1
+name: msp
+stack: kotlin-restassured
+auth:
+  default_actor: root
+  missing: { status: 401, body: { message: Unauthorized } }
+  malformed: { status: 401, value: "Bearer invalid.token.value", body: { message: Unauthorized } }
+actors: [root, account, tenant, char_limit]
+error:
+  keys: { code: code, violations: violations, field: propertyPath, message: message }
+  codes: { validation: INVALID_REQUEST, not_found: NOT_FOUND }
+tenant: { model: authorizer-context, param: null, cross_tenant_status: 404, actor_other: account }
+tests: { indexer: kotlin-restassured }

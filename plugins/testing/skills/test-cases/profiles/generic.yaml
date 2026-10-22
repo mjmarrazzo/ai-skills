@@ -1,0 +1,52 @@
+version: 1
+name: "generic"
+service_path: null
+stack: null
+auth:
+  default_actor: "default"
+  missing:
+    status: 401
+    body: null
+  malformed:
+    status: 401
+    value: "Bearer invalid.token.value"
+    body: null
+actors:
+  - "default"
+error:
+  keys:
+    code: "code"
+    violations: "violations"
+    field: "field"
+    message: "message"
+  statuses:
+    validation: 400
+    not_found: 404
+    conflict: 409
+    unsupported_media: 415
+  codes:
+    validation: null
+    not_found: null
+    conflict: null
+    malformed_body: null
+    forbidden: null
+  assert_messages: false
+  messages: {}
+  unknown_fields: "unknown"
+tenant:
+  model: "none"
+  param: null
+  cross_tenant_status: 404
+  actor_other: null
+auth_matrix: []
+conflicts: {}
+state_machines: {}
+exclude: []
+tests:
+  indexer: null
+  globs:
+    - "**/src/test/**/*.kt"
+    - "**/src/test/**/*.java"
+  exclude_classes:
+    - "*TestBase"
+    - "*Support"
