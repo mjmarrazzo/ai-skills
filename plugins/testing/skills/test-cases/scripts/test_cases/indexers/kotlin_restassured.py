@@ -32,7 +32,7 @@ class _Unresolved(Exception):
     pass
 
 
-def _mask(text):
+def _mask(text, nested=True):
     # Keeps offsets and newlines so structure can be scanned on the mask while
     # literal text is still read from the original.
     out = list(text)
@@ -52,9 +52,10 @@ def _mask(text):
             blank(i, j)
             i = j
         elif text.startswith("/*", i):
+            # Only Kotlin nests block comments; Java ends at the first "*/".
             depth, j = 1, i + 2
             while j < n and depth:
-                if text.startswith("/*", j):
+                if nested and text.startswith("/*", j):
                     depth += 1
                     j += 2
                 elif text.startswith("*/", j):
@@ -66,9 +67,12 @@ def _mask(text):
             i = j
         elif text.startswith('"""', i):
             j = text.find('"""', i + 3)
-            j = n if j < 0 else j
-            blank(i + 3, j)
-            i = j + 3
+            end = n if j < 0 else j + 3
+            # Extra quotes before the closer are string content.
+            while j >= 0 and end < n and text[end] == '"':
+                end += 1
+            blank(i + 3, end - 3 if j >= 0 else n)
+            i = end
         elif c in "\"'":
             j = i + 1
             while j < n and text[j] != c and text[j] != "\n":
@@ -284,9 +288,9 @@ def _expression_body_end(masked, start):
     return len(masked[:k].rstrip())
 
 
-def _first_arg(text, masked, start):
+def _first_arg(text, masked, start, limit):
     depth = 0
-    for k in range(start, len(masked)):
+    for k in range(start, limit):
         ch = masked[k]
         if ch in "([{":
             depth += 1
@@ -296,7 +300,7 @@ def _first_arg(text, masked, start):
             depth -= 1
         elif ch == "," and depth == 0:
             return " ".join(text[start:k].split())
-    return " ".join(text[start:].split())
+    return " ".join(text[start:limit].split())
 
 
 def _statuses(body):
@@ -315,7 +319,7 @@ def _methods(text, masked, lines, class_disabled, lookup, ctx):
         names, display = _annotations_before(text, masked, m.start())
         if not any(a in names for a in _TEST_ANNOTATIONS + ("ManualTest",)):
             continue
-        kw_pos = m.start() + m.group().find("fun " if m.group(1) else "void")
+        kw_pos = m.start() if m.group(1) else m.start() + m.group().find("void")
         close = _match(masked, m.end() - 1)
         j = close + 1
         while j < len(masked) and masked[j] not in "{=;}":
@@ -332,7 +336,7 @@ def _methods(text, masked, lines, class_disabled, lookup, ctx):
 
         calls = []
         for cm in _CALL_RE.finditer(body):
-            expr = _first_arg(text, masked, body_start + cm.end())
+            expr = _first_arg(text, masked, body_start + cm.end(), body_end)
             path = _eval(expr, lookup, True)
             if not path.startswith("/"):
                 continue
@@ -377,7 +381,7 @@ class KotlinRestAssuredIndexer:
 
     def index(self, sources, ctx):
         ordered = sorted(sources, key=lambda s: s.path)
-        masks = {s.path: _mask(s.text) for s in ordered}
+        masks = {s.path: _mask(s.text, s.path.endswith(".kt")) for s in ordered}
 
         entries = {}
         for s in ordered:

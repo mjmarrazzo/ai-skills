@@ -161,5 +161,28 @@ class KotlinIndexerTests(unittest.TestCase):
         self.assertEqual(kra.HTTP_STATUS["SC_NOT_FOUND"], 404)
 
 
+class MaskHardeningTests(unittest.TestCase):
+    def test_java_block_comments_do_not_nest(self):
+        src = "/* see /* x */\nclass A {}\n"
+        self.assertIn("class A", kra._mask(src, nested=False))
+        self.assertNotIn("class A", kra._mask(src, nested=True))
+
+    def test_raw_string_with_extra_closing_quotes(self):
+        masked = kra._mask('val s = """x"""" + y\nval z = 1', True)
+        self.assertIn("+ y", masked)
+        self.assertNotIn("x", masked.split("+")[0])
+
+    def test_first_arg_bounded_by_method_body(self):
+        src = 'class T {\n @Test fun a() { get("/x" \n}\n @Test fun b() { post("/y") }\n}\n'
+        out = kra.KotlinRestAssuredIndexer().index([index.SourceFile("T.kt", src)], _ctx())
+        a = out["files"][0]["methods"][0]
+        self.assertTrue(all("post" not in c["expr"] for c in a["calls"]))
+
+    def test_fun_keyword_followed_by_tab(self):
+        src = 'class T {\n @Test fun\tt() { get("/x") }\n}\n'
+        out = kra.KotlinRestAssuredIndexer().index([index.SourceFile("T.kt", src)], _ctx())
+        self.assertEqual(out["files"][0]["methods"][0]["line"], 2)
+
+
 if __name__ == "__main__":
     unittest.main()
