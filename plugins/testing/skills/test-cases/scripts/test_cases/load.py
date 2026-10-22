@@ -1,10 +1,13 @@
 import datetime
+import fnmatch
 import hashlib
 import json
 import os
 import shutil
 import subprocess
 from pathlib import Path
+
+from test_cases.index import SourceFile
 
 SKILL_DIR = Path(__file__).resolve().parents[2]
 
@@ -137,3 +140,20 @@ def load_schema(name):
 
 def sha256_file(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def discover_tests(root, globs, excludes):
+    r = Path(root)
+    if not r.is_dir():
+        raise LoadError(f"{root}: not a directory")
+    found = set()
+    for g in globs:
+        for p in r.glob(g):
+            if p.is_file():
+                found.add(p.relative_to(r).as_posix())
+    return sorted(f for f in found if not any(fnmatch.fnmatch(f, x) for x in excludes))
+
+
+def read_sources(root, rel_paths):
+    r = Path(root)
+    return [SourceFile(rel, (r / rel).read_text(encoding="utf-8", errors="replace")) for rel in rel_paths]
