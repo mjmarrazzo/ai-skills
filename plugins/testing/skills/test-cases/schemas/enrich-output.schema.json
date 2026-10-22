@@ -1,0 +1,497 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "test-cases enrich output",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "entity": {
+      "type": "string"
+    },
+    "canonical": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          },
+          "request": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "object"
+              },
+              "query": {
+                "type": "object"
+              },
+              "headers": {
+                "type": "object"
+              },
+              "body": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "path",
+              "query",
+              "headers",
+              "body"
+            ],
+            "additionalProperties": false
+          },
+          "threading": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "operationId",
+          "request"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "pattern_samples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "specRef": {
+            "type": "string"
+          },
+          "valid": {
+            "type": "string"
+          },
+          "invalid": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "specRef",
+          "valid",
+          "invalid"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "id_mapping": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "create": {
+            "type": "string"
+          },
+          "response_field": {
+            "type": "string"
+          },
+          "item_param": {
+            "type": "string"
+          },
+          "confirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entity",
+          "create",
+          "response_field",
+          "item_param",
+          "confirmed"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/llm_case"
+      }
+    },
+    "drift": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "specRef": {
+            "type": "string"
+          },
+          "code_ref": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "spec_only",
+              "code_only",
+              "mismatch"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "specRef",
+          "code_ref",
+          "type",
+          "detail"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "entity",
+    "canonical",
+    "cases"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "llm_case": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "operationId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "method",
+            "path",
+            "operationId"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "CROSS_FIELD",
+            "DUPLICATE",
+            "STATE_CONFLICT",
+            "RANGE_INVALID",
+            "LENGTH_INVALID",
+            "REQUIRED_MISSING",
+            "FORBIDDEN_PERMISSION"
+          ]
+        },
+        "loc": {
+          "type": "string",
+          "enum": [
+            "body",
+            "path",
+            "query",
+            "header",
+            "auth",
+            "op",
+            "lifecycle"
+          ]
+        },
+        "field": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rule": {
+          "type": "string"
+        },
+        "negative": {
+          "type": "boolean"
+        },
+        "technique": {
+          "type": "string",
+          "enum": [
+            "ep",
+            "bva-3",
+            "error-guess",
+            "state-transition",
+            "auth-matrix",
+            "lifecycle",
+            "owasp-api1",
+            "owasp-api3",
+            "owasp-api4",
+            "owasp-api5",
+            "owasp-api7",
+            "llm"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "P1",
+            "P2",
+            "P3"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "llm"
+          ]
+        },
+        "specRef": {
+          "type": "string"
+        },
+        "needs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "actor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "auth": {
+          "type": "string",
+          "enum": [
+            "valid",
+            "none",
+            "malformed"
+          ]
+        },
+        "input": {
+          "type": "object",
+          "properties": {
+            "body": {
+              "type": "object"
+            },
+            "remove": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "body_mode": {
+              "type": "string",
+              "enum": [
+                "merge",
+                "replace",
+                "raw",
+                "none"
+              ]
+            },
+            "raw": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "content_type": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "path": {
+              "type": "object"
+            },
+            "query": {
+              "type": "object"
+            },
+            "headers": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "body",
+            "remove",
+            "body_mode",
+            "raw",
+            "content_type",
+            "path",
+            "query",
+            "headers"
+          ],
+          "additionalProperties": false
+        },
+        "steps": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "expected": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": [
+                "integer",
+                "array"
+              ],
+              "items": {
+                "type": "integer"
+              }
+            },
+            "code": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "violations": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "body": {},
+            "not_persisted": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "status",
+            "code",
+            "violations",
+            "body",
+            "not_persisted"
+          ],
+          "additionalProperties": false
+        },
+        "coverage": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "gap",
+                "covered",
+                "stub"
+              ]
+            },
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "status",
+            "tests"
+          ],
+          "additionalProperties": false
+        },
+        "drift": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "spec_only",
+            "code_only",
+            "mismatch"
+          ]
+        },
+        "review": {
+          "type": "string",
+          "enum": [
+            "required"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "quote": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "operation",
+        "kind",
+        "loc",
+        "field",
+        "rule",
+        "negative",
+        "technique",
+        "priority",
+        "source",
+        "specRef",
+        "needs",
+        "actor",
+        "auth",
+        "input",
+        "steps",
+        "expected",
+        "coverage",
+        "drift",
+        "review",
+        "tags",
+        "quote"
+      ],
+      "additionalProperties": false
+    },
+    "step": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "type": "string"
+        },
+        "expect": {
+          "type": "integer"
+        },
+        "capture": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "operationId",
+        "expect",
+        "capture"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
