@@ -240,5 +240,26 @@ creds 200-nonjson; FAKE_CURL_BODY="$T/body-bad.json"
 run_case 200-nonjson 1; err_has 'unparseable body'; [ ! -e "$T/c/200-nonjson/usage.json" ] || fail_if "cache written"; finish
 FAKE_CURL_BODY=$BODY
 
+# ---- Task 4: backoff ----
+creds http-429; FAKE_CURL_STATUS=429
+run_case http-429 4
+mode_is "$T/c/http-429/backoff-until" -rw-------
+v=$(cat "$T/c/http-429/backoff-until" 2>/dev/null); d=$(( ${v:-0} - $(date +%s) ))
+{ [ "$d" -ge 295 ] && [ "$d" -le 305 ]; } || fail_if "backoff value off: $d"
+grep -Eq 'retry in [45]m[0-9]+s' "$ERR" || fail_if "stderr: $(cat "$ERR")"; finish
+FAKE_CURL_STATUS=200
+
+creds backoff-active; warm backoff-active "$FULL"; echo $(( $(date +%s) + 120 )) > "$T/c/backoff-active/backoff-until"
+run_case backoff-active 4; curl_calls 0; out_empty; finish
+
+creds backoff-expired; warm backoff-expired "$FULL"; echo $(( $(date +%s) - 10 )) > "$T/c/backoff-expired/backoff-until"
+run_case backoff-expired 0; curl_calls 0; out_has '5h 51%'; finish
+
+creds backoff-corrupt; mkdir -m 700 "$T/c/backoff-corrupt"; echo abc > "$T/c/backoff-corrupt/backoff-until"
+run_case backoff-corrupt 0; curl_calls 1; finish
+
+creds 200-clears-backoff; mkdir -m 700 "$T/c/200-clears-backoff"; echo $(( $(date +%s) - 10 )) > "$T/c/200-clears-backoff/backoff-until"
+run_case 200-clears-backoff 0; [ ! -e "$T/c/200-clears-backoff/backoff-until" ] || fail_if "backoff not cleared"; finish
+
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

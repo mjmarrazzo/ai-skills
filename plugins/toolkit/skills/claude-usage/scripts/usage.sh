@@ -40,7 +40,18 @@ else
   mkdir -m 700 "$dir"
 fi
 
-# backoff check
+if [ -f "$backoff" ]; then
+  until_ts=$(head -n 1 "$backoff" 2>/dev/null || true)
+  case $until_ts in
+    ''|*[!0-9]*) ;;
+    *)
+      now=$(date +%s)
+      if [ "$until_ts" -gt "$now" ]; then
+        rem=$(( until_ts - now ))
+        echo "claude-usage: rate limited (HTTP 429); retry in $((rem / 60))m$((rem % 60))s" >&2; exit 4
+      fi ;;
+  esac
+fi
 
 summary_filter='
 def epoch: sub("\\.[0-9]+"; "") | capture("^(?<b>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2})(?<z>Z|[+-][0-9]{2}:[0-9]{2})$") | (.b + "Z" | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) - (if .z == "Z" then 0 else (.z[0:1] + "1" | tonumber) * ((.z[1:3]|tonumber)*3600 + (.z[4:6]|tonumber)*60) end);
@@ -120,7 +131,11 @@ case $status in
   401|403)
     echo "claude-usage: HTTP $status: OAuth token rejected (expired or revoked); open Claude Code to refresh login" >&2; exit 1 ;;
   429)
-    echo "claude-usage: rate limited (HTTP 429)" >&2; exit 4 ;;
+    until_ts=$(( $(date +%s) + 300 ))
+    printf '%s\n' "$until_ts" > "$body_tmp"
+    chmod 600 "$body_tmp"
+    mv "$body_tmp" "$backoff"
+    echo "claude-usage: rate limited (HTTP 429); retry in 5m0s" >&2; exit 4 ;;
   2??) ;;
   *) echo "claude-usage: HTTP $status: request failed" >&2; exit 1 ;;
 esac
