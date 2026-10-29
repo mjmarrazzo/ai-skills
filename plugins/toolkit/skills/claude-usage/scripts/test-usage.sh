@@ -176,5 +176,69 @@ run_case warm-bucket-string 0; out_starts "5h n/a"; finish
 mkdir -p "$T/h/unsafe-dir"; mkdir -m 700 "$T/c/unsafe-dir"; chmod 770 "$T/c/unsafe-dir"
 run_case unsafe-dir 3; err_has "$T/c/unsafe-dir"; mode_is "$T/c/unsafe-dir" drwxrwx---; finish
 
+# ---- Task 3: token, fetch, errors ----
+BODY="$T/body.json"
+jq -n "{five_hour:{utilization:51,resets_at:$R2H},seven_day:{utilization:27,resets_at:$R4D},seven_day_opus:null,seven_day_sonnet:null}" > "$BODY"
+echo 'not json' > "$T/body-bad.json"
+FAKE_CURL_BODY=$BODY; FAKE_CURL_STATUS=200; export FAKE_CURL_BODY FAKE_CURL_STATUS
+
+creds() { mkdir -p "$T/h/$1/.claude"; printf '{"claudeAiOauth":{"accessToken":"%s"}}' "${2:-$TOKEN}" > "$T/h/$1/.claude/.credentials.json"; }
+
+creds cold-200
+run_case cold-200 0; out_has '5h 51%'; curl_calls 1
+mode_is "$T/c/cold-200/usage.json" -rw-------; mode_is "$T/c/cold-200" drwx------; finish
+
+creds cold-200-json
+run_case cold-200-json 0 --json; cmp -s "$OUT" "$BODY" || fail_if "json differs from body"; finish
+
+creds stale-cache; mkdir -m 700 "$T/c/stale-cache"; echo '{}' > "$T/c/stale-cache/usage.json"; touch -t 200001010000 "$T/c/stale-cache/usage.json"
+run_case stale-cache 0; curl_calls 1; finish
+
+creds future-cache; mkdir -m 700 "$T/c/future-cache"; echo '{}' > "$T/c/future-cache/usage.json"; touch -t 203501010000 "$T/c/future-cache/usage.json"
+run_case future-cache 0; curl_calls 1; finish
+
+creds corrupt-cache; mkdir -m 700 "$T/c/corrupt-cache"; echo 'not json' > "$T/c/corrupt-cache/usage.json"
+run_case corrupt-cache 0; curl_calls 1; cmp -s "$T/c/corrupt-cache/usage.json" "$BODY" || fail_if "cache not replaced"; finish
+
+creds darwin-keychain tok-OTHER
+CASE_ENV="FAKE_UNAME=Darwin FAKE_SECURITY_OUT={\"claudeAiOauth\":{\"accessToken\":\"$TOKEN\"}}"
+run_case darwin-keychain 0; curl_calls 1; finish
+
+creds darwin-garbage-keychain
+CASE_ENV="FAKE_UNAME=Darwin FAKE_SECURITY_OUT=not-json"
+run_case darwin-garbage-keychain 0; finish
+
+creds darwin-fallback
+CASE_ENV="FAKE_UNAME=Darwin"
+run_case darwin-fallback 0; finish
+CASE_ENV=
+
+mkdir -p "$T/h/no-token"
+run_case no-token 3; err_has '.credentials.json'; curl_calls 0; finish
+
+creds bad-token-chars 'tok\"x'
+run_case bad-token-chars 3; err_has 'unexpected characters'; err_lacks 'tok"x'; curl_calls 0; finish
+mkdir -p "$T/h/bad-token-backslash/.claude"; printf '{"claudeAiOauth":{"accessToken":"tok\\\\x"}}' > "$T/h/bad-token-backslash/.claude/.credentials.json"
+run_case bad-token-backslash 3; err_has 'unexpected characters'; curl_calls 0; finish
+mkdir -p "$T/h/bad-token-newline/.claude"; printf '{"claudeAiOauth":{"accessToken":"tok\\nx"}}' > "$T/h/bad-token-newline/.claude/.credentials.json"
+run_case bad-token-newline 3; err_has 'unexpected characters'; curl_calls 0; finish
+
+creds http-401; FAKE_CURL_STATUS=401
+run_case http-401 1; err_has 'HTTP 401'; err_has 'open Claude Code'; finish
+creds http-500; FAKE_CURL_STATUS=500
+run_case http-500 1; err_has 'HTTP 500'; finish
+
+creds http-500-keeps-stale; mkdir -m 700 "$T/c/http-500-keeps-stale"; echo '{"x":1}' > "$T/c/http-500-keeps-stale/usage.json"; touch -t 200001010000 "$T/c/http-500-keeps-stale/usage.json"
+cp "$T/c/http-500-keeps-stale/usage.json" "$T/stale.copy"
+run_case http-500-keeps-stale 1; out_empty; cmp -s "$T/stale.copy" "$T/c/http-500-keeps-stale/usage.json" || fail_if "stale cache modified"; finish
+
+FAKE_CURL_STATUS=200
+creds net-fail
+CASE_ENV="FAKE_CURL_FAIL=1"; run_case net-fail 1; err_has 'request failed: curl: (6)'; finish; CASE_ENV=
+
+creds 200-nonjson; FAKE_CURL_BODY="$T/body-bad.json"
+run_case 200-nonjson 1; err_has 'unparseable body'; [ ! -e "$T/c/200-nonjson/usage.json" ] || fail_if "cache written"; finish
+FAKE_CURL_BODY=$BODY
+
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

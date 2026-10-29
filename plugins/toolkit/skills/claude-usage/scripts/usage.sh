@@ -78,4 +78,57 @@ if [ -f "$cache" ]; then
   fi
 fi
 
-exit 1
+nl='
+'
+token_filter='.claudeAiOauth.accessToken // empty'
+creds="$HOME/.claude/.credentials.json"
+token=
+tried=
+if [ "$(uname -s)" = Darwin ]; then
+  tried="keychain, "
+  token=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null | jq -r "$token_filter" 2>/dev/null || true)
+fi
+if [ -z "$token" ]; then
+  tried="$tried$creds"
+  if [ -f "$creds" ]; then
+    token=$(jq -r "$token_filter" < "$creds" 2>/dev/null || true)
+  fi
+fi
+if [ -z "$token" ]; then
+  echo "claude-usage: no OAuth token found (tried: $tried)" >&2; exit 3
+fi
+case $token in
+  *'"'*|*\\*|*"$nl"*) echo "claude-usage: token has unexpected characters" >&2; exit 3 ;;
+esac
+
+body_tmp=$(mktemp "$dir/.tmp.XXXXXX")
+err_tmp=$(mktemp "$dir/.tmp.XXXXXX")
+trap 'rm -f "$body_tmp" "$err_tmp"' EXIT
+
+if status=$(printf 'header = "Authorization: Bearer %s"\n' "$token" | curl -sS --max-time 10 -o "$body_tmp" -w '%{http_code}' -H 'anthropic-beta: oauth-2025-04-20' -K - 'https://api.anthropic.com/api/oauth/usage' 2>"$err_tmp"); then
+  :
+else
+  rc=$?
+  line=$(head -n 1 "$err_tmp")
+  case $line in
+    *Authorization*|*"$token"*|'') line="curl exit $rc" ;;
+  esac
+  echo "claude-usage: request failed: $line" >&2; exit 1
+fi
+
+case $status in
+  401|403)
+    echo "claude-usage: HTTP $status: OAuth token rejected (expired or revoked); open Claude Code to refresh login" >&2; exit 1 ;;
+  429)
+    echo "claude-usage: rate limited (HTTP 429)" >&2; exit 4 ;;
+  2??) ;;
+  *) echo "claude-usage: HTTP $status: request failed" >&2; exit 1 ;;
+esac
+
+if ! jq -e 'type=="object"' "$body_tmp" >/dev/null 2>&1; then
+  echo "claude-usage: HTTP $status: unparseable body" >&2; exit 1
+fi
+chmod 600 "$body_tmp"
+mv "$body_tmp" "$cache"
+rm -f "$backoff"
+emit
