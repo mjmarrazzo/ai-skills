@@ -129,5 +129,52 @@ grep -q jq "$T/out/mj.err" || fail_if "stderr lacks jq"
 leak_check "$T/out/mj.out" "$T/out/mj.err" "$T/c/missing-jq" >/dev/null || fail_if "leak"
 finish
 
+# ---- Task 2: warm cache + formatting ----
+# warm <name> <jq-expr producing the body>; pre-creates the cache dir and usage.json
+warm() {
+  mkdir -p "$T/h/$1"; mkdir -m 700 "$T/c/$1"
+  jq -n "$2" > "$T/c/$1/usage.json"
+}
+R2H='(now+8030|todate)'
+R4D='(now+4*86400+6*3600+1800|todate)'
+FULL="{five_hour:{utilization:51.0,resets_at:$R2H},seven_day:{utilization:27,resets_at:$R4D},seven_day_opus:{utilization:12,resets_at:null},seven_day_sonnet:{utilization:3,resets_at:null}}"
+
+warm warm-full "$FULL"
+run_case warm-full 0
+out_is "5h 51% (resets in 2h13m) · 7d 27% (resets in 4d6h) · opus 12% · sonnet 3%"; curl_calls 0; finish
+
+warm warm-null-models "{five_hour:{utilization:51,resets_at:$R2H},seven_day:{utilization:27,resets_at:$R4D},seven_day_opus:null,seven_day_sonnet:null}"
+run_case warm-null-models 0; out_lacks opus; out_lacks sonnet; out_has '7d 27%'; curl_calls 0; finish
+
+warm warm-null-5h "{five_hour:null,seven_day:{utilization:27,resets_at:$R4D}}"
+run_case warm-null-5h 0; out_starts "5h n/a · 7d"; curl_calls 0; finish
+
+warm warm-float "{five_hour:{utilization:50.6,resets_at:null},seven_day:null}"
+run_case warm-float 0; out_starts "5h 51%"; curl_calls 0; finish
+
+warm warm-frac-offset "{five_hour:{utilization:51,resets_at:(now+8030|todate|sub(\"Z\$\";\".123456+00:00\"))},seven_day:null}"
+run_case warm-frac-offset 0; out_has 'resets in 2h13m'; curl_calls 0; finish
+
+warm warm-nonutc-offset "{five_hour:{utilization:51,resets_at:(now+8030+18000|todate|sub(\"Z\$\";\"+05:00\"))},seven_day:null}"
+run_case warm-nonutc-offset 0; out_has 'resets in 2h13m'; curl_calls 0; finish
+
+warm warm-bad-reset '{five_hour:{utilization:51,resets_at:"soon"},seven_day:null}'
+run_case warm-bad-reset 0; out_has '(resets soon)'; finish
+
+warm warm-null-reset '{five_hour:{utilization:51,resets_at:null},seven_day:null}'
+run_case warm-null-reset 0; out_is "5h 51% · 7d n/a"; finish
+
+warm warm-nonnumeric '{five_hour:{utilization:"x",resets_at:null},seven_day:null}'
+run_case warm-nonnumeric 0; out_starts "5h ?%"; finish
+
+warm warm-json "$FULL"
+run_case warm-json 0 --json; cmp -s "$OUT" "$T/c/warm-json/usage.json" || fail_if "json output differs from fixture"; curl_calls 0; finish
+
+warm warm-bucket-string '{five_hour:"x",seven_day:null}'
+run_case warm-bucket-string 0; out_starts "5h n/a"; finish
+
+mkdir -p "$T/h/unsafe-dir"; mkdir -m 700 "$T/c/unsafe-dir"; chmod 770 "$T/c/unsafe-dir"
+run_case unsafe-dir 3; err_has "$T/c/unsafe-dir"; mode_is "$T/c/unsafe-dir" drwxrwx---; finish
+
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]
