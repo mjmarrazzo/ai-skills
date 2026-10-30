@@ -74,6 +74,7 @@ Skills are grouped around a research → planning → executing → verifying �
 
 ### `toolkit` — Cross-cutting utilities
 - [`fdm`](plugins/toolkit/skills/fdm/SKILL.md) — applies Functional Domain Modeling discipline when explicitly invoked or when the repo's doctrine adopts FDM (generic "implement X" requests stay with blueprint/execute-plan): pushes I/O to the edge, keeps domain functions pure, three-file (handler / domain / repository) decomposition, mock-free domain tests. References cover backend stacks (Go, Java/Spring, TypeScript/Node, Python/FastAPI) and frontend stacks (React, Vue, Svelte).
+- [`claude-usage`](plugins/toolkit/skills/claude-usage/SKILL.md) — reads your 5h/7d subscription utilization from the OAuth usage endpoint (3-min cache, 5-min backoff after a 429, fail-loud exit codes) so agents can check headroom before fanning out.
 
 ### `orchestration` — Fleet-style drivers
 - [`hive`](plugins/orchestration/skills/hive/SKILL.md) — the front door for engineering work. Sizes the request with a cheap read-only triage worker, picks a depth tier (`direct` / `plan-only` / `full`), asks once how much oversight you want (`every step` / `plan check` / `auto`), then writes the `.pipeline.json` grant and relays sealed workers through blueprint → execute-plan → verify-before-done → finish-branch, carrying only artifact paths between phases. Halts and surfaces on blocked tasks, red verification, stuck CI, or a post-approval upsize — and **never merges**.

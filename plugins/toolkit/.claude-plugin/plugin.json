@@ -1,7 +1,7 @@
 {
   "name": "toolkit",
-  "version": "0.1.0",
-  "description": "Cross-cutting utilities — fdm. Functional domain modeling discipline.",
+  "version": "0.2.0",
+  "description": "Cross-cutting utilities — fdm, claude-usage. Functional domain modeling discipline and Claude subscription usage checks.",
   "author": {
     "name": "mjmarrazzo"
   }
