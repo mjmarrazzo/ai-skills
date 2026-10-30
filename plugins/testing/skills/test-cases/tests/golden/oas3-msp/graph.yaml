@@ -1,0 +1,72 @@
+version: 1
+entities:
+  - id: "health"
+    collection_path: "/health"
+    item_path: null
+    id_param: null
+    parent: null
+    ops:
+      R: "health"
+    actions: []
+    singleton: true
+    lifecycle: false
+    id_candidate: null
+    depends_on: []
+    needs: []
+  - id: "shapes"
+    collection_path: "/v1/{tenantId}/shapes"
+    item_path: null
+    id_param: null
+    parent: null
+    ops:
+      C: "createShape"
+    actions: []
+    singleton: false
+    lifecycle: false
+    id_candidate: null
+    depends_on: []
+    needs: []
+  - id: "widgets"
+    collection_path: "/v1/{tenantId}/widgets"
+    item_path: "/v1/{tenantId}/widgets/{widgetId}"
+    id_param: "widgetId"
+    parent: null
+    ops:
+      C: "createWidget"
+      L: "listWidgets"
+      R: "getWidget"
+      U: "updateWidget"
+      D: "deleteWidget"
+    actions:
+      - "archiveWidget"
+    singleton: false
+    lifecycle: true
+    id_candidate:
+      field: "id"
+      source: "spec-candidate"
+    depends_on: []
+    needs: []
+  - id: "parts"
+    collection_path: "/v1/{tenantId}/parts"
+    item_path: "/v1/{tenantId}/parts/{partId}"
+    id_param: "partId"
+    parent: null
+    ops:
+      C: "createPart"
+      R: "getPart"
+    actions: []
+    singleton: false
+    lifecycle: true
+    id_candidate:
+      field: "partId"
+      source: "spec-candidate"
+    depends_on:
+      - "widgets"
+    needs:
+      - "widgets"
+order:
+  - "health"
+  - "shapes"
+  - "widgets"
+  - "parts"
+warnings: []

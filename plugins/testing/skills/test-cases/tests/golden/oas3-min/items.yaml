@@ -1,0 +1,963 @@
+version: 1
+engine: "test-cases/0.1.0"
+spec:
+  source: "tests/fixtures/specs/oas3-min.json"
+  version: "3.0.0"
+  sha256: "2bd9652110c9e689689d111bb0a3333fc2c6da7e1750f840b9dc305114086f7a"
+profile:
+  name: "generic"
+  source: null
+error_shape:
+  code_key: "code"
+  violations_key: "violations"
+  field_key: "field"
+  message_key: "message"
+entity: "items"
+cases:
+  - id: "items.listItems.auth._.auth.public"
+    title: "GET /items accepts op: auth.public"
+    operation:
+      method: "GET"
+      path: "/items"
+      operationId: "listItems"
+    kind: "PUBLIC_REACHABLE"
+    loc: "auth"
+    field: null
+    rule: "auth.public"
+    negative: false
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/get"
+    needs: []
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "security"
+  - id: "items.listItems.op._.happy.full"
+    title: "GET /items accepts op: happy.full"
+    operation:
+      method: "GET"
+      path: "/items"
+      operationId: "listItems"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/get"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "items.createItem.body.name.required.missing"
+    title: "POST /items rejects name: required.missing"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "name"
+    rule: "required.missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody/content/application~1json/schema/properties/name"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "name"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+      - "undocumented-status"
+  - id: "items.createItem.body.name.required.null"
+    title: "POST /items rejects name: required.null"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "name"
+    rule: "required.null"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody/content/application~1json/schema/properties/name"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+      - "undocumented-status"
+  - id: "items.createItem.body.name.required.empty"
+    title: "POST /items rejects name: required.empty"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "name"
+    rule: "required.empty"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody/content/application~1json/schema/properties/name"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: ""
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+      - "undocumented-status"
+  - id: "items.createItem.body.name.type.wrong.int"
+    title: "POST /items rejects name: type.wrong int"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "name"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody/content/application~1json/schema/properties/name/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: 123
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+      - "undocumented-status"
+  - id: "items.createItem.body.name.maxLength.minus1"
+    title: "POST /items accepts name: maxLength.minus1"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "LENGTH_BOUNDARY_VALID"
+    loc: "body"
+    field: "name"
+    rule: "maxLength.minus1"
+    negative: false
+    technique: "bva-3"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody/content/application~1json/schema/properties/name/maxLength"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: "<<str:9>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 201
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "items.createItem.body.name.maxLength.max"
+    title: "POST /items accepts name: maxLength.max"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "LENGTH_BOUNDARY_VALID"
+    loc: "body"
+    field: "name"
+    rule: "maxLength.max"
+    negative: false
+    technique: "bva-3"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody/content/application~1json/schema/properties/name/maxLength"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: "<<str:10>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 201
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "items.createItem.body.name.maxLength.plus1"
+    title: "POST /items rejects name: maxLength.plus1"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "LENGTH_INVALID"
+    loc: "body"
+    field: "name"
+    rule: "maxLength.plus1"
+    negative: true
+    technique: "bva-3"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody/content/application~1json/schema/properties/name/maxLength"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: "<<str:11>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+      - "undocumented-status"
+  - id: "items.createItem.body.role.mass_assignment.role"
+    title: "POST /items rejects role: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "role"
+    rule: "mass_assignment.role"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        role: "admin"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "role"
+      body: null
+      not_persisted:
+        - "role"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.body.tenantId.mass_assignment.tenantId"
+    title: "POST /items rejects tenantId: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "tenantId"
+    rule: "mass_assignment.tenantId"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tenantId: "other-tenant"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "tenantId"
+      body: null
+      not_persisted:
+        - "tenantId"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.body.status.mass_assignment.status"
+    title: "POST /items rejects status: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "status"
+    rule: "mass_assignment.status"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        status: "ACTIVE"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "status"
+      body: null
+      not_persisted:
+        - "status"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.body.price.mass_assignment.price"
+    title: "POST /items rejects price: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "price"
+    rule: "mass_assignment.price"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        price: 0
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "price"
+      body: null
+      not_persisted:
+        - "price"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.body.id.mass_assignment.id"
+    title: "POST /items rejects id: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "id"
+    rule: "mass_assignment.id"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        id: "00000000-0000-0000-0000-000000000000"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "id"
+      body: null
+      not_persisted:
+        - "id"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.body.isAdmin.mass_assignment.isAdmin"
+    title: "POST /items rejects isAdmin: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "isAdmin"
+    rule: "mass_assignment.isAdmin"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/post/requestBody"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        isAdmin: true
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 201
+        - 400
+      code: null
+      violations:
+        - field: "isAdmin"
+      body: null
+      not_persisted:
+        - "isAdmin"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.auth._.auth.public"
+    title: "POST /items accepts op: auth.public"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "PUBLIC_REACHABLE"
+    loc: "auth"
+    field: null
+    rule: "auth.public"
+    negative: false
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/post"
+    needs: []
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 201
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "security"
+  - id: "items.createItem.op._.happy.full"
+    title: "POST /items accepts op: happy.full"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1items/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 201
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "items.createItem.op._.required.all_missing"
+    title: "POST /items rejects op: required.all_missing"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "REQUIRED_MISSING"
+    loc: "op"
+    field: null
+    rule: "required.all_missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "replace"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.op._.body.malformed"
+    title: "POST /items rejects op: body.malformed"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.malformed"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "{\""
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.op._.body.array"
+    title: "POST /items rejects op: body.array"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.array"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "[]"
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.op._.body.empty"
+    title: "POST /items rejects op: body.empty"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "EMPTY_BODY"
+    loc: "op"
+    field: null
+    rule: "body.empty"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "none"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "items.createItem.op._.body.content_type"
+    title: "POST /items rejects op: body.content_type"
+    operation:
+      method: "POST"
+      path: "/items"
+      operationId: "createItem"
+    kind: "WRONG_CONTENT_TYPE"
+    loc: "op"
+    field: null
+    rule: "body.content_type"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1items/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: "text/plain"
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 415
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"

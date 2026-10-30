@@ -1,0 +1,97 @@
+version: 1
+engine: "test-cases/0.1.0"
+spec:
+  source: "tests/fixtures/specs/oas3.yaml"
+  version: "3.0.3"
+  sha256: "ad910f29708d38a01efb06e3ee9175467a92355aa4d5a60ed9ac753ecc8cb75a"
+profile:
+  name: "msp"
+  source: "profiles/msp.yaml"
+error_shape:
+  code_key: "code"
+  violations_key: "violations"
+  field_key: "propertyPath"
+  message_key: "message"
+entity: "health"
+cases:
+  - id: "health.health.auth._.auth.public"
+    title: "GET /health accepts op: auth.public"
+    operation:
+      method: "GET"
+      path: "/health"
+      operationId: "health"
+    kind: "PUBLIC_REACHABLE"
+    loc: "auth"
+    field: null
+    rule: "auth.public"
+    negative: false
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1health/get"
+    needs: []
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "security"
+  - id: "health.health.op._.happy.full"
+    title: "GET /health accepts op: happy.full"
+    operation:
+      method: "GET"
+      path: "/health"
+      operationId: "health"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1health/get"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []

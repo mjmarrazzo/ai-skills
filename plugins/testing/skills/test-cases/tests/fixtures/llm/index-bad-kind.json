@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "file": "src/test/kotlin/com/example/widgets/WidgetsPostTest.kt",
+  "class": "WidgetsPostTest",
+  "tests": [
+    {
+      "method": "testWidgetsPost_nameIsRequired",
+      "line": 20,
+      "http_method": "POST",
+      "path": "/v1/{tenantId}/widgets",
+      "kind": "NOT_A_KIND",
+      "field": "name",
+      "status": 400,
+      "actor": null,
+      "factory_entry": null,
+      "confidence": "high"
+    },
+    {
+      "method": "testWidgetsPost_created",
+      "line": 40,
+      "http_method": "POST",
+      "path": "/v1/{tenantId}/widgets",
+      "kind": "HAPPY_FULL",
+      "field": null,
+      "status": 201,
+      "actor": "root",
+      "factory_entry": null,
+      "confidence": "medium"
+    }
+  ]
+}

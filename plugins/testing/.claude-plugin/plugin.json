@@ -1,0 +1,8 @@
+{
+  "name": "testing",
+  "version": "0.1.0",
+  "description": "Testing — test-cases: deterministic API test-case derivation from OpenAPI specs plus coverage and drift against existing tests.",
+  "author": {
+    "name": "mjmarrazzo"
+  }
+}

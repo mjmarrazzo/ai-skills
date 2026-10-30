@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "indexer": "kotlin-restassured",
+  "path_constants": {
+    "Paths.WIDGETS": "/v1/{tenantId}/widgets"
+  },
+  "unused_path_constants": [],
+  "files": [
+    {
+      "path": "src/test/kotlin/com/example/widgets/WidgetsPostTest.kt",
+      "class": "WidgetsPostTest",
+      "excluded": null,
+      "display_name": null,
+      "methods": [
+        {
+          "name": "testWidgetsPost_nameIsRequired",
+          "line": 20,
+          "end_line": 35,
+          "annotations": [
+            "Test"
+          ],
+          "factory": false,
+          "display_name": null,
+          "stub": null,
+          "calls": [
+            {
+              "verb": "POST",
+              "expr": "Paths.WIDGETS",
+              "path": "/v1/{tenantId}/widgets",
+              "op": "POST /v1/{tenantId}/widgets",
+              "line": 28
+            }
+          ],
+          "statuses": [
+            400
+          ]
+        },
+        {
+          "name": "testWidgetsPost_created",
+          "line": 40,
+          "end_line": 55,
+          "annotations": [
+            "Test"
+          ],
+          "factory": false,
+          "display_name": null,
+          "stub": null,
+          "calls": [
+            {
+              "verb": "POST",
+              "expr": "Paths.WIDGETS",
+              "path": "/v1/{tenantId}/widgets",
+              "op": "POST /v1/{tenantId}/widgets",
+              "line": 48
+            }
+          ],
+          "statuses": [
+            201
+          ]
+        }
+      ]
+    }
+  ]
+}

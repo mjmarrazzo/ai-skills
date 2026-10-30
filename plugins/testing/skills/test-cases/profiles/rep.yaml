@@ -1,0 +1,13 @@
+version: 1
+name: rep
+stack: kotlin-restassured
+auth:
+  default_actor: admin
+  missing: { status: 401, body: { message: Unauthorized } }
+  malformed: { status: 403, value: "Bearer invalid.token.value", body: { Message: "User is not authorized to access this resource with an explicit deny" } }
+actors: [admin, user, other_tenant]
+error:
+  keys: { code: code, violations: violations, field: field, message: message }
+  codes: { validation: VALIDATION_ERROR, not_found: NOT_FOUND }
+tenant: { model: path-param, param: tenantId, cross_tenant_status: 403, actor_other: other_tenant }
+tests: { indexer: kotlin-restassured, exclude_classes: ["*TestBase", "*Support", "*EventTest", "*ProcessorTest", "Authorizer*Test"] }

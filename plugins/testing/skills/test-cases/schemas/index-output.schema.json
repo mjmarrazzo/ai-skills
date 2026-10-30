@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "test-cases index output",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "file": {
+      "type": "string"
+    },
+    "class": {
+      "type": "string"
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer"
+          },
+          "http_method": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "HAPPY_FULL",
+              "HAPPY_MIN",
+              "OPTIONAL_ABSENT",
+              "REQUIRED_MISSING",
+              "LENGTH_INVALID",
+              "LENGTH_BOUNDARY_VALID",
+              "PATTERN_INVALID",
+              "RANGE_INVALID",
+              "RANGE_BOUNDARY_VALID",
+              "ENUM_INVALID",
+              "ENUM_EACH_VALID",
+              "ARRAY_BOUNDS",
+              "CROSS_FIELD",
+              "MALFORMED_BODY",
+              "EMPTY_BODY",
+              "DUPLICATE",
+              "STATE_CONFLICT",
+              "NOT_FOUND",
+              "INVALID_ID_FORMAT",
+              "AUTH_MISSING",
+              "AUTH_INVALID",
+              "AUTH_WRONG_TYPE",
+              "FORBIDDEN_PERMISSION",
+              "CROSS_TENANT",
+              "PAGINATION",
+              "INVALID_QUERY_PARAM",
+              "SORT_FILTER",
+              "CORS_VALID",
+              "CORS_INVALID",
+              "RATE_LIMIT",
+              "ASYNC_ACCEPTED",
+              "SIDE_EFFECT",
+              "SMOKE",
+              "FORMAT_INVALID",
+              "TYPE_INVALID",
+              "UNKNOWN_FIELD",
+              "MASS_ASSIGNMENT",
+              "READONLY_SENT",
+              "WRONG_CONTENT_TYPE",
+              "RESOURCE_LIMIT",
+              "PUBLIC_REACHABLE",
+              "LIFECYCLE",
+              "DELETE_TWICE"
+            ]
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 599
+          },
+          "actor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "factory_entry": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          }
+        },
+        "required": [
+          "method",
+          "line",
+          "http_method",
+          "path",
+          "kind",
+          "field",
+          "status",
+          "actor",
+          "factory_entry",
+          "confidence"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "file",
+    "class",
+    "tests"
+  ],
+  "additionalProperties": false
+}

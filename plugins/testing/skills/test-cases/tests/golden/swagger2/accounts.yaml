@@ -1,0 +1,3994 @@
+version: 1
+engine: "test-cases/0.1.0"
+spec:
+  source: "tests/fixtures/specs/swagger2.yaml"
+  version: "2.0"
+  sha256: "1ead4541eae29967a40044c6ba4888bcffc61eb9cbd9a6fd6e2efdc39a6e02da"
+profile:
+  name: "generic"
+  source: null
+error_shape:
+  code_key: "code"
+  violations_key: "violations"
+  field_key: "field"
+  message_key: "message"
+entity: "accounts"
+cases:
+  - id: "accounts.postAccounts.body.id.type.wrong.int"
+    title: "POST /accounts rejects id: type.wrong int"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "id"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/id/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        id: 123
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "id"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.id.type.null"
+    title: "POST /accounts rejects id: type.null"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "id"
+    rule: "type.null"
+    negative: true
+    technique: "error-guess"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/id/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        id: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "id"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.id.readOnly.sent"
+    title: "POST /accounts rejects id: readOnly.sent"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "READONLY_SENT"
+    loc: "body"
+    field: "id"
+    rule: "readOnly.sent"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/id"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        id: "<<str:1>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "id"
+      body: null
+      not_persisted:
+        - "id"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:readOnly"
+  - id: "accounts.postAccounts.body.id.unbounded.oversize"
+    title: "POST /accounts rejects id: unbounded.oversize"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "RESOURCE_LIMIT"
+    loc: "body"
+    field: "id"
+    rule: "unbounded.oversize"
+    negative: true
+    technique: "owasp-api4"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/id"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        id: "<<str:10000>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 400
+        - 413
+      code: null
+      violations:
+        - field: "id"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.postAccounts.body.id.optional.absent"
+    title: "POST /accounts accepts id: optional.absent"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "OPTIONAL_ABSENT"
+    loc: "body"
+    field: "id"
+    rule: "optional.absent"
+    negative: false
+    technique: "ep"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/id"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "id"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.body.createdAt.type.wrong.int"
+    title: "POST /accounts rejects createdAt: type.wrong int"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "createdAt"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/createdAt/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        createdAt: 123
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "createdAt"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.createdAt.type.null"
+    title: "POST /accounts rejects createdAt: type.null"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "createdAt"
+    rule: "type.null"
+    negative: true
+    technique: "error-guess"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/createdAt/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        createdAt: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "createdAt"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.createdAt.format.no_tz"
+    title: "POST /accounts rejects createdAt: format.no_tz"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "createdAt"
+    rule: "format.no_tz"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/createdAt/format"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        createdAt: "2026-01-01T00:00:00"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "createdAt"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "accounts.postAccounts.body.createdAt.format.bad_month"
+    title: "POST /accounts rejects createdAt: format.bad_month"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "createdAt"
+    rule: "format.bad_month"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/createdAt/format"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        createdAt: "2026-13-01T00:00:00Z"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "createdAt"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "accounts.postAccounts.body.createdAt.format.bad_day"
+    title: "POST /accounts rejects createdAt: format.bad_day"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "createdAt"
+    rule: "format.bad_day"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/createdAt/format"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        createdAt: "2026-02-30T00:00:00Z"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "createdAt"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "accounts.postAccounts.body.createdAt.format.date_only"
+    title: "POST /accounts rejects createdAt: format.date_only"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "createdAt"
+    rule: "format.date_only"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/createdAt/format"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        createdAt: "2026-01-01"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "createdAt"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "accounts.postAccounts.body.createdAt.readOnly.sent"
+    title: "POST /accounts rejects createdAt: readOnly.sent"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "READONLY_SENT"
+    loc: "body"
+    field: "createdAt"
+    rule: "readOnly.sent"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/createdAt"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        createdAt: "2026-01-01T00:00:00Z"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "createdAt"
+      body: null
+      not_persisted:
+        - "createdAt"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:readOnly"
+  - id: "accounts.postAccounts.body.createdAt.unbounded.oversize"
+    title: "POST /accounts rejects createdAt: unbounded.oversize"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "RESOURCE_LIMIT"
+    loc: "body"
+    field: "createdAt"
+    rule: "unbounded.oversize"
+    negative: true
+    technique: "owasp-api4"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/createdAt"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        createdAt: "<<str:10000>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 400
+        - 413
+      code: null
+      violations:
+        - field: "createdAt"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.postAccounts.body.createdAt.optional.absent"
+    title: "POST /accounts accepts createdAt: optional.absent"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "OPTIONAL_ABSENT"
+    loc: "body"
+    field: "createdAt"
+    rule: "optional.absent"
+    negative: false
+    technique: "ep"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Base/properties/createdAt"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "createdAt"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.body.email.required.missing"
+    title: "POST /accounts rejects email: required.missing"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "email"
+    rule: "required.missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/allOf/1/properties/email"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "email"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "email"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "accounts.postAccounts.body.email.required.null"
+    title: "POST /accounts rejects email: required.null"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "email"
+    rule: "required.null"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/allOf/1/properties/email"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        email: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "email"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "accounts.postAccounts.body.email.required.empty"
+    title: "POST /accounts rejects email: required.empty"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "email"
+    rule: "required.empty"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/allOf/1/properties/email"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        email: ""
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "email"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "accounts.postAccounts.body.email.type.wrong.int"
+    title: "POST /accounts rejects email: type.wrong int"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "email"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/allOf/1/properties/email/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        email: 123
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "email"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.email.format.no_at"
+    title: "POST /accounts rejects email: format.no_at"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "email"
+    rule: "format.no_at"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/allOf/1/properties/email/format"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        email: "user.example.test"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "email"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "accounts.postAccounts.body.email.format.two_at"
+    title: "POST /accounts rejects email: format.two_at"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "email"
+    rule: "format.two_at"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/allOf/1/properties/email/format"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        email: "a@b@example.test"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "email"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "accounts.postAccounts.body.email.format.no_domain"
+    title: "POST /accounts rejects email: format.no_domain"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "email"
+    rule: "format.no_domain"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/allOf/1/properties/email/format"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        email: "user@"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "email"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "accounts.postAccounts.body.email.format.space"
+    title: "POST /accounts rejects email: format.space"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "FORMAT_INVALID"
+    loc: "body"
+    field: "email"
+    rule: "format.space"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/allOf/1/properties/email/format"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        email: "us er@example.test"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "email"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:format"
+  - id: "accounts.postAccounts.body.email.unbounded.oversize"
+    title: "POST /accounts rejects email: unbounded.oversize"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "RESOURCE_LIMIT"
+    loc: "body"
+    field: "email"
+    rule: "unbounded.oversize"
+    negative: true
+    technique: "owasp-api4"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/allOf/1/properties/email"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        email: "<<str:10000>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 400
+        - 413
+      code: null
+      violations:
+        - field: "email"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.postAccounts.body.name.required.missing"
+    title: "POST /accounts rejects name: required.missing"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "name"
+    rule: "required.missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/name"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "name"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "accounts.postAccounts.body.name.required.null"
+    title: "POST /accounts rejects name: required.null"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "name"
+    rule: "required.null"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/name"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "accounts.postAccounts.body.name.required.empty"
+    title: "POST /accounts rejects name: required.empty"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "name"
+    rule: "required.empty"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/name"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: ""
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+  - id: "accounts.postAccounts.body.name.type.wrong.int"
+    title: "POST /accounts rejects name: type.wrong int"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "name"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/name/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: 123
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.name.maxLength.minus1"
+    title: "POST /accounts accepts name: maxLength.minus1"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "LENGTH_BOUNDARY_VALID"
+    loc: "body"
+    field: "name"
+    rule: "maxLength.minus1"
+    negative: false
+    technique: "bva-3"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/name/maxLength"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: "<<str:29>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "accounts.postAccounts.body.name.maxLength.max"
+    title: "POST /accounts accepts name: maxLength.max"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "LENGTH_BOUNDARY_VALID"
+    loc: "body"
+    field: "name"
+    rule: "maxLength.max"
+    negative: false
+    technique: "bva-3"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/name/maxLength"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: "<<str:30>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "accounts.postAccounts.body.name.maxLength.plus1"
+    title: "POST /accounts rejects name: maxLength.plus1"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "LENGTH_INVALID"
+    loc: "body"
+    field: "name"
+    rule: "maxLength.plus1"
+    negative: true
+    technique: "bva-3"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/name/maxLength"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        name: "<<str:31>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "name"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "accounts.postAccounts.body.age.type.wrong.string"
+    title: "POST /accounts rejects age: type.wrong string"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "age"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/age/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        age: "1"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "age"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.age.type.wrong.float"
+    title: "POST /accounts rejects age: type.wrong float"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "age"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/age/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        age: 1.5
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "age"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.age.type.wrong.bool"
+    title: "POST /accounts rejects age: type.wrong bool"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "age"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/age/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        age: true
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "age"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.age.type.null"
+    title: "POST /accounts rejects age: type.null"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "age"
+    rule: "type.null"
+    negative: true
+    technique: "error-guess"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/age/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        age: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "age"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.age.exclusiveMinimum.plus1"
+    title: "POST /accounts accepts age: exclusiveMinimum.plus1"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "RANGE_BOUNDARY_VALID"
+    loc: "body"
+    field: "age"
+    rule: "exclusiveMinimum.plus1"
+    negative: false
+    technique: "bva-3"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/age/exclusiveMinimum"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        age: 19
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:exclusiveMinimum"
+  - id: "accounts.postAccounts.body.age.exclusiveMinimum.at"
+    title: "POST /accounts rejects age: exclusiveMinimum.at"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "RANGE_INVALID"
+    loc: "body"
+    field: "age"
+    rule: "exclusiveMinimum.at"
+    negative: true
+    technique: "bva-3"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/age/exclusiveMinimum"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        age: 18
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "age"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:exclusiveMinimum"
+  - id: "accounts.postAccounts.body.age.optional.absent"
+    title: "POST /accounts accepts age: optional.absent"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "OPTIONAL_ABSENT"
+    loc: "body"
+    field: "age"
+    rule: "optional.absent"
+    negative: false
+    technique: "ep"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/age"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "age"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.body.metadata.type.wrong.string"
+    title: "POST /accounts rejects metadata: type.wrong string"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "metadata"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/metadata/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        metadata: "x"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "metadata"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.metadata.type.null"
+    title: "POST /accounts rejects metadata: type.null"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "metadata"
+    rule: "type.null"
+    negative: true
+    technique: "error-guess"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/metadata/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        metadata: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "metadata"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.metadata.optional.absent"
+    title: "POST /accounts accepts metadata: optional.absent"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "OPTIONAL_ABSENT"
+    loc: "body"
+    field: "metadata"
+    rule: "optional.absent"
+    negative: false
+    technique: "ep"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/metadata"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "metadata"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.body.tree.type.wrong.string"
+    title: "POST /accounts rejects tree: type.wrong string"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "tree"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/tree/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tree: "x"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "tree"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.tree.type.null"
+    title: "POST /accounts rejects tree: type.null"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "tree"
+    rule: "type.null"
+    negative: true
+    technique: "error-guess"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/tree/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tree: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "tree"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.tree.optional.absent"
+    title: "POST /accounts accepts tree: optional.absent"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "OPTIONAL_ABSENT"
+    loc: "body"
+    field: "tree"
+    rule: "optional.absent"
+    negative: false
+    technique: "ep"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Account/properties/tree"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "tree"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.body.tree.label.type.wrong.int"
+    title: "POST /accounts rejects tree.label: type.wrong int"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "tree.label"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Node/properties/label/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tree:
+          label: 123
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "tree.label"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.tree.label.type.null"
+    title: "POST /accounts rejects tree.label: type.null"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "tree.label"
+    rule: "type.null"
+    negative: true
+    technique: "error-guess"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Node/properties/label/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tree:
+          label: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "tree.label"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.tree.label.unbounded.oversize"
+    title: "POST /accounts rejects tree.label: unbounded.oversize"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "RESOURCE_LIMIT"
+    loc: "body"
+    field: "tree.label"
+    rule: "unbounded.oversize"
+    negative: true
+    technique: "owasp-api4"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Node/properties/label"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tree:
+          label: "<<str:10000>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 400
+        - 413
+      code: null
+      violations:
+        - field: "tree.label"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.postAccounts.body.tree.children.type.wrong.string"
+    title: "POST /accounts rejects tree.children: type.wrong string"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "tree.children"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/definitions/Node/properties/children/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tree:
+          children: "x"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "tree.children"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.tree.children.type.null"
+    title: "POST /accounts rejects tree.children: type.null"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "tree.children"
+    rule: "type.null"
+    negative: true
+    technique: "error-guess"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/definitions/Node/properties/children/type"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tree:
+          children: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "tree.children"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+  - id: "accounts.postAccounts.body.role.mass_assignment.role"
+    title: "POST /accounts rejects role: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "role"
+    rule: "mass_assignment.role"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post/parameters/1"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        role: "admin"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "role"
+      body: null
+      not_persisted:
+        - "role"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.body.tenantId.mass_assignment.tenantId"
+    title: "POST /accounts rejects tenantId: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "tenantId"
+    rule: "mass_assignment.tenantId"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post/parameters/1"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tenantId: "other-tenant"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "tenantId"
+      body: null
+      not_persisted:
+        - "tenantId"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.body.status.mass_assignment.status"
+    title: "POST /accounts rejects status: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "status"
+    rule: "mass_assignment.status"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post/parameters/1"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        status: "ACTIVE"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "status"
+      body: null
+      not_persisted:
+        - "status"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.body.price.mass_assignment.price"
+    title: "POST /accounts rejects price: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "price"
+    rule: "mass_assignment.price"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post/parameters/1"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        price: 0
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "price"
+      body: null
+      not_persisted:
+        - "price"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.body.isAdmin.mass_assignment.isAdmin"
+    title: "POST /accounts rejects isAdmin: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "isAdmin"
+    rule: "mass_assignment.isAdmin"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post/parameters/1"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        isAdmin: true
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "isAdmin"
+      body: null
+      not_persisted:
+        - "isAdmin"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.auth._.auth.missing"
+    title: "POST /accounts rejects op: auth.missing"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "AUTH_MISSING"
+    loc: "auth"
+    field: null
+    rule: "auth.missing"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.postAccounts.auth._.auth.malformed"
+    title: "POST /accounts rejects op: auth.malformed"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "AUTH_INVALID"
+    loc: "auth"
+    field: null
+    rule: "auth.malformed"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "malformed"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.postAccounts.op._.happy.full"
+    title: "POST /accounts accepts op: happy.full"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.op._.happy.min"
+    title: "POST /accounts accepts op: happy.min"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "HAPPY_MIN"
+    loc: "op"
+    field: null
+    rule: "happy.min"
+    negative: false
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "id"
+        - "createdAt"
+        - "age"
+        - "metadata"
+        - "tree"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.op._.required.all_missing"
+    title: "POST /accounts rejects op: required.all_missing"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "REQUIRED_MISSING"
+    loc: "op"
+    field: null
+    rule: "required.all_missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "replace"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.op._.body.malformed"
+    title: "POST /accounts rejects op: body.malformed"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.malformed"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "{\""
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.op._.body.array"
+    title: "POST /accounts rejects op: body.array"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.array"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "[]"
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.op._.body.empty"
+    title: "POST /accounts rejects op: body.empty"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "EMPTY_BODY"
+    loc: "op"
+    field: null
+    rule: "body.empty"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "none"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.postAccounts.op._.body.content_type"
+    title: "POST /accounts rejects op: body.content_type"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "WRONG_CONTENT_TYPE"
+    loc: "op"
+    field: null
+    rule: "body.content_type"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: "text/plain"
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 415
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.postAccounts.lifecycle._.lifecycle.crud"
+    title: "accounts: create, read and mutate through the lifecycle"
+    operation:
+      method: "POST"
+      path: "/accounts"
+      operationId: "postAccounts"
+    kind: "LIFECYCLE"
+    loc: "lifecycle"
+    field: null
+    rule: "lifecycle.crud"
+    negative: false
+    technique: "lifecycle"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps:
+      - operationId: "postAccounts"
+        expect: 200
+        capture:
+          accountId: "id"
+      - operationId: "getAccount_134ad2"
+        expect: 200
+        capture: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.getAccount_134ad2.path.accountId.path.malformed"
+    title: "GET /accounts/{accountId} rejects accountId: path.malformed"
+    operation:
+      method: "GET"
+      path: "/accounts/{accountId}"
+      operationId: "getAccount_134ad2"
+    kind: "INVALID_ID_FORMAT"
+    loc: "path"
+    field: "accountId"
+    rule: "path.malformed"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}/parameters/0"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path:
+        accountId: "not-a-uuid"
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.getAccount_134ad2.path.accountId.path.not_found"
+    title: "GET /accounts/{accountId} rejects accountId: path.not_found"
+    operation:
+      method: "GET"
+      path: "/accounts/{accountId}"
+      operationId: "getAccount_134ad2"
+    kind: "NOT_FOUND"
+    loc: "path"
+    field: "accountId"
+    rule: "path.not_found"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}/parameters/0"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path:
+        accountId: "<<nonexistent:accountId>>"
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 404
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.getAccount_134ad2.auth._.auth.missing"
+    title: "GET /accounts/{accountId} rejects op: auth.missing"
+    operation:
+      method: "GET"
+      path: "/accounts/{accountId}"
+      operationId: "getAccount_134ad2"
+    kind: "AUTH_MISSING"
+    loc: "auth"
+    field: null
+    rule: "auth.missing"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}/get"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.getAccount_134ad2.auth._.auth.malformed"
+    title: "GET /accounts/{accountId} rejects op: auth.malformed"
+    operation:
+      method: "GET"
+      path: "/accounts/{accountId}"
+      operationId: "getAccount_134ad2"
+    kind: "AUTH_INVALID"
+    loc: "auth"
+    field: null
+    rule: "auth.malformed"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}/get"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "malformed"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.getAccount_134ad2.op._.happy.full"
+    title: "GET /accounts/{accountId} accepts op: happy.full"
+    operation:
+      method: "GET"
+      path: "/accounts/{accountId}"
+      operationId: "getAccount_134ad2"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}/get"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.uploadAvatar.body.caption.required.missing"
+    title: "POST /accounts/{accountId}/avatar rejects caption: required.missing"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "caption"
+    rule: "required.missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/2"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "caption"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "caption"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.caption.required.null"
+    title: "POST /accounts/{accountId}/avatar rejects caption: required.null"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "caption"
+    rule: "required.null"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/2"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        caption: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "caption"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.caption.required.empty"
+    title: "POST /accounts/{accountId}/avatar rejects caption: required.empty"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "caption"
+    rule: "required.empty"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/2"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        caption: ""
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "caption"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.caption.type.wrong.int"
+    title: "POST /accounts/{accountId}/avatar rejects caption: type.wrong int"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "TYPE_INVALID"
+    loc: "body"
+    field: "caption"
+    rule: "type.wrong"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/2/type"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        caption: 123
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "caption"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:type"
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.caption.maxLength.minus1"
+    title: "POST /accounts/{accountId}/avatar accepts caption: maxLength.minus1"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "LENGTH_BOUNDARY_VALID"
+    loc: "body"
+    field: "caption"
+    rule: "maxLength.minus1"
+    negative: false
+    technique: "bva-3"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/2/maxLength"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        caption: "<<str:99>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "accounts.uploadAvatar.body.caption.maxLength.max"
+    title: "POST /accounts/{accountId}/avatar accepts caption: maxLength.max"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "LENGTH_BOUNDARY_VALID"
+    loc: "body"
+    field: "caption"
+    rule: "maxLength.max"
+    negative: false
+    technique: "bva-3"
+    priority: "P3"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/2/maxLength"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        caption: "<<str:100>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+  - id: "accounts.uploadAvatar.body.caption.maxLength.plus1"
+    title: "POST /accounts/{accountId}/avatar rejects caption: maxLength.plus1"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "LENGTH_INVALID"
+    loc: "body"
+    field: "caption"
+    rule: "maxLength.plus1"
+    negative: true
+    technique: "bva-3"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/2/maxLength"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        caption: "<<str:101>>"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "caption"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:maxLength"
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.file.required.missing"
+    title: "POST /accounts/{accountId}/avatar rejects file: required.missing"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "file"
+    rule: "required.missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/3"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove:
+        - "file"
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "file"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.file.required.null"
+    title: "POST /accounts/{accountId}/avatar rejects file: required.null"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "REQUIRED_MISSING"
+    loc: "body"
+    field: "file"
+    rule: "required.null"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/3"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        file: null
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations:
+        - field: "file"
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "constraint:required"
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.role.mass_assignment.role"
+    title: "POST /accounts/{accountId}/avatar rejects role: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "role"
+    rule: "mass_assignment.role"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        role: "admin"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "role"
+      body: null
+      not_persisted:
+        - "role"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.tenantId.mass_assignment.tenantId"
+    title: "POST /accounts/{accountId}/avatar rejects tenantId: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "tenantId"
+    rule: "mass_assignment.tenantId"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        tenantId: "other-tenant"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "tenantId"
+      body: null
+      not_persisted:
+        - "tenantId"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.status.mass_assignment.status"
+    title: "POST /accounts/{accountId}/avatar rejects status: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "status"
+    rule: "mass_assignment.status"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        status: "ACTIVE"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "status"
+      body: null
+      not_persisted:
+        - "status"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.price.mass_assignment.price"
+    title: "POST /accounts/{accountId}/avatar rejects price: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "price"
+    rule: "mass_assignment.price"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        price: 0
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "price"
+      body: null
+      not_persisted:
+        - "price"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.id.mass_assignment.id"
+    title: "POST /accounts/{accountId}/avatar rejects id: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "id"
+    rule: "mass_assignment.id"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        id: "00000000-0000-0000-0000-000000000000"
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "id"
+      body: null
+      not_persisted:
+        - "id"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.body.isAdmin.mass_assignment.isAdmin"
+    title: "POST /accounts/{accountId}/avatar rejects isAdmin: mass_assignment"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "MASS_ASSIGNMENT"
+    loc: "body"
+    field: "isAdmin"
+    rule: "mass_assignment.isAdmin"
+    negative: true
+    technique: "owasp-api3"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body:
+        isAdmin: true
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status:
+        - 200
+        - 400
+      code: null
+      violations:
+        - field: "isAdmin"
+      body: null
+      not_persisted:
+        - "isAdmin"
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.path.accountId.path.not_found"
+    title: "POST /accounts/{accountId}/avatar rejects accountId: path.not_found"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "NOT_FOUND"
+    loc: "path"
+    field: "accountId"
+    rule: "path.not_found"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post/parameters/0"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path:
+        accountId: "<<nonexistent:accountId>>"
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 404
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.auth._.auth.missing"
+    title: "POST /accounts/{accountId}/avatar rejects op: auth.missing"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "AUTH_MISSING"
+    loc: "auth"
+    field: null
+    rule: "auth.missing"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.auth._.auth.malformed"
+    title: "POST /accounts/{accountId}/avatar rejects op: auth.malformed"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "AUTH_INVALID"
+    loc: "auth"
+    field: null
+    rule: "auth.malformed"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "malformed"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.op._.happy.full"
+    title: "POST /accounts/{accountId}/avatar accepts op: happy.full"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 200
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "accounts.uploadAvatar.op._.required.all_missing"
+    title: "POST /accounts/{accountId}/avatar rejects op: required.all_missing"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "REQUIRED_MISSING"
+    loc: "op"
+    field: null
+    rule: "required.all_missing"
+    negative: true
+    technique: "ep"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "replace"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.op._.body.malformed"
+    title: "POST /accounts/{accountId}/avatar rejects op: body.malformed"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.malformed"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "{\""
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.op._.body.array"
+    title: "POST /accounts/{accountId}/avatar rejects op: body.array"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.array"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "[]"
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.op._.body.empty"
+    title: "POST /accounts/{accountId}/avatar rejects op: body.empty"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "EMPTY_BODY"
+    loc: "op"
+    field: null
+    rule: "body.empty"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "none"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "accounts.uploadAvatar.op._.body.content_type"
+    title: "POST /accounts/{accountId}/avatar rejects op: body.content_type"
+    operation:
+      method: "POST"
+      path: "/accounts/{accountId}/avatar"
+      operationId: "uploadAvatar"
+    kind: "WRONG_CONTENT_TYPE"
+    loc: "op"
+    field: null
+    rule: "body.content_type"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1accounts~1{accountId}~1avatar/post"
+    needs:
+      - "accounts"
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: "text/plain"
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 415
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"

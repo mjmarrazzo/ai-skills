@@ -1,0 +1,147 @@
+swagger: "2.0"
+info:
+  title: Accounts API
+  version: "1.0.0"
+host: api.example.test
+basePath: /api
+schemes: [https]
+consumes: [application/json]
+produces: [application/json]
+securityDefinitions:
+  apiKey:
+    type: apiKey
+    in: header
+    name: x-api-key
+paths:
+  /accounts:
+    post:
+      summary: Create an account
+      parameters:
+        - name: Authorization
+          in: header
+          type: string
+          required: true
+        - name: account
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Account'
+      responses:
+        200:
+          description: Created
+          schema:
+            $ref: '#/definitions/Account'
+        400:
+          description: Bad request
+  /accounts/{accountId}:
+    parameters:
+      - name: accountId
+        in: path
+        type: string
+        format: uuid
+        required: true
+    get:
+      operationId: getAccount
+      parameters:
+        - name: Authorization
+          in: header
+          type: string
+          required: true
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/Account'
+        404:
+          description: Not found
+  /accounts/{accountId}/notes:
+    get:
+      operationId: getAccount
+      parameters:
+        - name: accountId
+          in: path
+          type: string
+          required: true
+        - name: Authorization
+          in: header
+          type: string
+          required: true
+      responses:
+        200:
+          description: OK
+  /accounts/{accountId}/avatar:
+    post:
+      operationId: uploadAvatar
+      consumes: [multipart/form-data]
+      parameters:
+        - name: accountId
+          in: path
+          type: string
+          required: true
+        - name: Authorization
+          in: header
+          type: string
+          required: true
+        - name: caption
+          in: formData
+          type: string
+          required: true
+          maxLength: 100
+        - name: file
+          in: formData
+          type: file
+          required: true
+      responses:
+        200:
+          description: Uploaded
+  /proxy:
+    x-amazon-apigateway-any-method:
+      responses:
+        200:
+          description: OK
+definitions:
+  Base:
+    type: object
+    properties:
+      id:
+        type: string
+        readOnly: true
+      createdAt:
+        type: string
+        format: date-time
+        readOnly: true
+  Account:
+    allOf:
+      - $ref: '#/definitions/Base'
+      - type: object
+        properties:
+          email:
+            type: string
+            format: email
+        required: [email]
+    required: [name]
+    properties:
+      name:
+        type: string
+        maxLength: 30
+        x-nullable: true
+      age:
+        type: integer
+        minimum: 18
+        exclusiveMinimum: true
+      metadata:
+        type: object
+        properties:
+          additionalProp1:
+            type: string
+      tree:
+        $ref: '#/definitions/Node'
+  Node:
+    type: object
+    properties:
+      label:
+        type: string
+      children:
+        type: array
+        items:
+          $ref: '#/definitions/Node'

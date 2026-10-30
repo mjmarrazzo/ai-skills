@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "entity": "widgets",
+  "canonical": [
+    {
+      "operationId": "createWidget",
+      "request": {
+        "path": {},
+        "query": {},
+        "headers": {},
+        "body": {
+          "name": "Gadget",
+          "kind": "SMALL"
+        }
+      },
+      "threading": {
+        "widgetId": "createWidget.response.body.id"
+      }
+    }
+  ],
+  "pattern_samples": [
+    {
+      "specRef": "#/components/schemas/WidgetCreate/properties/name/pattern",
+      "valid": "Gadget 1",
+      "invalid": [
+        "gad-get"
+      ]
+    }
+  ],
+  "id_mapping": [
+    {
+      "entity": "widgets",
+      "create": "createWidget",
+      "response_field": "id",
+      "item_param": "widgetId",
+      "confirmed": true
+    }
+  ],
+  "cases": [
+    {
+      "id": "widgets.createWidget.body.name.llm.catalog_display",
+      "title": "POST /v1/{tenantId}/widgets rejects a name that cannot be shown in the catalog",
+      "operation": {
+        "method": "POST",
+        "path": "/v1/{tenantId}/widgets",
+        "operationId": "createWidget"
+      },
+      "kind": "LENGTH_INVALID",
+      "loc": "body",
+      "field": "name",
+      "rule": "llm.catalog_display",
+      "negative": true,
+      "technique": "llm",
+      "priority": "P2",
+      "source": "llm",
+      "specRef": "#/components/schemas/WidgetCreate/properties/name/description",
+      "needs": [],
+      "actor": null,
+      "auth": "valid",
+      "input": {
+        "body": {
+          "colour": "red"
+        },
+        "remove": [],
+        "body_mode": "merge",
+        "raw": null,
+        "content_type": null,
+        "path": {},
+        "query": {},
+        "headers": {}
+      },
+      "steps": null,
+      "expected": {
+        "status": 400,
+        "code": null,
+        "violations": [
+          {
+            "field": "name"
+          }
+        ],
+        "body": null,
+        "not_persisted": []
+      },
+      "coverage": {
+        "status": "gap",
+        "tests": []
+      },
+      "drift": null,
+      "review": "required",
+      "tags": [
+        "llm"
+      ],
+      "quote": "shown in the widget catalog"
+    }
+  ],
+  "drift": [
+    {
+      "specRef": "#/components/schemas/WidgetCreate/properties/name",
+      "code_ref": "pkg/x.go:54",
+      "type": "mismatch",
+      "detail": "code allows 60 chars"
+    }
+  ]
+}

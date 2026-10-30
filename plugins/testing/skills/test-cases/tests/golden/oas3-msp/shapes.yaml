@@ -1,0 +1,346 @@
+version: 1
+engine: "test-cases/0.1.0"
+spec:
+  source: "tests/fixtures/specs/oas3.yaml"
+  version: "3.0.3"
+  sha256: "ad910f29708d38a01efb06e3ee9175467a92355aa4d5a60ed9ac753ecc8cb75a"
+profile:
+  name: "msp"
+  source: "profiles/msp.yaml"
+error_shape:
+  code_key: "code"
+  violations_key: "violations"
+  field_key: "propertyPath"
+  message_key: "message"
+entity: "shapes"
+cases:
+  - id: "shapes.createShape.path.tenantId.path.not_found"
+    title: "POST /v1/{tenantId}/shapes rejects tenantId: path.not_found"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/shapes"
+      operationId: "createShape"
+    kind: "NOT_FOUND"
+    loc: "path"
+    field: "tenantId"
+    rule: "path.not_found"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1shapes/post/parameters/0"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path:
+        tenantId: "<<nonexistent:tenantId>>"
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 404
+      code: "NOT_FOUND"
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "shapes.createShape.auth._.auth.missing"
+    title: "POST /v1/{tenantId}/shapes rejects op: auth.missing"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/shapes"
+      operationId: "createShape"
+    kind: "AUTH_MISSING"
+    loc: "auth"
+    field: null
+    rule: "auth.missing"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1shapes/post"
+    needs: []
+    actor: null
+    auth: "none"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body:
+        message: "Unauthorized"
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "shapes.createShape.auth._.auth.malformed"
+    title: "POST /v1/{tenantId}/shapes rejects op: auth.malformed"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/shapes"
+      operationId: "createShape"
+    kind: "AUTH_INVALID"
+    loc: "auth"
+    field: null
+    rule: "auth.malformed"
+    negative: true
+    technique: "auth-matrix"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1shapes/post"
+    needs: []
+    actor: null
+    auth: "malformed"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 401
+      code: null
+      violations: []
+      body:
+        message: "Unauthorized"
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "shapes.createShape.op._.happy.full"
+    title: "POST /v1/{tenantId}/shapes accepts op: happy.full"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/shapes"
+      operationId: "createShape"
+    kind: "HAPPY_FULL"
+    loc: "op"
+    field: null
+    rule: "happy.full"
+    negative: false
+    technique: "ep"
+    priority: "P1"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1shapes/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 201
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags: []
+  - id: "shapes.createShape.op._.body.malformed"
+    title: "POST /v1/{tenantId}/shapes rejects op: body.malformed"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/shapes"
+      operationId: "createShape"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.malformed"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1shapes/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "{\""
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: "INVALID_REQUEST"
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "shapes.createShape.op._.body.array"
+    title: "POST /v1/{tenantId}/shapes rejects op: body.array"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/shapes"
+      operationId: "createShape"
+    kind: "MALFORMED_BODY"
+    loc: "op"
+    field: null
+    rule: "body.array"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1shapes/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "raw"
+      raw: "[]"
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: "INVALID_REQUEST"
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "shapes.createShape.op._.body.empty"
+    title: "POST /v1/{tenantId}/shapes rejects op: body.empty"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/shapes"
+      operationId: "createShape"
+    kind: "EMPTY_BODY"
+    loc: "op"
+    field: null
+    rule: "body.empty"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1shapes/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "none"
+      raw: null
+      content_type: null
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 400
+      code: "INVALID_REQUEST"
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"
+  - id: "shapes.createShape.op._.body.content_type"
+    title: "POST /v1/{tenantId}/shapes rejects op: body.content_type"
+    operation:
+      method: "POST"
+      path: "/v1/{tenantId}/shapes"
+      operationId: "createShape"
+    kind: "WRONG_CONTENT_TYPE"
+    loc: "op"
+    field: null
+    rule: "body.content_type"
+    negative: true
+    technique: "error-guess"
+    priority: "P2"
+    source: "spec"
+    specRef: "#/paths/~1v1~1{tenantId}~1shapes/post"
+    needs: []
+    actor: null
+    auth: "valid"
+    input:
+      body: {}
+      remove: []
+      body_mode: "merge"
+      raw: null
+      content_type: "text/plain"
+      path: {}
+      query: {}
+      headers: {}
+    steps: null
+    expected:
+      status: 415
+      code: null
+      violations: []
+      body: null
+      not_persisted: []
+    coverage:
+      status: "gap"
+      tests: []
+    drift: null
+    review: null
+    tags:
+      - "undocumented-status"

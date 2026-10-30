@@ -1,0 +1,344 @@
+openapi: 3.0.3
+info:
+  title: Widgets API
+  version: "1.0.0"
+servers:
+  - url: "https://api.{stage}.example.test/{stage}/widgets-svc"
+    variables:
+      stage:
+        default: dev
+security:
+  - bearerAuth: []
+paths:
+  /v1/{tenantId}/widgets:
+    parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: createWidget
+      description: Creates a widget in the tenant catalog.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WidgetCreate'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Widget'
+        "400":
+          description: Bad request
+        "409":
+          description: Conflict
+    get:
+      operationId: listWidgets
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: OK
+  /v1/{tenantId}/widgets/{widgetId}:
+    parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getWidget
+      parameters:
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Widget'
+        "404":
+          description: Not found
+    put:
+      operationId: updateWidget
+      parameters:
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WidgetCreate'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Widget'
+        "422":
+          description: Unprocessable
+    delete:
+      operationId: deleteWidget
+      parameters:
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+  /v1/{tenantId}/widgets/{widgetId}/archive:
+    post:
+      operationId: archiveWidget
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Archived
+  /v1/{tenantId}/parts:
+    post:
+      operationId: createPart
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartCreate'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Part'
+        "400":
+          description: Bad request
+    get:
+      operationId: listParts
+      responses:
+        "200":
+          description: OK
+  /v1/{tenantId}/parts/{partId}:
+    get:
+      operationId: getPart
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: partId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Part'
+  /v1/{tenantId}/shapes:
+    post:
+      operationId: createShape
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Shape'
+      responses:
+        "201":
+          description: Created
+  /health:
+    get:
+      operationId: health
+      security: []
+      responses:
+        "200":
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    WidgetCreate:
+      type: object
+      additionalProperties: false
+      required: [name, kind, color]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: '^[A-Za-z0-9 ]+$'
+          description: Display name shown in the widget catalog.
+        code:
+          type: string
+          pattern: '[A-Z]{3}'
+          example: ABC
+        sku:
+          type: string
+          pattern: '^\p{IsLatin}+$'
+        kind:
+          type: string
+          enum: [SMALL, LARGE]
+        price:
+          type: number
+          minimum: 0
+          maximum: 1000
+          multipleOf: 0.01
+        quantity:
+          type: integer
+          format: int32
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 500
+        startsAt:
+          type: string
+          format: date-time
+        birthday:
+          type: string
+          format: date
+        ownerId:
+          type: string
+          format: uuid
+        contactEmail:
+          type: string
+          format: email
+        homepage:
+          type: string
+          format: uri
+        callbackUrl:
+          type: string
+          format: url
+        dimensions:
+          type: object
+          properties:
+            width:
+              type: integer
+              minimum: 1
+            height:
+              type: integer
+        tags:
+          type: array
+          minItems: 1
+          maxItems: 5
+          uniqueItems: true
+          items:
+            type: string
+            maxLength: 20
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartRef'
+        id:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          nullable: true
+        color:
+          type: string
+          maxLength: 10
+    PartRef:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+    Widget:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [SMALL, LARGE]
+    PartCreate:
+      type: object
+      required: [widgetId, label]
+      properties:
+        widgetId:
+          type: string
+          format: uuid
+        label:
+          type: string
+          maxLength: 10
+    Part:
+      type: object
+      properties:
+        partId:
+          type: string
+        label:
+          type: string
+    Shape:
+      oneOf:
+        - $ref: '#/components/schemas/Circle'
+        - $ref: '#/components/schemas/Square'
+    Circle:
+      type: object
+      properties:
+        radius:
+          type: number
+    Square:
+      type: object
+      properties:
+        side:
+          type: number

@@ -1,0 +1,293 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "test-cases profile",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "service_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stack": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "default_actor": {
+          "type": "string"
+        },
+        "missing": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer"
+            },
+            "body": {}
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "malformed": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer"
+            },
+            "value": {
+              "type": "string"
+            },
+            "body": {}
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "actors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "violations": {
+              "type": "string"
+            },
+            "field": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "statuses": {
+          "type": "object",
+          "properties": {
+            "validation": {
+              "type": "integer"
+            },
+            "not_found": {
+              "type": "integer"
+            },
+            "conflict": {
+              "type": "integer"
+            },
+            "unsupported_media": {
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "codes": {
+          "type": "object",
+          "properties": {
+            "validation": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "not_found": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "conflict": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "malformed_body": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "forbidden": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "assert_messages": {
+          "type": "boolean"
+        },
+        "messages": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "unknown_fields": {
+          "type": "string",
+          "enum": [
+            "reject",
+            "ignore",
+            "unknown"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "tenant": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": [
+            "none",
+            "authorizer-context",
+            "path-param",
+            "token-only"
+          ]
+        },
+        "param": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cross_tenant_status": {
+          "type": "integer"
+        },
+        "actor_other": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "auth_matrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ops": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "expect": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ops",
+          "actor",
+          "expect"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "conflicts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "state_machines": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "transition_op": {
+            "type": "string"
+          },
+          "states": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "field",
+          "transition_op",
+          "states"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tests": {
+      "type": "object",
+      "properties": {
+        "indexer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "globs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude_classes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
