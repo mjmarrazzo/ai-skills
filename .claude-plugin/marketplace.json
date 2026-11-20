@@ -16,7 +16,7 @@
     {
       "name": "planning",
       "source": "./plugins/planning",
-      "description": "Planning — blueprint, draft-ticket."
+      "description": "Planning — blueprint."
     },
     {
       "name": "executing",

@@ -55,7 +55,6 @@ Skills are grouped around a research → planning → executing → verifying �
 
 ### `planning` — Planning
 - [`blueprint`](plugins/planning/skills/blueprint/SKILL.md) — discovery questionnaire → parallel-reviewed spec → bite-sized implementation plan, all gitignored under `.claude-plans/`. Phase 1 reads knowledge-capture, offers pre-task-research, runs visual-digest on attached mockups. Invoked directly for a single feature request, or as `hive`'s plan phase.
-- [`draft-ticket`](plugins/planning/skills/draft-ticket/SKILL.md) — light discovery → optional verification → high-level bullets → workshop loop → tracker-target confirm → create, for work the user is scoping but **not** implementing themselves. Tracker-agnostic: the body is the same whether it lands as a GitHub issue, a JIRA ticket, or elsewhere — resolved at create time, asking when unclear. Produces ONE ticket whose body is detailed enough for another team or LLM to plan and implement from. Interactive only — no auto mode.
 
 ### `executing` — Executing
 - [`execute-plan`](plugins/executing/skills/execute-plan/SKILL.md) — walks `plan.md` task-by-task in one of two modes (subagent-per-task with two-stage review, or inline batch with checkpoints). Owns `progress.json` for resume across sessions.

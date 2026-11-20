@@ -1,7 +1,7 @@
 {
   "name": "planning",
   "version": "0.1.0",
-  "description": "Planning phase — blueprint, draft-ticket. Discovery-driven spec + plan and handoff ticket drafting.",
+  "description": "Planning phase — blueprint. Discovery-driven spec + plan.",
   "author": {
     "name": "mjmarrazzo"
   }
